@@ -17,338 +17,268 @@
 #include <sot-dyninv/controller-pd.h>
 #include <sot-core/debug.h>
 #include <dynamic-graph/factory.h>
-#include <dynamic-graph/command.h>
-#include <dynamic-graph/command-setter.h>
-#include <dynamic-graph/command-getter.h>
 
-#include <jrl/mal/matrixabstractlayer.hh>
+#include <sot-dyninv/commands-helper.h>
 
 namespace sot
 {
   namespace dyninv
   {
 
-    using namespace dg;
 
+    namespace dg = ::dynamicgraph;
+    using namespace dg;
+    using ::dynamicgraph::command::makeDirectGetter;
+    using ::dynamicgraph::command::docDirectGetter;
+    using ::dynamicgraph::command::makeDirectSetter;
+    using ::dynamicgraph::command::docDirectSetter;
+
+    /* --- DG FACTORY ------------------------------------------------------- */
     DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(ControllerPD,"ControllerPD");
 
+    /* --- CONSTRUCTION ----------------------------------------------------- */
+    /* --- CONSTRUCTION ----------------------------------------------------- */
+    /* --- CONSTRUCTION ----------------------------------------------------- */
     ControllerPD::
     ControllerPD( const std::string & name )
-      :Entity(name)
-      ,sensorWorldRotationSIN(NULL,"sotControllerPD("+name
-			      +")::input(MatrixRotation)::sensorWorldRotation")
-      ,sensorEmbeddedPositionSIN(NULL,"sotControllerPD("+name
-				 +")::input(MatrixHomo)::sensorEmbeddedPosition")
-      ,contactWorldPositionSIN(NULL,"sotControllerPD("+name
-			       +")::input(MatrixHomo)::contactWorldPosition")
-      ,contactEmbeddedPositionSIN(NULL,"sotControllerPD("+name
-				  +")::input(MatrixHomo)::contactEmbeddedPosition")
+      : Entity(name)
 
-      ,anglesSOUT( boost::bind(&ControllerPD::computeAngles,this,_1,_2),
-		   sensorWorldRotationSIN<<sensorEmbeddedPositionSIN
-		   <<contactWorldPositionSIN<<contactEmbeddedPositionSIN,
-		   "sotControllerPD("+name+")::output(Vector)::angles" )
-      ,flexibilitySOUT( boost::bind(&ControllerPD::computeFlexibilityFromAngles
-				    ,this,_1,_2),
-			anglesSOUT,
-			"sotControllerPD("+name+")::output(matrixRotation)::flexibility" )
-      ,driftSOUT( boost::bind(&ControllerPD::computeDriftFromAngles,this,_1,_2),
-		  anglesSOUT,
-		  "sotControllerPD("+name+")::output(matrixRotation)::drift" )
-      ,sensorWorldRotationSOUT( boost::bind(&ControllerPD::computeSensorWorldRotation
-					    ,this,_1,_2),
-				anglesSOUT<<sensorWorldRotationSIN,
-				"sotControllerPD("+name
-				+")::output(matrixRotation)::sensorCorrectedRotation" )
-      ,waistWorldRotationSOUT( boost::bind(&ControllerPD::computeWaistWorldRotation
-					   ,this,_1,_2),
-			       sensorWorldRotationSOUT<<sensorEmbeddedPositionSIN,
-			       "sotControllerPD("+name
-			       +")::output(matrixRotation)::waistWorldRotation" )
-      ,waistWorldPositionSOUT( boost::bind(&ControllerPD::computeWaistWorldPosition
-					   ,this,_1,_2),
-			       flexibilitySOUT << contactEmbeddedPositionSIN,
-			       "sotControllerPD("+name
-			       +")::output(MatrixHomogeneous)::waistWorldPosition" )
-      ,waistWorldPoseRPYSOUT( boost::bind(&ControllerPD::computeWaistWorldPoseRPY
-					  ,this,_1,_2),
-			      waistWorldPositionSOUT,
-			      "sotControllerPD("+name
-			      +")::output(vectorRollPitchYaw)::waistWorldPoseRPY" )
+      ,CONSTRUCT_SIGNAL_IN(Kp,ml::Vector)
+      ,CONSTRUCT_SIGNAL_IN(Kd,ml::Vector)
+      ,CONSTRUCT_SIGNAL_IN(position,ml::Vector)
+      ,CONSTRUCT_SIGNAL_IN(positionRef,ml::Vector)
+      ,CONSTRUCT_SIGNAL_IN(velocity,ml::Vector)
+      ,CONSTRUCT_SIGNAL_IN(velocityRef,ml::Vector)
 
-      ,fromSensor_(true)
+      ,CONSTRUCT_SIGNAL_OUT(control,ml::Vector,ControllerPD,
+			    KpSIN << KdSIN << positionSIN << positionRefSIN
+			    << velocitySIN << velocityRefSIN )
     {
-      sotDEBUGIN(5);
+      Entity::signalRegistration( KpSIN << KdSIN << positionSIN << positionRefSIN
+				  << velocitySIN << velocityRefSIN
+				  << controlSOUT );
 
-      signalRegistration( sensorWorldRotationSIN     << sensorEmbeddedPositionSIN
-			  << contactWorldPositionSIN << contactEmbeddedPositionSIN
-			  << anglesSOUT              << flexibilitySOUT
-			  << driftSOUT               << sensorWorldRotationSOUT
-			  << waistWorldRotationSOUT
-			  << waistWorldPositionSOUT  << waistWorldPoseRPYSOUT  );
 
-      // Commands
-      std::string docstring;
-      docstring = "    \n"
-	"    Set flag specifying whether angle is measured from sensors or simulated.\n"
-	"    \n"
-	"      Input:\n"
-	"        - a boolean value.\n"
-	"    \n";
-      addCommand("setFromSensor",
-		 new ::dynamicgraph::command::Setter<ControllerPD, bool>
-		 (*this, &ControllerPD::fromSensor, docstring));
+      /* Commands. */
+      addCommand("getSize",
+		 makeDirectGetter(*this,&_dimension,
+				  docDirectGetter("dimension","int")));
 
-      docstring = "    \n"
-	"    Get flag specifying whether angle is measured from sensors or simulated.\n"
-	"    \n"
-	"      No input,\n"
-	"      return a boolean value.\n"
-	"    \n";
-      addCommand("getFromSensor",
-		 new ::dynamicgraph::command::Getter<ControllerPD, bool>
-		 (*this, &ControllerPD::fromSensor, docstring));
+      // std::string docstring
+      // 		 = "\nSet the vectors dimension.\n\nInput:\n- an int.\nVoid return.\n\n";
+      // addCommand("setSize",
+      // 		 new ::dynamicgraph::command::Setter<ControllerPD,int>
+      // 		 (*this, &ControllerPD::size,docstring));
 
-      sotDEBUGOUT(5);
+      addCommand("setSize",
+		 makeDirectSetter(*this, &_dimension,
+				  docDirectSetter("dimension","int")));
     }
 
 
-    ControllerPD::
-    ~ControllerPD( void )
-    {
-      sotDEBUGIN(5);
-
-      sotDEBUGOUT(5);
-      return;
-    }
-
-    /* --- SIGNALS -------------------------------------------------------------- */
-    /* --- SIGNALS -------------------------------------------------------------- */
-    /* --- SIGNALS -------------------------------------------------------------- */
-    ml::Vector& ControllerPD::
-    computeAngles( ml::Vector& res,
-		   const int& time )
-    {
-      sotDEBUGIN(15);
-
-      res.resize(3);
-
-      const MatrixRotation &worldestRchest = sensorWorldRotationSIN( time );
-      sotDEBUG(35) << "worldestRchest = " << std::endl << worldestRchest;
-      const MatrixHomogeneous &waistMchest = sensorEmbeddedPositionSIN( time );
-      MatrixRotation waistRchest; waistMchest.extract( waistRchest );
-
-      const MatrixHomogeneous & waistMleg = contactEmbeddedPositionSIN( time );
-      MatrixRotation waistRleg; waistMleg.extract( waistRleg );
-      MatrixRotation chestRleg; waistRchest.transpose().multiply( waistRleg,chestRleg );
-      MatrixRotation worldestRleg; worldestRchest.multiply( chestRleg,worldestRleg );
-
-      sotDEBUG(35) << "worldestRleg = " << std::endl << worldestRleg;
-
-      /* Euler angles with following code: (-z)xy, -z being the yaw drift, x the
-       * first flexibility and y the second flexibility. */
-      const double TOLERANCE_TH = 1e-6;
-
-      const MatrixRotation &R = worldestRleg;
-      if( (fabs(R(0,1))<TOLERANCE_TH)&&(fabs(R(1,1))<TOLERANCE_TH) ) 
-	{
-	  /* This means that cos(X) is very low, ie flex1 is close to 90deg.
-	   * I take the case into account, but it is bloody never going 
-	   * to happens. */
-	  if( R(2,1)>0 ) res(0)=M_PI/2; else res(0) = -M_PI/2;
-	  res(2) = atan2( -R(0,2),R(0,0) );
-	  res(1) = 0;
-
-	  /* To sum up: if X=PI/2, then Y and Z are in singularity.
-	   * we cannot decide both of then. I fixed Y=0, which
-	   * means that all the measurement coming from the sensor
-	   * is assumed to be drift of the gyro. */
-	}
-      else
-	{
-	  double &X = res(0);
-	  double &Y = res(1);
-	  double &Z = res(2);
-
-	  Y = atan2( R(2,0),R(2,2) );
-	  Z = atan2( R(0,1),R(1,1) );
-	  if( fabs(R(2,0))>fabs(R(2,2)) )
-	    { X=atan2( R(2,1)*sin(Y),R(2,0) ); }
-	  else 
-	    { X=atan2( R(2,1)*cos(Y),R(2,2) ); }
-	}
-  
-      sotDEBUG(35) << "angles = " << res;
-
-
-      sotDEBUGOUT(15);
-      return res;
-    }
-
-    /* compute the transformation matrix of the flexibility, ie
-     * feetRleg. 
-     */
-    MatrixRotation& ControllerPD::
-    computeFlexibilityFromAngles( MatrixRotation& res,
-				  const int& time )
-    {
-      sotDEBUGIN(15);
-
-      const ml::Vector & angles = anglesSOUT( time );
-      double cx= cos( angles(0) );
-      double sx= sin( angles(0) );
-      double cy= cos( angles(1) );
-      double sy= sin( angles(1) );
-  
-      res(0,0) = cy;
-      res(0,1) = 0;
-      res(0,2) = -sy;
-
-      res(1,0) = -sx*sy;
-      res(1,1) = cx;
-      res(1,2) = -sx*cy;
-
-      res(2,0) = cx*sy;
-      res(2,1) = sx;
-      res(2,2) = cx*cy;
-
-      sotDEBUGOUT(15);
-      return res;
-    }
-
-    /* Compute the rotation matrix of the drift, ie the
-     * transfo from the world frame to the estimated (drifted) world
-     * frame: worldRworldest.
-     */
-    MatrixRotation& ControllerPD::
-    computeDriftFromAngles( MatrixRotation& res,
-			    const int& time )
-    {
-      sotDEBUGIN(15);
-  
-      const ml::Vector & angles = anglesSOUT( time );
-      double cz = cos( angles(2) );
-      double sz = sin( angles(2) );
-  
-      res(0,0) = cz;
-      res(0,1) = -sz;
-      res(0,2) = 0;
-
-      // z is the positive angle (R_{-z} has been computed
-      // in the <angles> function). Thus, the /-/sin(z) is in 0,1
-      res(1,0) = sz;  
-      res(1,1) = cz;
-      res(1,2) = 0;
-
-      res(2,0) = 0;
-      res(2,1) = 0;
-      res(2,2) = 1;
-
-      sotDEBUGOUT(15);
-      return res;
-    }
-
-    MatrixRotation& ControllerPD::
-    computeSensorWorldRotation( MatrixRotation& res,
-				const int& time )
-    {
-      sotDEBUGIN(15);
-  
-      const MatrixRotation & worldRworldest = driftSOUT( time );
-      const MatrixRotation & worldestRsensor = sensorWorldRotationSIN( time );
-  
-      worldRworldest.multiply( worldestRsensor,res );
-
-      sotDEBUGOUT(15);
-      return res;
-    }
- 
-    MatrixRotation& ControllerPD::
-    computeWaistWorldRotation( MatrixRotation& res,
-			       const int& time )
-    {
-      sotDEBUGIN(15);
-  
-      // chest = sensor
-      const MatrixRotation & worldRsensor = sensorWorldRotationSOUT( time );
-      const MatrixHomogeneous & waistMchest = sensorEmbeddedPositionSIN( time );
-      MatrixRotation waistRchest; waistMchest.extract( waistRchest );
-  
-      worldRsensor .multiply( waistRchest.transpose(),res );
-
-      sotDEBUGOUT(15);
-      return res;
-    }
-
-
-
-    MatrixHomogeneous& ControllerPD::
-    computeWaistWorldPosition( MatrixHomogeneous& res,
-			       const int& time )
-    {
-      sotDEBUGIN(15);
-  
-      const MatrixHomogeneous & waistMleg = contactEmbeddedPositionSIN( time );
-      const MatrixHomogeneous& contactPos = contactWorldPositionSIN( time );
-      MatrixHomogeneous legMwaist; waistMleg.inverse( legMwaist );
-      MatrixHomogeneous tmpRes;
-      if( fromSensor_ )
-	{ 
-	  const MatrixRotation & Rflex = flexibilitySOUT( time ); // footRleg
-	  ml::Vector zero(3); zero.fill(0.);
-	  MatrixHomogeneous footMleg; footMleg.buildFrom( Rflex,zero );
-				    
-	  footMleg.multiply( legMwaist,tmpRes );
-	}
-      else { tmpRes = legMwaist; }
-
-      contactPos.multiply( tmpRes, res );
-      sotDEBUGOUT(15);
-      return res;
-    }
+    /* --- SIGNALS ---------------------------------------------------------- */
+    /* --- SIGNALS ---------------------------------------------------------- */
+    /* --- SIGNALS ---------------------------------------------------------- */
 
     ml::Vector& ControllerPD::
-    computeWaistWorldPoseRPY( ml::Vector& res,
-			      const int& time )
+    controlSOUT_function( ml::Vector &tau, int iter )
     {
-      const MatrixHomogeneous & M = waistWorldPositionSOUT( time );
+      sotDEBUGIN(15);
+      const ml::Vector& Kp = KpSIN(iter);
+      const ml::Vector& Kd = KdSIN(iter);
+      const ml::Vector& position = positionSIN(iter);
+      const ml::Vector& desiredposition = positionRefSIN(iter);
+      const unsigned int size = Kp.size();
 
-      MatrixRotation R; M.extract(R);
-      VectorRollPitchYaw r; r.fromMatrix(R);
-      ml::Vector t(3); M.extract(t);
+      assert( _dimension == (int)size );
+      assert( size==Kp.size() );        assert( size==Kd.size() );
+      assert( size==position.size() );  assert( size==desiredposition.size() );
 
-      res.resize(6);
-      for( int i=0;i<3;++i ) { res(i)=t(i); res(i+3)=r(i); }
+      bool useVelocity = velocitySIN;
+      ml::Vector velocity;
+      bool useVelocityDesired = false;
+      ml::Vector desiredvelocity;
+      if( useVelocity ) // TODO: there is a useless copy here. Use a pointer?
+	{
+	  velocity = velocitySIN(iter);
+	  assert( size==velocity.size() );
+	  useVelocityDesired = velocityRefSIN;
+	  if( useVelocityDesired )
+	    {
+	      desiredvelocity = velocityRefSIN(iter);
+	      assert( size==desiredvelocity.size() );
+	    }
+	}
 
-      return res;
+      tau.resize(size); double dv; // TODO: use dv from start to avoid the copy.
+      for(unsigned i = 0u; i < size; ++i)
+	{
+	  tau(i) = Kp(i)*(desiredposition(i)-position(i));
+	  if( useVelocity )
+	    {
+	      dv= velocity(i);
+	      if( useVelocityDesired )
+		dv-=desiredvelocity(i);
+	      tau(i) -= Kd(i)*dv;
+	    }
+	}
+
+      sotDEBUG(15) << "p = " << position << std::endl;
+      sotDEBUG(15) << "pd = " << desiredposition << std::endl;
+      if( useVelocity ) {sotDEBUG(15) << "v= " << velocity << std::endl;}
+      if( useVelocityDesired ) { sotDEBUG(15) << "vd= " << velocity << std::endl; }
+      sotDEBUG(15) << "kp = " << Kp << std::endl;
+      sotDEBUG(15) << "kd = " << Kd << std::endl;
+      sotDEBUG(15) << "PD torque= " << tau << std::endl;
+
+      sotDEBUGOUT(15);
+      return tau;
     }
 
-    /* --- PARAMS --------------------------------------------------------------- */
-    /* --- PARAMS --------------------------------------------------------------- */
-    /* --- PARAMS --------------------------------------------------------------- */
+
+    /* --- COMMANDS ---------------------------------------------------------- */
+    /* --- MEMBERS ---------------------------------------------------------- */
+    void ControllerPD::
+    size(const int & dimension)
+    {
+      _dimension = dimension;
+    }
+
+    int ControllerPD::
+    size(void) const
+    {
+      return _dimension;
+    }
+
+    /* --- ENTITY ----------------------------------------------------------- */
+    /* --- ENTITY ----------------------------------------------------------- */
+    /* --- ENTITY ----------------------------------------------------------- */
+
+    void ControllerPD::
+    display( std::ostream& os ) const
+    {
+      os << "ControllerPD "<<getName();
+      try
+	{
+	  os <<"control = "<<controlSOUT;
+	}
+      catch (ExceptionSignal e) {}
+    }
+
     void ControllerPD::
     commandLine( const std::string& cmdLine,
 		 std::istringstream& cmdArgs,
 		 std::ostream& os )
     {
-      sotDEBUG(25) << "Cmd " << cmdLine <<std::endl;
-
       if( cmdLine == "help" )
+	{
+	  os << "sotControlPD:\n"
+	     << " - size <arg>\t\tset the size of the vector.\n"
+	     << " - stdGain \t\tset the input vector gains according to the size for HRP2.\n"
+	     << " - velocityonly <arg>\t\tset Kp = 0.\n"
+	     << std::endl;
+	}
+      else if( cmdLine == "size" )
+	{
+	  cmdArgs >> std::ws;
+	  if( cmdArgs.good() )
+	    {
+	      unsigned int i; cmdArgs >> i ;
+	      size(i);
+	    }
+	  else
+	    {
+	      os << "size = " << size() << std::endl;
+	    }
+	}
+      else if( cmdLine == "velocityonly" )
+	{
+	  ml::Vector zero(_dimension); zero.fill(0);
+	  positionSIN = zero;
+	  positionRefSIN = zero;
+	  KpSIN = zero;
+	}
+      else if( cmdLine == "stdGain" )
+	{
+	  std::string config = "high";
+	  cmdArgs >> std::ws; if( cmdArgs.good() ) cmdArgs >> config;
+
+	  if( config =="low" )
+	    {
+	      // Low
+	      ml::Vector Kp(_dimension); Kp.fill(100);
+	      ml::Vector Kd(_dimension); Kp.fill(20);
+	      KpSIN = Kp;
+	      KdSIN = Kd;
+	    }
+	  else if( config =="medium" )
+	    {
+	      // Medium gains
+	      // Kp = [30](400,1000,2000,1800,2000,1000,400,1000,2000,1800,2000,1000,500,250,200,200,300,300,200,400,400,200,200,300, 300,200,400,400,200,200);
+	      // Kd = [30] (40,100,200,180,200,100,40,100,200,180,200,100,50,25,20,20,30,30,20,40,40,20,20,30, 30,20,40,40,20,20);
+	      if( _dimension != 30 )
+		{ os << "Only working for dim=30!" << std::endl; return; }
+
+	      ml::Vector Kp(_dimension),Kd(_dimension);
+	      unsigned int i=0;
+	      Kp(i++)=400;   Kp(i++)=1000; Kp(i++)=2000;  Kp(i++)=1800;  Kp(i++)=2000;
+	      Kp(i++)=1000;  Kp(i++)=400;  Kp(i++)=1000;  Kp(i++)=2000;  Kp(i++)=1800;
+	      Kp(i++)=2000;  Kp(i++)=1000; Kp(i++)=500;  Kp(i++)=250;  Kp(i++)=200;
+	      Kp(i++)=200;   Kp(i++)=300;  Kp(i++)=300;  Kp(i++)=200;  Kp(i++)=400;
+	      Kp(i++)=400;   Kp(i++)=200;  Kp(i++)=200;  Kp(i++)=300;  Kp(i++)= 300;
+	      Kp(i++)=200;   Kp(i++)=400;  Kp(i++)=400;  Kp(i++)=200;  Kp(i++)=200;
+
+	      i=0;
+	      Kd(i++)=40;  Kd(i++)=100;  Kd(i++)=200;  Kd(i++)=180;  Kd(i++)=200;
+	      Kd(i++)=100; Kd(i++)=40;   Kd(i++)=100;  Kd(i++)=200;  Kd(i++)=180;
+	      Kd(i++)=200; Kd(i++)=100;  Kd(i++)=50;   Kd(i++)=25;   Kd(i++)=20;
+	      Kd(i++)=20;  Kd(i++)=30;   Kd(i++)=30;   Kd(i++)=20;   Kd(i++)=40;
+	      Kd(i++)=40;  Kd(i++)=20;   Kd(i++)=20;   Kd(i++)=30;   Kd(i++)= 30;
+	      Kd(i++)=20;  Kd(i++)=40;   Kd(i++)=40;   Kd(i++)=20;   Kd(i++)=20;
+
+	      KpSIN = Kp;
+	      KdSIN = Kd;
+	    }
+	  else // high
+	    {
+	      // High gains
+	      // Kp = [30](4000,10000,20000,18000,20000,10000,4000,10000,20000,18000,20000,10000,5000,2500,2000,2000,3000,3000,2000,4000,4000,2000,2000,3000, 3000,2000,4000,4000,2000,2000);
+	      //Kd = [30](120,300,600,500,600,300,120,300,600,500,600,300,150,75,60,60,90,90,60,120,120,60,60,90, 90,60,120,120,60,60);
+
+	      if( _dimension != 30 )
+		{ os << "Only working for dim=30!" << std::endl; return; }
+
+	      ml::Vector Kp(_dimension),Kd(_dimension);
+	      unsigned int i=0;
+	      Kp(i++)=4000;  Kp(i++)=10000; Kp(i++)=20000; Kp(i++)=18000;  Kp(i++)=20000;
+	      Kp(i++)=10000; Kp(i++)=4000;  Kp(i++)=10000; Kp(i++)=20000;  Kp(i++)=18000;
+	      Kp(i++)=20000; Kp(i++)=10000; Kp(i++)=5000;  Kp(i++)=2500;   Kp(i++)=2000;
+	      Kp(i++)=2000;  Kp(i++)=3000;  Kp(i++)=3000;  Kp(i++)=2000;   Kp(i++)=4000;
+	      Kp(i++)=4000;  Kp(i++)=2000;  Kp(i++)=2000;  Kp(i++)=3000;   Kp(i++)= 3000;
+	      Kp(i++)=2000;  Kp(i++)=4000;  Kp(i++)=4000;  Kp(i++)=2000;   Kp(i++)=2000;
+
+	      i=0;
+	      Kd(i++)=120;   Kd(i++)=300;   Kd(i++)=600;   Kd(i++)=500;    Kd(i++)=600;
+	      Kd(i++)=300;   Kd(i++)=120;   Kd(i++)=300;   Kd(i++)=600;    Kd(i++)=500;
+	      Kd(i++)=600;   Kd(i++)=300;   Kd(i++)=150;   Kd(i++)=75;     Kd(i++)=60;
+	      Kd(i++)=60;    Kd(i++)=90;    Kd(i++)=90;    Kd(i++)=60;     Kd(i++)=120;
+	      Kd(i++)=120;   Kd(i++)=60;    Kd(i++)=60;    Kd(i++)=90;     Kd(i++)= 90;
+	      Kd(i++)=60;    Kd(i++)=120;   Kd(i++)=120;   Kd(i++)=60;     Kd(i++)=60;
+
+	      KpSIN = Kp;
+	      KdSIN = Kd;
+	    }
+	}
+      else
 	{
 	  Entity::commandLine(cmdLine,cmdArgs,os);
 	}
-      else if( cmdLine == "fromSensor" )
-	{
-	  std::string val; cmdArgs>>val;
-	  if( ("true"==val)||("false"==val) )
-	    {
-	      fromSensor_ = ( val=="true" );
-	    } else {
-	    os << "fromSensor = " << (fromSensor_?"true":"false") << std::endl;
-	  }
-	}
-      else { Entity::commandLine( cmdLine,cmdArgs,os); }
     }
+
+
+
+
+
 
   } // namespace dyninv
 } // namespace sot

@@ -34,83 +34,58 @@
 /* --- INCLUDE --------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 
-/* Matrix */
-#include <jrl/mal/boost.hh>
-namespace ml = maal::boost;
 
 /* SOT */
-#include <dynamic-graph/entity.h>
-#include <dynamic-graph/signal-ptr.h>
-#include <dynamic-graph/signal-time-dependent.h>
-#include <sot-core/matrix-homogeneous.h>
-#include <sot-core/vector-roll-pitch-yaw.h>
-#include <sot-core/matrix-rotation.h>
+#include <sot-dyninv/signal-helper.h>
 
-/* STD */
-#include <string>
 
 
 namespace sot {
   namespace dyninv {
-
-    namespace dg = dynamicgraph;
 
   /* --------------------------------------------------------------------- */
   /* --- CLASS ----------------------------------------------------------- */
   /* --------------------------------------------------------------------- */
 
   class SOTCONTROLLERPD_EXPORT ControllerPD
-    :public dg::Entity
-    {
-    public:
-      static const std::string CLASS_NAME;
+    :public ::dynamicgraph::Entity
+      {
 
-    public: /* --- CONSTRUCTION --- */
+      public: /* --- CONSTRUCTOR ---- */
 
-      ControllerPD( const std::string& name );
-      virtual ~ControllerPD( void );
+	ControllerPD( const std::string & name );
 
-    public: /* --- SIGNAL --- */
+      protected:
+	/* Parameters of the torque-control function:
+	 * tau = kp * (qd-q) + kd* (dqd-dq) */
+	int _dimension;
 
-      dg::SignalPtr<MatrixRotation,int> sensorWorldRotationSIN; // estimate(worldRc)
-      dg::SignalPtr<MatrixHomogeneous,int> sensorEmbeddedPositionSIN; // waistRchest
-      dg::SignalPtr<MatrixHomogeneous,int> contactWorldPositionSIN; // estimate(worldRf)
-      dg::SignalPtr<MatrixHomogeneous,int> contactEmbeddedPositionSIN; // waistRleg
-      dg::SignalTimeDependent<ml::Vector,int> anglesSOUT;  // [ flex1 flex2 yaw_drift ]
-      dg::SignalTimeDependent<MatrixRotation,int> flexibilitySOUT;  // footRleg
-      dg::SignalTimeDependent<MatrixRotation,int> driftSOUT;  // Ryaw = worldRc est(wRc)^-1
-      dg::SignalTimeDependent<MatrixRotation,int> sensorWorldRotationSOUT;  // worldRc
-      dg::SignalTimeDependent<MatrixRotation,int> waistWorldRotationSOUT;  // worldRwaist
-      dg::SignalTimeDependent<MatrixHomogeneous,int> waistWorldPositionSOUT; // worldMwaist
-      dg::SignalTimeDependent<ml::Vector,int> waistWorldPoseRPYSOUT; // worldMwaist
+      public:
+	void size(const int & dimension);
+	int size(void) const;
 
-    public: /* --- FUNCTIONS --- */
-      ml::Vector& computeAngles( ml::Vector& res,
-				 const int& time );
-      MatrixRotation& computeFlexibilityFromAngles( MatrixRotation& res,
-						    const int& time );
-      MatrixRotation& computeDriftFromAngles( MatrixRotation& res,
-					      const int& time );
-      MatrixRotation& computeSensorWorldRotation( MatrixRotation& res,
-						  const int& time );
-      MatrixRotation& computeWaistWorldRotation( MatrixRotation& res,
-						 const int& time );
-      MatrixHomogeneous& computeWaistWorldPosition( MatrixHomogeneous& res,
-						    const int& time );
-      ml::Vector& computeWaistWorldPoseRPY( ml::Vector& res,
-					    const int& time );
+      public: /* --- ENTITY INHERITANCE --- */
 
-    public: /* --- PARAMS --- */
-      void fromSensor(const bool& inFromSensor) {    fromSensor_ = inFromSensor;  }
-      bool fromSensor() const {    return fromSensor_;  }
-    private:
-      bool fromSensor_;
-      virtual void commandLine( const std::string& cmdLine,
-				std::istringstream& cmdArgs,
-				std::ostream& os );
-    };
+	static const std::string CLASS_NAME;
+	virtual void display( std::ostream& os ) const;
+	virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
 
+	virtual void commandLine( const std::string& cmdLine,
+				  std::istringstream& cmdArgs,
+				  std::ostream& os );
 
+      public:  /* --- SIGNALS --- */
+
+	DECLARE_SIGNAL_IN(Kp,ml::Vector);
+	DECLARE_SIGNAL_IN(Kd,ml::Vector);
+	DECLARE_SIGNAL_IN(position,ml::Vector);
+	DECLARE_SIGNAL_IN(positionRef,ml::Vector);
+	DECLARE_SIGNAL_IN(velocity,ml::Vector);
+	DECLARE_SIGNAL_IN(velocityRef,ml::Vector);
+
+	DECLARE_SIGNAL_OUT(control,ml::Vector);
+
+      }; // class ControllerPD
 
   } // namespace dyninv
 } // namespace sot
