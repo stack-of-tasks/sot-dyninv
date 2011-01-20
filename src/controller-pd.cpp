@@ -60,7 +60,7 @@ namespace sot
 				  docDirectGetter("dimension","int")));
 
       addCommand("setSize",
-		 makeDirectSetter<Value::INT>(*this, &_dimension,
+		 makeDirectSetter(*this, &_dimension,
 				  docDirectSetter("dimension","int")));
     }
 
