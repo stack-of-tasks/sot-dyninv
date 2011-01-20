@@ -66,6 +66,8 @@ namespace sot {
       public:
 	void size(const int & dimension);
 	int size(void) const;
+	void setStandardGains( const std::string & config );
+	void setGainVelocityOnly( void );
 
       public: /* --- ENTITY INHERITANCE --- */
 

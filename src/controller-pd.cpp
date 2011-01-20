@@ -62,6 +62,16 @@ namespace sot
       addCommand("setSize",
 		 makeDirectSetter(*this, &_dimension,
 				  docDirectSetter("dimension","int")));
+
+      addCommand("velocityOnly",
+		 makeCommandVoid0(*this,&ControllerPD::setGainVelocityOnly,
+				  docCommandVoid0("Set a friction-style controller.")));
+
+      addCommand("stdGain",
+		 makeCommandVoid1(*this,&ControllerPD::setStandardGains,
+				  docCommandVoid1("Set spefic gains.",
+						  "string (in low|medium|high)")));
+
     }
 
 
@@ -139,6 +149,85 @@ namespace sot
       return _dimension;
     }
 
+    void ControllerPD::
+    setGainVelocityOnly( void )
+    {
+      ml::Vector zero(_dimension); zero.fill(0);
+      positionSIN = zero;
+      positionRefSIN = zero;
+      KpSIN = zero;
+    }
+
+    /** Give some specific values for the Kp and Kd gains. Possible
+     * configs are "low", "middle" and "high".
+     * Warning: middle and high only works for dim 30.
+     * TODO: properly throw errors when needed.
+     */
+    void ControllerPD::
+    setStandardGains( const std::string & config )
+    {
+
+      if( config =="low" )
+	{
+	  // Low gains
+	  ml::Vector Kp(_dimension); Kp.fill(100);
+	  ml::Vector Kd(_dimension); Kd.fill(20);
+	  KpSIN = Kp;
+	  KdSIN = Kd;
+	}
+      else if( config =="medium" )
+	{
+	  // Medium gains
+	  if( _dimension != 30 )
+	    { std::cerr << "Only working for dim=30!" << std::endl; return; }
+
+	  ml::Vector Kp(_dimension),Kd(_dimension);
+	  unsigned int i=0;
+	  Kp(i++)=400;   Kp(i++)=1000; Kp(i++)=2000;  Kp(i++)=1800;  Kp(i++)=2000;
+	  Kp(i++)=1000;  Kp(i++)=400;  Kp(i++)=1000;  Kp(i++)=2000;  Kp(i++)=1800;
+	  Kp(i++)=2000;  Kp(i++)=1000; Kp(i++)=500;  Kp(i++)=250;  Kp(i++)=200;
+	  Kp(i++)=200;   Kp(i++)=300;  Kp(i++)=300;  Kp(i++)=200;  Kp(i++)=400;
+	  Kp(i++)=400;   Kp(i++)=200;  Kp(i++)=200;  Kp(i++)=300;  Kp(i++)= 300;
+	  Kp(i++)=200;   Kp(i++)=400;  Kp(i++)=400;  Kp(i++)=200;  Kp(i++)=200;
+
+	  i=0;
+	  Kd(i++)=40;  Kd(i++)=100;  Kd(i++)=200;  Kd(i++)=180;  Kd(i++)=200;
+	  Kd(i++)=100; Kd(i++)=40;   Kd(i++)=100;  Kd(i++)=200;  Kd(i++)=180;
+	  Kd(i++)=200; Kd(i++)=100;  Kd(i++)=50;   Kd(i++)=25;   Kd(i++)=20;
+	  Kd(i++)=20;  Kd(i++)=30;   Kd(i++)=30;   Kd(i++)=20;   Kd(i++)=40;
+	  Kd(i++)=40;  Kd(i++)=20;   Kd(i++)=20;   Kd(i++)=30;   Kd(i++)= 30;
+	  Kd(i++)=20;  Kd(i++)=40;   Kd(i++)=40;   Kd(i++)=20;   Kd(i++)=20;
+
+	  KpSIN = Kp;
+	  KdSIN = Kd;
+	}
+      else // high
+	{
+	  // High gains
+	  if( _dimension != 30 )
+	    { std::cerr << "Only working for dim=30!" << std::endl; return; }
+
+	  ml::Vector Kp(_dimension),Kd(_dimension);
+	  unsigned int i=0;
+	  Kp(i++)=4000;  Kp(i++)=10000; Kp(i++)=20000; Kp(i++)=18000;  Kp(i++)=20000;
+	  Kp(i++)=10000; Kp(i++)=4000;  Kp(i++)=10000; Kp(i++)=20000;  Kp(i++)=18000;
+	  Kp(i++)=20000; Kp(i++)=10000; Kp(i++)=5000;  Kp(i++)=2500;   Kp(i++)=2000;
+	  Kp(i++)=2000;  Kp(i++)=3000;  Kp(i++)=3000;  Kp(i++)=2000;   Kp(i++)=4000;
+	  Kp(i++)=4000;  Kp(i++)=2000;  Kp(i++)=2000;  Kp(i++)=3000;   Kp(i++)= 3000;
+	  Kp(i++)=2000;  Kp(i++)=4000;  Kp(i++)=4000;  Kp(i++)=2000;   Kp(i++)=2000;
+
+	  i=0;
+	  Kd(i++)=120;   Kd(i++)=300;   Kd(i++)=600;   Kd(i++)=500;    Kd(i++)=600;
+	  Kd(i++)=300;   Kd(i++)=120;   Kd(i++)=300;   Kd(i++)=600;    Kd(i++)=500;
+	  Kd(i++)=600;   Kd(i++)=300;   Kd(i++)=150;   Kd(i++)=75;     Kd(i++)=60;
+	  Kd(i++)=60;    Kd(i++)=90;    Kd(i++)=90;    Kd(i++)=60;     Kd(i++)=120;
+	  Kd(i++)=120;   Kd(i++)=60;    Kd(i++)=60;    Kd(i++)=90;     Kd(i++)= 90;
+	  Kd(i++)=60;    Kd(i++)=120;   Kd(i++)=120;   Kd(i++)=60;     Kd(i++)=60;
+
+	  KpSIN = Kp;
+	  KdSIN = Kd;
+	}
+    }
     /* --- ENTITY ----------------------------------------------------------- */
     /* --- ENTITY ----------------------------------------------------------- */
     /* --- ENTITY ----------------------------------------------------------- */
@@ -181,82 +270,12 @@ namespace sot
 	    }
 	}
       else if( cmdLine == "velocityonly" )
-	{
-	  ml::Vector zero(_dimension); zero.fill(0);
-	  positionSIN = zero;
-	  positionRefSIN = zero;
-	  KpSIN = zero;
-	}
+	{ setGainVelocityOnly(); }
       else if( cmdLine == "stdGain" )
 	{
 	  std::string config = "high";
 	  cmdArgs >> std::ws; if( cmdArgs.good() ) cmdArgs >> config;
-
-	  if( config =="low" )
-	    {
-	      // Low
-	      ml::Vector Kp(_dimension); Kp.fill(100);
-	      ml::Vector Kd(_dimension); Kp.fill(20);
-	      KpSIN = Kp;
-	      KdSIN = Kd;
-	    }
-	  else if( config =="medium" )
-	    {
-	      // Medium gains
-	      // Kp = [30](400,1000,2000,1800,2000,1000,400,1000,2000,1800,2000,1000,500,250,200,200,300,300,200,400,400,200,200,300, 300,200,400,400,200,200);
-	      // Kd = [30] (40,100,200,180,200,100,40,100,200,180,200,100,50,25,20,20,30,30,20,40,40,20,20,30, 30,20,40,40,20,20);
-	      if( _dimension != 30 )
-		{ os << "Only working for dim=30!" << std::endl; return; }
-
-	      ml::Vector Kp(_dimension),Kd(_dimension);
-	      unsigned int i=0;
-	      Kp(i++)=400;   Kp(i++)=1000; Kp(i++)=2000;  Kp(i++)=1800;  Kp(i++)=2000;
-	      Kp(i++)=1000;  Kp(i++)=400;  Kp(i++)=1000;  Kp(i++)=2000;  Kp(i++)=1800;
-	      Kp(i++)=2000;  Kp(i++)=1000; Kp(i++)=500;  Kp(i++)=250;  Kp(i++)=200;
-	      Kp(i++)=200;   Kp(i++)=300;  Kp(i++)=300;  Kp(i++)=200;  Kp(i++)=400;
-	      Kp(i++)=400;   Kp(i++)=200;  Kp(i++)=200;  Kp(i++)=300;  Kp(i++)= 300;
-	      Kp(i++)=200;   Kp(i++)=400;  Kp(i++)=400;  Kp(i++)=200;  Kp(i++)=200;
-
-	      i=0;
-	      Kd(i++)=40;  Kd(i++)=100;  Kd(i++)=200;  Kd(i++)=180;  Kd(i++)=200;
-	      Kd(i++)=100; Kd(i++)=40;   Kd(i++)=100;  Kd(i++)=200;  Kd(i++)=180;
-	      Kd(i++)=200; Kd(i++)=100;  Kd(i++)=50;   Kd(i++)=25;   Kd(i++)=20;
-	      Kd(i++)=20;  Kd(i++)=30;   Kd(i++)=30;   Kd(i++)=20;   Kd(i++)=40;
-	      Kd(i++)=40;  Kd(i++)=20;   Kd(i++)=20;   Kd(i++)=30;   Kd(i++)= 30;
-	      Kd(i++)=20;  Kd(i++)=40;   Kd(i++)=40;   Kd(i++)=20;   Kd(i++)=20;
-
-	      KpSIN = Kp;
-	      KdSIN = Kd;
-	    }
-	  else // high
-	    {
-	      // High gains
-	      // Kp = [30](4000,10000,20000,18000,20000,10000,4000,10000,20000,18000,20000,10000,5000,2500,2000,2000,3000,3000,2000,4000,4000,2000,2000,3000, 3000,2000,4000,4000,2000,2000);
-	      //Kd = [30](120,300,600,500,600,300,120,300,600,500,600,300,150,75,60,60,90,90,60,120,120,60,60,90, 90,60,120,120,60,60);
-
-	      if( _dimension != 30 )
-		{ os << "Only working for dim=30!" << std::endl; return; }
-
-	      ml::Vector Kp(_dimension),Kd(_dimension);
-	      unsigned int i=0;
-	      Kp(i++)=4000;  Kp(i++)=10000; Kp(i++)=20000; Kp(i++)=18000;  Kp(i++)=20000;
-	      Kp(i++)=10000; Kp(i++)=4000;  Kp(i++)=10000; Kp(i++)=20000;  Kp(i++)=18000;
-	      Kp(i++)=20000; Kp(i++)=10000; Kp(i++)=5000;  Kp(i++)=2500;   Kp(i++)=2000;
-	      Kp(i++)=2000;  Kp(i++)=3000;  Kp(i++)=3000;  Kp(i++)=2000;   Kp(i++)=4000;
-	      Kp(i++)=4000;  Kp(i++)=2000;  Kp(i++)=2000;  Kp(i++)=3000;   Kp(i++)= 3000;
-	      Kp(i++)=2000;  Kp(i++)=4000;  Kp(i++)=4000;  Kp(i++)=2000;   Kp(i++)=2000;
-
-	      i=0;
-	      Kd(i++)=120;   Kd(i++)=300;   Kd(i++)=600;   Kd(i++)=500;    Kd(i++)=600;
-	      Kd(i++)=300;   Kd(i++)=120;   Kd(i++)=300;   Kd(i++)=600;    Kd(i++)=500;
-	      Kd(i++)=600;   Kd(i++)=300;   Kd(i++)=150;   Kd(i++)=75;     Kd(i++)=60;
-	      Kd(i++)=60;    Kd(i++)=90;    Kd(i++)=90;    Kd(i++)=60;     Kd(i++)=120;
-	      Kd(i++)=120;   Kd(i++)=60;    Kd(i++)=60;    Kd(i++)=90;     Kd(i++)= 90;
-	      Kd(i++)=60;    Kd(i++)=120;   Kd(i++)=120;   Kd(i++)=60;     Kd(i++)=60;
-
-	      KpSIN = Kp;
-	      KdSIN = Kd;
-	    }
+	  setStandardGains( config );
 	}
       else
 	{
