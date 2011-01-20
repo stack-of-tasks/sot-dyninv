@@ -29,6 +29,7 @@ have to be available on your machine.
 
  - Libraries:
    - sot-core (>= 1.0.0)
+   - soth (>= 0.0.1)
  - System tools:
    - CMake (>=2.6)
    - pkg-config
@@ -36,3 +37,4 @@ have to be available on your machine.
 
 
 [sot-core]: http://github.com/jrl-umi3128/sot-core
+[soth]: ssh://softs.laas.fr/git/jrl/frameworks/soth
