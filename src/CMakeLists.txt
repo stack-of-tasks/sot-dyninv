@@ -35,6 +35,7 @@ FOREACH(lib ${libs})
 
   PKG_CONFIG_USE_DEPENDENCY(${lib} sot-core)
   PKG_CONFIG_USE_DEPENDENCY(${lib} dynamic-graph)
+  PKG_CONFIG_USE_DEPENDENCY(${lib} soth)
 
   INSTALL(TARGETS ${lib} DESTINATION lib/plugin)
   # build python submodule

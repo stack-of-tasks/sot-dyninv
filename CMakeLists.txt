@@ -41,6 +41,8 @@ SETUP_PROJECT()
 ADD_REQUIRED_DEPENDENCY("jrl-mal >= 1.8.0")
 ADD_REQUIRED_DEPENDENCY("dynamic-graph >= 1.0.0")
 ADD_REQUIRED_DEPENDENCY("sot-core >= 1.0.0")
+ADD_REQUIRED_DEPENDENCY("soth >= 0.0.1")
+
 
 # List plug-ins that will be compiled.
 SET(libs
