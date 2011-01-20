@@ -21,9 +21,9 @@
 #include <dynamic-graph/command.h>
 #include <dynamic-graph/command-direct-setter.h>
 #include <dynamic-graph/command-direct-getter.h>
+#include <dynamic-graph/command-bind.h>
 
-
-
+#include <boost/function.hpp>
 
 /* --- HELPER --------------------------------------------------------------- */
 namespace sot {
@@ -32,6 +32,10 @@ namespace sot {
     using ::dynamicgraph::command::docDirectGetter;
     using ::dynamicgraph::command::makeDirectSetter;
     using ::dynamicgraph::command::docDirectSetter;
+    using ::dynamicgraph::command::makeCommandVoid0;
+    using ::dynamicgraph::command::docCommandVoid0;
+    using ::dynamicgraph::command::makeCommandVoid1;
+    using ::dynamicgraph::command::docCommandVoid1;
   } // namespace dyninv
 } // namespace sot
 
