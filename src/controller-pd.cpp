@@ -28,10 +28,6 @@ namespace sot
 
     namespace dg = ::dynamicgraph;
     using namespace dg;
-    using ::dynamicgraph::command::makeDirectGetter;
-    using ::dynamicgraph::command::docDirectGetter;
-    using ::dynamicgraph::command::makeDirectSetter;
-    using ::dynamicgraph::command::docDirectSetter;
 
     /* --- DG FACTORY ------------------------------------------------------- */
     DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(ControllerPD,"ControllerPD");
@@ -50,28 +46,21 @@ namespace sot
       ,CONSTRUCT_SIGNAL_IN(velocity,ml::Vector)
       ,CONSTRUCT_SIGNAL_IN(velocityRef,ml::Vector)
 
-      ,CONSTRUCT_SIGNAL_OUT(control,ml::Vector,ControllerPD,
-			    KpSIN << KdSIN << positionSIN << positionRefSIN
-			    << velocitySIN << velocityRefSIN )
+      ,CONSTRUCT_SIGNAL_OUT(control,ml::Vector,
+       			    KpSIN << KdSIN << positionSIN << positionRefSIN
+       			    << velocitySIN << velocityRefSIN )
     {
       Entity::signalRegistration( KpSIN << KdSIN << positionSIN << positionRefSIN
 				  << velocitySIN << velocityRefSIN
 				  << controlSOUT );
-
 
       /* Commands. */
       addCommand("getSize",
 		 makeDirectGetter(*this,&_dimension,
 				  docDirectGetter("dimension","int")));
 
-      // std::string docstring
-      // 		 = "\nSet the vectors dimension.\n\nInput:\n- an int.\nVoid return.\n\n";
-      // addCommand("setSize",
-      // 		 new ::dynamicgraph::command::Setter<ControllerPD,int>
-      // 		 (*this, &ControllerPD::size,docstring));
-
       addCommand("setSize",
-		 makeDirectSetter(*this, &_dimension,
+		 makeDirectSetter<Value::INT>(*this, &_dimension,
 				  docDirectSetter("dimension","int")));
     }
 

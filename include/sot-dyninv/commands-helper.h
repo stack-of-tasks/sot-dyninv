@@ -30,7 +30,7 @@ namespace dynamicgraph {
 
 
     template <class E, typename T>
-    class DirectGetter
+      class DirectGetter
       : public Command
     {
     public:
@@ -38,10 +38,10 @@ namespace dynamicgraph {
       typedef T (E::*GetterMethod) () const;
 
       /// Constructor
-      DirectGetter(E& entity,T* ptr,
-		   const std::string& docString)
-	: Command(entity, std::vector<Value::Type>(), docString),
-	  T_ptr(ptr) {}
+    DirectGetter(E& entity,T* ptr,
+		 const std::string& docString)
+      : Command(entity, std::vector<Value::Type>(), docString),
+	T_ptr(ptr) {}
 
     protected:
       virtual Value doExecute() { return Value(*T_ptr); }
@@ -50,16 +50,16 @@ namespace dynamicgraph {
     };
 
     template <class E, typename T>
-    DirectGetter<E,T>*
-    makeDirectGetter( E& entity,T* ptr,
-		      const std::string& docString)
-    { return  new DirectGetter<E,T>(entity,ptr,docString); }
+      DirectGetter<E,T>*
+      makeDirectGetter( E& entity,T* ptr,
+			const std::string& docString)
+      { return  new DirectGetter<E,T>(entity,ptr,docString); }
 
     std::string docDirectGetter( const std::string& name,
 				 const std::string& type )
-    {
-      return std::string("\nGet the ")+name+".\n\nNo input.\nReturn an "+type+".\n\n";
-    }
+      {
+	return std::string("\nGet the ")+name+".\n\nNo input.\nReturn an "+type+".\n\n";
+      }
 
   } // namespace command
 } // namespace dynamicgraph
@@ -69,35 +69,26 @@ namespace dynamicgraph {
 namespace dynamicgraph {
   namespace command {
 
-    template <class E, typename T>
-    class DirectSetter
-      : public Command
-    {
-    public:
-      DirectSetter(E& entity,T* ptr,const std::string& docString);
-      typedef void (E::*SetterMethod) (const int&);
 
-    protected:
-      virtual Value doExecute()
+    template< typename T >
+      struct ValueHelper
       {
-	const std::vector<Value>& values = getParameterValues();
-	T val = values[0].value();
-	return (*T_ptr) = val;
-      }
-    private:
-      T* T_ptr;
-    };
+	static const Value::Type TypeID;
+      };
 
-    template <class E>
-      class DirectSetter<E,int>
+    template<>
+      const Value::Type ValueHelper<int>::TypeID = Value::INT;
+
+
+    template <class E, typename T, Value::Type TYPEID>
+      class DirectSetter
       : public Command
     {
-      typedef int T;
     public:
     DirectSetter(E& entity,T* ptr,const std::string& docString)
-      :Command(entity, boost::assign::list_of(Value::INT), docString)
+      :Command(entity, boost::assign::list_of(TYPEID), docString)
 	,T_ptr(ptr)
-	{}
+      {}
 
     protected:
       virtual Value doExecute()
@@ -111,21 +102,37 @@ namespace dynamicgraph {
       T* T_ptr;
     };
 
-    template <class E, typename T>
-    DirectSetter<E,T>*
-    makeDirectSetter( E& entity,T* ptr,
-		      const std::string& docString)
-    { return  new DirectSetter<E,T>(entity,ptr,docString); }
+
+
+    template <Value::Type TYPEID,class E, typename T>
+      DirectSetter<E,T,TYPEID>*
+      makeDirectSetter( E& entity,T* ptr,
+			const std::string& docString)
+      { return  new DirectSetter<E,T,TYPEID>(entity,ptr,docString); }
 
     std::string docDirectSetter( const std::string& name,
 				 const std::string& type )
-    {
-      return std::string("\nSet the ")+name+".\n\nInput:\n - a "
-	+type+".\nVoid return.\n\n";
-    }
+      {
+	return std::string("\nSet the ")+name+".\n\nInput:\n - a "
+	  +type+".\nVoid return.\n\n";
+      }
 
   } // namespace command
 } // namespace dynamicgraph
+
+
+
+/* --- HELPER --------------------------------------------------------------- */
+namespace sot {
+  namespace dyninv {
+    using ::dynamicgraph::command::Value;
+    using ::dynamicgraph::command::makeDirectGetter;
+    using ::dynamicgraph::command::docDirectGetter;
+    using ::dynamicgraph::command::makeDirectSetter;
+    using ::dynamicgraph::command::docDirectSetter;
+  } // namespace dyninv
+} // namespace sot
+
 
 
 #endif // __sot_dyninv_commands_helper_H__

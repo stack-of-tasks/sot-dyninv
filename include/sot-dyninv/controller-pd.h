@@ -37,6 +37,7 @@
 
 /* SOT */
 #include <sot-dyninv/signal-helper.h>
+#include <sot-dyninv/entity-helper.h>
 
 
 
@@ -47,8 +48,10 @@ namespace sot {
   /* --- CLASS ----------------------------------------------------------- */
   /* --------------------------------------------------------------------- */
 
+
   class SOTCONTROLLERPD_EXPORT ControllerPD
     :public ::dynamicgraph::Entity
+      ,public ::dynamicgraph::EntityHelper<ControllerPD>
       {
 
       public: /* --- CONSTRUCTOR ---- */
