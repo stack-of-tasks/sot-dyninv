@@ -48,6 +48,7 @@ ADD_REQUIRED_DEPENDENCY("soth >= 0.0.1")
 SET(libs
   controller-pd
   task-dyn-pd
+  dynamic-integrator
   )
 
 LIST(APPEND LOGGING_WATCHED_TARGETS ${libs})
