@@ -45,6 +45,7 @@ ADD_REQUIRED_DEPENDENCY("sot-core >= 1.0.0")
 # List plug-ins that will be compiled.
 SET(libs
   controller-pd
+  task-dyn-pd
   )
 
 LIST(APPEND LOGGING_WATCHED_TARGETS ${libs})
