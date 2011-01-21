@@ -6,3 +6,6 @@ TaskDynPD('')
 
 from dynamic_integrator import DynamicIntegrator
 DynamicIntegrator('')
+
+from solver_op_space import SolverOpSpace
+SolverOpSpace('')

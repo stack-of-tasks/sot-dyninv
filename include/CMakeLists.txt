@@ -14,7 +14,18 @@
 # sot-dyninv. If not, see <http://www.gnu.org/licenses/>.
 
 SET(${PROJECT_NAME}_HEADERS
+	commands-helper.h
+	entity-helper.h
+	signal-helper.h
+
+	mal-to-eigen.h
+	stack-template.h
+	stack-template.t.cpp
+
 	controller-pd.h
+	task-dyn-pd.h
+	dynamic-integrator.h
+	solver-op-space.h
 )
 
 # Recreate correct path for the headers
