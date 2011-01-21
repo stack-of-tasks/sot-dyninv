@@ -9,3 +9,6 @@ DynamicIntegrator('')
 
 from solver_op_space import SolverOpSpace
 SolverOpSpace('')
+
+from zmp_estimator import ZmpEstimator
+ZmpEstimator('')

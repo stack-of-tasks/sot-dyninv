@@ -46,10 +46,11 @@ ADD_REQUIRED_DEPENDENCY("soth >= 0.0.1")
 
 # List plug-ins that will be compiled.
 SET(libs
-  solver-op-space
-  controller-pd
-  task-dyn-pd
-  dynamic-integrator
+	controller-pd
+	task-dyn-pd
+	dynamic-integrator
+	solver-op-space
+	zmp-estimator
   )
 
 LIST(APPEND LOGGING_WATCHED_TARGETS ${libs})

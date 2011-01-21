@@ -26,6 +26,7 @@ SET(${PROJECT_NAME}_HEADERS
 	task-dyn-pd.h
 	dynamic-integrator.h
 	solver-op-space.h
+	zmp-estimator.h
 )
 
 # Recreate correct path for the headers
