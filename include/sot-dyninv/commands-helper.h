@@ -36,6 +36,8 @@ namespace sot {
     using ::dynamicgraph::command::docCommandVoid0;
     using ::dynamicgraph::command::makeCommandVoid1;
     using ::dynamicgraph::command::docCommandVoid1;
+    using ::dynamicgraph::command::makeCommandVoid2;
+    using ::dynamicgraph::command::docCommandVoid2;
     using ::dynamicgraph::command::makeCommandVerbose;
     using ::dynamicgraph::command::docCommandVerbose;
    } // namespace dyninv
