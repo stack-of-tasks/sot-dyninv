@@ -51,6 +51,7 @@ SET(libs
 	dynamic-integrator
 	solver-op-space
 	zmp-estimator
+	pseudo-robot-dynamic
   )
 
 LIST(APPEND LOGGING_WATCHED_TARGETS ${libs})

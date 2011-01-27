@@ -7,6 +7,9 @@ TaskDynPD('')
 from dynamic_integrator import DynamicIntegrator
 DynamicIntegrator('')
 
+from pseudo_robot_dynamic import PseudoRobotDynamic
+PseudoRobotDynamic('')
+
 from solver_op_space import SolverOpSpace
 SolverOpSpace('')
 
