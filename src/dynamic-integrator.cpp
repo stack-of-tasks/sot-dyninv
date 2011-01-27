@@ -107,11 +107,17 @@ namespace sot
 
     void DynamicIntegrator::
     setPosition( const ml::Vector& p )
-    { position = p; }
+    {
+      position = p;
+      positionSOUT.setReady();
+    }
 
     void DynamicIntegrator::
     setVelocity( const ml::Vector& v )
-    { velocity = v; }
+    {
+      velocity = v;
+      velocitySOUT.setReady();
+    }
 
     void DynamicIntegrator::
     setState( const ml::Vector& p,const ml::Vector& v )
@@ -119,6 +125,8 @@ namespace sot
       sotDEBUG(5) << "State: " << p << v << std::endl;
       position = p;
       velocity = v;
+      velocitySOUT.setReady();
+      positionSOUT.setReady();
     }
 
     /* --- COMMANDS ---------------------------------------------------------- */
