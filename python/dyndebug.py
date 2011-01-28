@@ -2,8 +2,10 @@ execfile('/home/nmansard/.pythonrc')
 
 from dynamic_graph import plug
 from dynamic_graph.sot.core import *
+from dynamic_graph.sot.core.math_small_entities import Derivator_of_Matrix
 from dynamic_graph.sot.dynamics import *
 from dynamic_graph.sot.dyninv import *
+import script_shortcuts
 
 # --- Dynamic parameters ---
 hrp2_14_pkgdatarootdir = "/home/nmansard/compil/devgiri/hpp2/share/hrp2_14"
@@ -132,26 +134,79 @@ robot.setRoot(((0.994864055284,0.000210089058006,0.101219896104,0.0274106623863)
 # robot.root [4,4]((0.962169712502,0.000588801121243,0.272450174631,0.13933634465),(1.369076794e-05,0.999997559008,-0.00220947748355,0.143849747317),(-0.272450810525,0.00212962236724,0.962167355792,0.632333943842),(0,0,0,1))
 
 # --- Task Dyn -----------------------------------------
-dyn.createOpPoint('task','right-wrist')
-p6 = FeaturePoint6d('p6')
-p6d= FeaturePoint6d('p6d')
 
-p6d.position.value = ((0,0,-1,0.22),(0,1,0,-0.37),(1,0,0,.74),(0,0,0,1))
-plug(dyn.Jtask,p6.Jq)
-plug(dyn.task,p6.position)
+class MetaTask6d(object):
+    name=''
+    opPoint=''
+    dyn=0
+    derivator=0
+    task=0
+    feature=0
+    featureDes=0
 
-p6.sdes.value='p6d'
-p6.selec.value='000111'
-p6.frame('current')
+    def opPointExist(self,opPoint):
+        sigsP = filter(lambda x: x.getName().split(':')[-1] == opPoint, self.dyn.signals())
+        sigsJ = filter(lambda x: x.getName().split(':')[-1] == 'J'+opPoint, self.dyn.signals())
+        return len(sigsP)==1 & len(sigsJ)==1
 
-task=TaskDynPD('task')
-task.add('p6')
-plug(dyn.velocity,task.qdot)
-task.dt.value = 1e-3
-task.controlGain.value = 10
+    def defineDynEntities(self,dyn):
+        self.dyn=dyn
+
+    def createOpPoint(self,opPoint,opPointRef = 'right-wrist'):
+        self.opPoint=opPoint
+        if self.opPointExist(opPoint): return
+        self.dyn.createOpPoint(opPoint,opPointRef)
+
+    def createFeatures(self):
+        self.feature    = FeaturePoint6d('feature'+self.name)
+        self.featureDes = FeaturePoint6d('feature'+self.name+'_ref')
+        self.feature.selec.value = '111111'
+        self.feature.frame('current')
+
+    def createTask(self):
+        self.task = TaskDynPD('task'+self.name)
+        self.task.dt.value = 1e-3
+
+    def createGain(self):
+        self.gain = GainAdaptive('gain'+self.name)
+        self.gain.set(1050,45,125e3)
+
+    def plugEverything(self):
+        self.feature.sdes.value = self.featureDes.name
+        plug(self.dyn.signal(self.opPoint),self.feature.signal('position'))
+        plug(self.dyn.signal('J'+self.opPoint),self.feature.signal('Jq'))
+        self.task.add(self.feature.name)
+        plug(self.dyn.velocity,self.task.qdot)
+        plug(self.task.error,self.gain.error)
+        plug(self.gain.gain,self.task.controlGain)
+
+    def __init__(self,name,dyn,opPoint,opPointRef='right-wrist'):
+        self.name=name
+        self.defineDynEntities(dyn)
+        self.createOpPoint(opPoint,opPointRef)
+        self.createFeatures()
+        self.createTask()
+        self.createGain()
+        self.plugEverything()
+
+    @property
+    def ref(self):
+        return self.featureDes.position.value
+
+    @ref.setter
+    def ref(self,m):
+        self.featureDes.position.value = m
+
+task=MetaTask6d('rh',dyn,'task')
+task.ref = ((0,0,-1,0.22),(0,1,0,-0.37),(1,0,0,.74),(0,0,0,1))
+
+
 
 # --- Task LFoot -----------------------------------------
 # Move the right foot up.
+
+
+
 dyn.createOpPoint('taskLF','left-ankle')
 featureLF  = FeaturePoint6d('featureLF')
 featureLFd = FeaturePoint6d('featureLFd')
@@ -207,11 +262,70 @@ sot.setSize(30)
 sot.breakFactor.value = 10
 
 plug(dyn.inertiaReal,sot.matrixInertia)
-#plug(dyn.dynamicDrift,sot.dyndrift)
+plug(dyn.dynamicDrift,sot.dyndrift)
 plug(dyn.velocity,sot.velocity)
 
 plug(sot.control,robot.control)
 
 # For the integration of q = int(int(qddot)).
 plug(sot.acceleration,robot.acceleration)
+
+# ---- CONTACT -----------------------------------------
+# Contact definition
+
+# Left foot contact
+dyn.createJacobian('Jlleg','left-ankle')
+Jll_dot = Derivator_of_Matrix('Jll_dot')
+plug(dyn.Jlleg,Jll_dot.sin)
+Jll_dot.dt.value = 1e3
+
+sot.addContact('ll')
+plug(dyn.Jlleg,sot._ll_J)
+plug(Jll_dot.sout,sot._ll_Jdot)
+sot._ll_p.value = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
+
+# Right foot contact
+dyn.createJacobian('Jrleg','right-ankle')
+Jrl_dot = Derivator_of_Matrix('Jrl_dot')
+plug(dyn.Jrleg,Jrl_dot.sin)
+Jrl_dot.dt.value = 1e3
+
+sot.addContact('rl')
+plug(dyn.Jrleg,sot._rl_J)
+plug(Jrl_dot.sout,sot._rl_Jdot)
+#sot._rl_p.value =  ((0.12,-0.09,-0.09,0.12),(-0.08,-0.08,0.05,0.05),(-0.105,-0.105,-0.105,-0.105))
+sot._rl_p.value =  ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
+
+# constraint order
+#                               19  16
+#     ^ Front +X                +---+
+#     |                 9   6   | R |
+#     +--> Right -Y     +---+   |   |
+#                       |   |   +---+
+#       ^X              | L |  18   17(-8,-45)
+#    Y  |               +---+   (-8,7)
+#    <--+              8    7(-8,-7)
+#                      (-8,45)
+
+# --- TRACE ----------------------------------------------
+
+#tr = TracerRealTime('tr')
+#tr.bufferSize(10485760)
+
+#tr.open('/tmp/','dyn_','.dat')
+#robot.periodicCall addSignal tr.triger
+
+#tr.add('p6.error','position')
+#tr.add('featureCom.error','comerror')
+#tr.add('dyn.com','com')
+#tr.add('sot.zmp')
+#tr.add('sot.qdot')
+#tr.add('robot.state')
+## tr.add('gCom.gain')
+## tr.add('gCom.error','gerror')
+#tr.start()
+
+#tr.add('sot.control')
+
+
 
