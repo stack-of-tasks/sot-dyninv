@@ -1,11 +1,4 @@
 
-def prettyDisp(self):
-    print matlab(self.value)
-
-from dynamic_graph.signal_base import *
-setattr(SignalBase,'m',property(prettyDisp))
-
-print('Pretty matlab print set')
 
 
 def pseudozero(prec):
@@ -20,7 +13,7 @@ def pseudozero(prec):
 class matlab:
   prec=12
   space=2
-  fullPrec=0
+  fullPrec=1e-5
 
   def __init__( self,obj ):
     try:
@@ -31,6 +24,7 @@ class matlab:
       return self.matlabFromVector(obj)
     except:
       pass
+    self.resstr = str(obj)
 
   def __str__(self):
     return self.resstr
@@ -44,17 +38,20 @@ class matlab:
     for v in A:
       lnstr=()
       for x in v:
-        if (abs(x)<self.fullPrec):
-          curr=pseudozero(self.prec)
+        if (abs(x)<self.fullPrec*self.fullPrec):
+          curr='0'
         else:
-          curr= ' '+(fm % x)
+            if (abs(x)<self.fullPrec):
+                curr=pseudozero(self.prec)
+            else:
+                curr= ' '+(fm % x)
         if( maxstr<len(curr)):
           maxstr=len(curr)
         lnstr+=(curr,)
       mstr+=(lnstr,)
 
     maxstr+=self.space
-    resstr='...[\n'
+    resstr='[...\n'
     first=True
     for v in mstr:
       if first:
@@ -80,13 +77,16 @@ class matlab:
     maxstr=0
     vstr=(())
     for x in v:
-      if (abs(x)<self.fullPrec):
-        curr=pseudozero(prec)
-      else:
-        curr= ' '+(fm % x)
-      if( maxstr<len(curr)):
-        maxstr=len(curr)
-      vstr+=(curr,)
+        if (abs(x)<self.fullPrec*self.fullPrec):
+            curr='0'
+        else:
+            if (abs(x)<self.fullPrec):
+                curr=pseudozero(self.prec)
+            else:
+                curr= ' '+(fm % x)
+        if( maxstr<len(curr)):
+            maxstr=len(curr)
+        vstr+=(curr,)
 
     maxstr+=self.space
     resstr='[  '
