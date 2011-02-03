@@ -1,11 +1,10 @@
-execfile('/home/nmansard/.pythonrc')
-
 from dynamic_graph import plug
 from dynamic_graph.sot.core import *
 from dynamic_graph.sot.core.math_small_entities import Derivator_of_Matrix
 from dynamic_graph.sot.dynamics import *
 from dynamic_graph.sot.dyninv import *
 import script_shortcuts
+from matlab import matlab
 
 # --- Dynamic parameters ---
 hrp2_14_pkgdatarootdir = "/home/nmansard/compil/devgiri/hpp2/share/hrp2_14"
@@ -23,12 +22,16 @@ robotDim=36
 
 robot = RobotSimu("robot")
 robot.resize(robotDim)
-robot.set( (-0.0091163033083694940822,-0.091409963793829082657,-0.47197874328281280709,0.84038019261713603481,-0.47023279905304871118,0.089662407859063653071,0.0095078180225693850747,0.091110286804129178573,-0.4694503518480188653,0.83530799538565336793,-0.46768619090392338222,-0.093802946636709280681,-8.7564658296357018321e-05,0.0032643187737393364843,-7.8338082008638037324e-06,0.00019474257801330629915,0.25837025731361307201,-0.17509910214200960499,-6.1173425555032122825e-05,-0.52495354876847799552,3.1825099712999219606e-06,-0.00025760004742291479777,-3.4121048192112107608e-06,0.25836727162795458668,0.17432209754621175168,-8.8902395499734237117e-05,-0.52498369084585783106,-3.4610294148795152394e-07,-0.00026540143977199129972,1.004984814529256132e-06) )
+#robot.set( (0,0,0,0,0,0, -0.0091163033083694940822,-0.091409963793829082657,-0.47197874328281280709,0.84038019261713603481,-0.47023279905304871118,0.089662407859063653071,0.0095078180225693850747,0.091110286804129178573,-0.4694503518480188653,0.83530799538565336793,-0.46768619090392338222,-0.093802946636709280681,-8.7564658296357018321e-05,0.0032643187737393364843,-7.8338082008638037324e-06,0.00019474257801330629915,0.25837025731361307201,-0.17509910214200960499,-6.1173425555032122825e-05,-0.52495354876847799552,3.1825099712999219606e-06,-0.00025760004742291479777,-3.4121048192112107608e-06,0.25836727162795458668,0.17432209754621175168,-8.8902395499734237117e-05,-0.52498369084585783106,-3.4610294148795152394e-07,-0.00026540143977199129972,1.004984814529256132e-06) )
+robot.set( ( 0.0274106623863, 0.143843868989, 0.646921914726, 0.00221064938462, 0.101393756965, 1.36729741242e-05, -0.00911630330837, -0.0914099637938, -0.471978743283, 0.840380192617, -0.470232799053, 0.0896624078591, 0.00950781802257, 0.0911102868041, -0.469450351848, 0.835307995386, -0.467686190904, -0.0938029466367, -8.75646582964e-05, 0.00326431877374, -7.83380820086e-06, 0.000194742578013, 0.258370257314, -0.175099102142, -6.1173425555e-05, -0.524953548768, 3.1825099713e-06, -0.000257600047423, -3.41210481921e-06, 0.258367271628, 0.174322097546, -8.89023954997e-05, -0.524983690846, -3.46102941488e-07, -0.000265401439772, 1.00498481453e-06 ) )
 
 
 robot_old=robot
 robot = PseudoRobotDynamic("dynint")
 robot.replace("robot",True)
+
+dt=1e-3
+robot.dt.value = dt
 
 #robot.boundNewCommand("increment")
 
@@ -83,6 +86,7 @@ flex.setFromSensor(False)
 plug(dyn2.contact,flex.contactEmbeddedPosition)
 plug(waistMsole.position,flex.contactEmbeddedPosition)
 plug(flex.waistWorldPoseRPY,dyn.ffposition)
+flex.contactWorldPosition.value = ((1,0,0,0),(0,1,0,0),(0,0,1,0),(0,0,0,1))
 
 # --- FF VELOCITY ----------
 dyn3=Dynamic('dyn3')
@@ -105,11 +109,10 @@ plug(flex.qdotOUT,dyn.velocity)
 # to compute (e.g. with matlab) the root position at start.
 
 sole = OpPointModifier('sole')
-dyn.createPosition('rleg','right-ankle')
-dyn.createPosition('lleg','left-ankle')
+dyn.createOpPoint('rf','right-ankle')
 dyn.createPosition('root','waist')
 
-plug(dyn.rleg,sole.positionIN)
+plug(dyn.rf,sole.positionIN)
 sole.setTransformation(((1,0,0,0),(0,1,0,0),(0,0,1,-0.105),(0,0,0,1)))
 
 # 45deg
@@ -197,38 +200,13 @@ class MetaTask6d(object):
     def ref(self,m):
         self.featureDes.position.value = m
 
+# Task right hand
 task=MetaTask6d('rh',dyn,'task')
 task.ref = ((0,0,-1,0.22),(0,1,0,-0.37),(1,0,0,.74),(0,0,0,1))
 
-
-
-# --- Task LFoot -----------------------------------------
-# Move the right foot up.
-
-
-
-dyn.createOpPoint('taskLF','left-ankle')
-featureLF  = FeaturePoint6d('featureLF')
-featureLFd = FeaturePoint6d('featureLFd')
-
-featureLFd.position.value = ((1,0,0,0.0),(0,1,0,+0.29),(0,0,1,.15),(0,0,0,1))
-plug(dyn.JtaskLF,featureLF.Jq)
-plug(dyn.taskLF,featureLF.position)
-featureLF.sdes.value = 'featureLFd'
-featureLF.selec.value = '111111'
-featureLF.frame('current')
-
-taskLF = TaskDynPD('taskLF')
-taskLF.add('featureLF')
-plug(dyn.velocity,taskLF.qdot)
-taskLF.dt = 1e-3
-
-gLF = GainAdaptive('gLF')
-plug(taskLF.error,gLF.error)
-plug(gLF.gain,taskLF.controlGain)
-# Work from .04 to .09 gLF.set 1050 45 125e3
-# gLF.set 500 15 125e3
-gLF.set(1050,45,125e3)
+# Task LFoot: Move the right foot up.
+taskLF=MetaTask6d('lf',dyn,'lf','left-ankle')
+taskLF.ref = ((1,0,0,0.0),(0,1,0,+0.29),(0,0,1,.15),(0,0,0,1))
 
 # --- TASK COM ------------------------------------------------------
 dyn.setProperty('ComputeCoM','true')
@@ -273,28 +251,21 @@ plug(sot.acceleration,robot.acceleration)
 # ---- CONTACT -----------------------------------------
 # Contact definition
 
-# Left foot contact
-dyn.createJacobian('Jlleg','left-ankle')
-Jll_dot = Derivator_of_Matrix('Jll_dot')
-plug(dyn.Jlleg,Jll_dot.sin)
-Jll_dot.dt.value = 1e3
+supportLF = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
+supportRF = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
+# supportRF = ((0.12,-0.09,-0.09,0.12),(-0.08,-0.08,0.05,0.05),(-0.105,-0.105,-0.105,-0.105))
 
-sot.addContact('ll')
-plug(dyn.Jlleg,sot._ll_J)
-plug(Jll_dot.sout,sot._ll_Jdot)
-sot._ll_p.value = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
+# Left foot contact
+contactLF = MetaTask6d('contact_lleg',dyn,'lf','left-ankle')
+contactLF.feature.frame('desired')
+sot.addContactFromTask(contactLF.task.name,'LF')
+sot._LF_p.value = supportLF
 
 # Right foot contact
-dyn.createJacobian('Jrleg','right-ankle')
-Jrl_dot = Derivator_of_Matrix('Jrl_dot')
-plug(dyn.Jrleg,Jrl_dot.sin)
-Jrl_dot.dt.value = 1e3
-
-sot.addContact('rl')
-plug(dyn.Jrleg,sot._rl_J)
-plug(Jrl_dot.sout,sot._rl_Jdot)
-#sot._rl_p.value =  ((0.12,-0.09,-0.09,0.12),(-0.08,-0.08,0.05,0.05),(-0.105,-0.105,-0.105,-0.105))
-sot._rl_p.value =  ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
+contactRF = MetaTask6d('contact_rleg',dyn,'rf','right-ankle')
+contactRF.feature.frame('desired')
+sot.addContactFromTask(contactRF.task.name,'RF')
+sot._RF_p.value = supportRF
 
 # constraint order
 #                               19  16
@@ -309,23 +280,40 @@ sot._rl_p.value =  ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0
 
 # --- TRACE ----------------------------------------------
 
-#tr = TracerRealTime('tr')
-#tr.bufferSize(10485760)
+from dynamic_graph.tracer import *
+from dynamic_graph.tracer_real_time import *
+tr = TracerRealTime('tr')
+tr.setBufferSize(10485760)
+tr.open('/tmp/','dyn_','.dat')
+tr.add('dyn.position','')
+tr.start()
 
-#tr.open('/tmp/','dyn_','.dat')
 #robot.periodicCall addSignal tr.triger
 
 #tr.add('p6.error','position')
-#tr.add('featureCom.error','comerror')
-#tr.add('dyn.com','com')
-#tr.add('sot.zmp')
-#tr.add('sot.qdot')
-#tr.add('robot.state')
-## tr.add('gCom.gain')
-## tr.add('gCom.error','gerror')
-#tr.start()
+tr.add('featureCom.error','comerror')
+tr.add('dyn.com','com')
+tr.add('sot.zmp','')
+#tr.add('sot.qdot','')
+tr.add('dyn.position','state')
+tr.add('dyn.ffposition','ffposition')
+# tr.add('gCom.gain','')
+# tr.add('gCom.error','gerror')
 
-#tr.add('sot.control')
+tr.add('sot.control','')
 
+# --- RUN ------------------------------------------------
+def inc():
+    robot_old.increment(dt)
+    tr.triger.recompute( robot_old.control.time )
+
+featureComDes.errorIN.value = (0.06,0,0.8)
+sot.push('taskCom')
+
+
+for i in range(2100):
+    inc()
+
+tr.dump()
 
 
