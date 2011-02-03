@@ -89,9 +89,9 @@ namespace sot
 				  docCommandVoid1("create the contact signals, unpluged.",
 						  "string")));
       addCommand("addContactFromTask",
-		 makeCommandVoid1(*this,&SolverOpSpace::addContactFromTask,
-				  docCommandVoid1("Add a contact from the named task. Remmeber to plug __p.",
-						  "string")));
+		 makeCommandVoid2(*this,&SolverOpSpace::addContactFromTask,
+				  docCommandVoid2("Add a contact from the named task. Remmeber to plug __p.",
+						  "string(task name)","string (contact name)")));
       addCommand("rmContact",
 		 makeCommandVoid1(*this,&SolverOpSpace::removeContact,
 				  docCommandVoid1("remove the contact named in arguments.",
@@ -153,11 +153,11 @@ namespace sot
     }
 
     void SolverOpSpace::
-    addContactFromTask( const std::string & name )
+    addContactFromTask( const std::string & taskName,const std::string & contactName )
     {
       using namespace dynamicgraph;
 
-      TaskDynPD & task = dynamic_cast<TaskDynPD&> ( g_pool.getEntity( name ) );
+      TaskDynPD & task = dynamic_cast<TaskDynPD&> ( g_pool.getEntity( taskName ) );
       assert( task.getFeatureList().size() == 1 );
       BOOST_FOREACH( FeatureAbstract* fptr, task.getFeatureList() )
 	{
@@ -167,7 +167,7 @@ namespace sot
 	  f6->servoCurrentPosition();
 	  f6->FeatureAbstract::selectionSIN = true;
 	}
-      addContact( name, &task.jacobianSOUT, &task.JdotSOUT,&task.taskVectorSOUT, NULL );
+      addContact( contactName, &task.jacobianSOUT, &task.JdotSOUT,&task.taskVectorSOUT, NULL );
     }
 
     void SolverOpSpace::
@@ -744,7 +744,7 @@ namespace sot
 	  if( cmdArgs.good() )
 	    {
 	      std::string name; cmdArgs >> name;
-	      addContactFromTask( name );
+	      addContactFromTask( name,name );
 	    }
 	  else { os << "!! A name must be specified. " << std::endl; }
 	}

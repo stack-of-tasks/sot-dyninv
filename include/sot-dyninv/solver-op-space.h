@@ -118,7 +118,7 @@ namespace sot {
 			 dynamicgraph::Signal<ml::Matrix,int> * JdotSignal,
 			 dynamicgraph::Signal<ml::Vector,int> * corrSignal,
 			 dynamicgraph::Signal<ml::Matrix,int> * contactPointsSignal );
-	void addContactFromTask( const std::string & name );
+	void addContactFromTask( const std::string & taskName, const std::string & contactName );
 	void removeContact( const std::string & name );
 	void dispContacts( std::ostream& os ) const;
 
