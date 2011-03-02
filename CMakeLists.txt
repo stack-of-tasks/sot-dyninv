@@ -52,6 +52,7 @@ SET(libs
 	solver-op-space
 	zmp-estimator
 	pseudo-robot-dynamic
+	robot-dyn-simu
   )
 
 LIST(APPEND LOGGING_WATCHED_TARGETS ${libs})
@@ -71,6 +72,7 @@ SET(headers
 	solver-op-space.h
 	zmp-estimator.h
 	pseudo-robot-dynamic.h
+	robot-dyn-simu.h
 )
 
 # Add subdirectories.

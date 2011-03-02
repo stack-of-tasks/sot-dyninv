@@ -15,3 +15,6 @@ SolverOpSpace('')
 
 from zmp_estimator import ZmpEstimator
 ZmpEstimator('')
+
+from robot_dyn_simu import RobotDynSimu
+RobotDynSimu('')
