@@ -56,8 +56,24 @@ SET(libs
 
 LIST(APPEND LOGGING_WATCHED_TARGETS ${libs})
 
+SET(headers
+	commands-helper.h
+	entity-helper.h
+	signal-helper.h
+
+	mal-to-eigen.h
+	stack-template.h
+	stack-template.t.cpp
+
+	controller-pd.h
+	task-dyn-pd.h
+	dynamic-integrator.h
+	solver-op-space.h
+	zmp-estimator.h
+	pseudo-robot-dynamic.h
+)
+
 # Add subdirectories.
-ADD_SUBDIRECTORY(include)
 ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(unitTesting)
 

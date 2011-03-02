@@ -26,22 +26,24 @@
 #include <boost/function.hpp>
 
 /* --- HELPER --------------------------------------------------------------- */
-namespace sot {
-  namespace dyninv {
-    using ::dynamicgraph::command::makeDirectGetter;
-    using ::dynamicgraph::command::docDirectGetter;
-    using ::dynamicgraph::command::makeDirectSetter;
-    using ::dynamicgraph::command::docDirectSetter;
-    using ::dynamicgraph::command::makeCommandVoid0;
-    using ::dynamicgraph::command::docCommandVoid0;
-    using ::dynamicgraph::command::makeCommandVoid1;
-    using ::dynamicgraph::command::docCommandVoid1;
-    using ::dynamicgraph::command::makeCommandVoid2;
-    using ::dynamicgraph::command::docCommandVoid2;
-    using ::dynamicgraph::command::makeCommandVerbose;
-    using ::dynamicgraph::command::docCommandVerbose;
-   } // namespace dyninv
-} // namespace sot
+namespace dynamicgraph {
+  namespace sot {
+    namespace dyninv {
+      using ::dynamicgraph::command::makeDirectGetter;
+      using ::dynamicgraph::command::docDirectGetter;
+      using ::dynamicgraph::command::makeDirectSetter;
+      using ::dynamicgraph::command::docDirectSetter;
+      using ::dynamicgraph::command::makeCommandVoid0;
+      using ::dynamicgraph::command::docCommandVoid0;
+      using ::dynamicgraph::command::makeCommandVoid1;
+      using ::dynamicgraph::command::docCommandVoid1;
+      using ::dynamicgraph::command::makeCommandVoid2;
+      using ::dynamicgraph::command::docCommandVoid2;
+      using ::dynamicgraph::command::makeCommandVerbose;
+      using ::dynamicgraph::command::docCommandVerbose;
+    } // namespace dyninv
+  } // namespace sot
+} // namespace dynamicgraph
 
 
 

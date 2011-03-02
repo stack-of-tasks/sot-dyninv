@@ -3,8 +3,8 @@ from dynamic_graph.sot.core import *
 from dynamic_graph.sot.core.math_small_entities import Derivator_of_Matrix
 from dynamic_graph.sot.dynamics import *
 from dynamic_graph.sot.dyninv import *
-import script_shortcuts
-from matlab import matlab
+import dynamic_graph.script_shortcuts
+from dynamic_graph.matlab import matlab
 
 # --- Dynamic parameters ---
 hrp2_14_pkgdatarootdir = "/home/nmansard/compil/devgiri/hpp2/share/hrp2_14"
@@ -26,9 +26,9 @@ robot.resize(robotDim)
 robot.set( ( 0.0274106623863, 0.143843868989, 0.646921914726, 0.00221064938462, 0.101393756965, 1.36729741242e-05, -0.00911630330837, -0.0914099637938, -0.471978743283, 0.840380192617, -0.470232799053, 0.0896624078591, 0.00950781802257, 0.0911102868041, -0.469450351848, 0.835307995386, -0.467686190904, -0.0938029466367, -8.75646582964e-05, 0.00326431877374, -7.83380820086e-06, 0.000194742578013, 0.258370257314, -0.175099102142, -6.1173425555e-05, -0.524953548768, 3.1825099713e-06, -0.000257600047423, -3.41210481921e-06, 0.258367271628, 0.174322097546, -8.89023954997e-05, -0.524983690846, -3.46102941488e-07, -0.000265401439772, 1.00498481453e-06 ) )
 
 
-robot_old=robot
+robot_wrapper=robot
 robot = PseudoRobotDynamic("dynint")
-robot.replace("robot",True)
+robot.replace(robot_wrapper.name,True)
 
 dt=1e-3
 robot.dt.value = dt
@@ -304,16 +304,16 @@ tr.add('sot.control','')
 
 # --- RUN ------------------------------------------------
 def inc():
-    robot_old.increment(dt)
-    tr.triger.recompute( robot_old.control.time )
+    robot_wrapper.increment(dt)
+    tr.triger.recompute( robot_wrapper.control.time )
 
 featureComDes.errorIN.value = (0.06,0,0.8)
 sot.push('taskCom')
 
 
-for i in range(2100):
-    inc()
+#for i in range(2100):
+#    inc()
 
-tr.dump()
+#tr.dump()
 
 

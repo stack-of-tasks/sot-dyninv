@@ -38,56 +38,56 @@
 /* SOT */
 #include <sot-dyninv/signal-helper.h>
 #include <sot-dyninv/entity-helper.h>
-#include <sot-core/task.h>
+#include <sot/core/task.hh>
+
+namespace dynamicgraph {
+  namespace sot {
+    namespace dyninv {
+
+      /* --------------------------------------------------------------------- */
+      /* --- CLASS ----------------------------------------------------------- */
+      /* --------------------------------------------------------------------- */
 
 
-namespace sot {
-  namespace dyninv {
+      class SOTTASKDYNPD_EXPORT TaskDynPD
+	:public ::dynamicgraph::sot::Task
+	,public ::dynamicgraph::EntityHelper<TaskDynPD>
+	{
 
-  /* --------------------------------------------------------------------- */
-  /* --- CLASS ----------------------------------------------------------- */
-  /* --------------------------------------------------------------------- */
+	public: /* --- CONSTRUCTOR ---- */
 
+	  TaskDynPD( const std::string & name );
 
-  class SOTTASKDYNPD_EXPORT TaskDynPD
-    :public ::sot::Task
-      ,public ::dynamicgraph::EntityHelper<TaskDynPD>
-      {
+	public: /* --- ENTITY INHERITANCE --- */
 
-      public: /* --- CONSTRUCTOR ---- */
+	  static const std::string CLASS_NAME;
+	  virtual void display( std::ostream& os ) const;
+	  virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
 
-	TaskDynPD( const std::string & name );
+	public:  /* --- SIGNALS --- */
 
-      public: /* --- ENTITY INHERITANCE --- */
+	  DECLARE_SIGNAL_IN(Kv,double);
+	  DECLARE_SIGNAL_IN(qdot,ml::Vector);
+	  DECLARE_SIGNAL_IN(dt,double);
 
-	static const std::string CLASS_NAME;
-	virtual void display( std::ostream& os ) const;
-	virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
+	  DECLARE_SIGNAL_OUT(errorDot,ml::Vector);
+	  DECLARE_SIGNAL_OUT(KvAuto,double);
+	  DECLARE_SIGNAL_OUT(Jdot,ml::Matrix);
+	  DECLARE_SIGNAL_OUT(taskVector,ml::Vector);
 
-      public:  /* --- SIGNALS --- */
+	protected:
+	  dynamicgraph::sot::VectorMultiBound&
+	    taskSOUT_function( dynamicgraph::sot::VectorMultiBound& task,int iter );
 
-	DECLARE_SIGNAL_IN(Kv,double);
-	DECLARE_SIGNAL_IN(qdot,ml::Vector);
-	DECLARE_SIGNAL_IN(dt,double);
+	protected:
+	  ml::Matrix previousJ;
+	  bool previousJset;
 
-	DECLARE_SIGNAL_OUT(errorDot,ml::Vector);
-	DECLARE_SIGNAL_OUT(KvAuto,double);
-	DECLARE_SIGNAL_OUT(Jdot,ml::Matrix);
-	DECLARE_SIGNAL_OUT(taskVector,ml::Vector);
+	}; // class TaskDynPD
 
-      protected:
-	sot::VectorMultiBound&
-	  taskSOUT_function( sot::VectorMultiBound& task,int iter );
-
-      protected:
-	ml::Matrix previousJ;
-	bool previousJset;
-
-      }; // class TaskDynPD
-
-  } // namespace dyninv
-} // namespace sot
-
+    } // namespace dyninv
+  } // namespace sot
+} // namespace dynamicgraph
 
 
 #endif // #ifndef __sot_dyninv_TaskDynPD_H__

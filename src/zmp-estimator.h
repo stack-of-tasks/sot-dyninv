@@ -39,42 +39,44 @@
 #include <sot-dyninv/signal-helper.h>
 #include <sot-dyninv/entity-helper.h>
 
-namespace sot {
-  namespace dyninv {
+namespace dynamicgraph {
+  namespace sot {
+    namespace dyninv {
 
-  /* --------------------------------------------------------------------- */
-  /* --- CLASS ----------------------------------------------------------- */
-  /* --------------------------------------------------------------------- */
+      /* --------------------------------------------------------------------- */
+      /* --- CLASS ----------------------------------------------------------- */
+      /* --------------------------------------------------------------------- */
 
-  class SOTZMPESTIMATOR_EXPORT ZmpEstimator
-    :public ::dynamicgraph::Entity
-      ,public ::dynamicgraph::EntityHelper<ZmpEstimator>
-    {
+      class SOTZMPESTIMATOR_EXPORT ZmpEstimator
+	:public ::dynamicgraph::Entity
+	,public ::dynamicgraph::EntityHelper<ZmpEstimator>
+	{
 
-      public: /* --- CONSTRUCTOR ---- */
+	public: /* --- CONSTRUCTOR ---- */
 
-	ZmpEstimator( const std::string & name );
+	  ZmpEstimator( const std::string & name );
 
-      public: /* --- ENTITY INHERITANCE --- */
+	public: /* --- ENTITY INHERITANCE --- */
 
-	static const std::string CLASS_NAME;
-	virtual void display( std::ostream& os ) const;
-	virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
+	  static const std::string CLASS_NAME;
+	  virtual void display( std::ostream& os ) const;
+	  virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
 
-	virtual void commandLine( const std::string& cmdLine,
-				  std::istringstream& cmdArgs,
-				  std::ostream& os );
+	  virtual void commandLine( const std::string& cmdLine,
+				    std::istringstream& cmdArgs,
+				    std::ostream& os );
 
-      public:  /* --- SIGNALS --- */
+	public:  /* --- SIGNALS --- */
 
-	DECLARE_SIGNAL_IN(fn,ml::Vector);
-	DECLARE_SIGNAL_IN(support,ml::Matrix);
-	DECLARE_SIGNAL_OUT(zmp,ml::Vector);
+	  DECLARE_SIGNAL_IN(fn,ml::Vector);
+	  DECLARE_SIGNAL_IN(support,ml::Matrix);
+	  DECLARE_SIGNAL_OUT(zmp,ml::Vector);
 
-     }; // class ZmpEstimator
+	}; // class ZmpEstimator
 
-  } // namespace dyninv
-} // namespace sot
+    } // namespace dyninv
+  } // namespace sot
+} // namespace dynamicgraph
 
 
 

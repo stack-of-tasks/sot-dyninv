@@ -20,7 +20,20 @@ IF(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
   ADD_DEFINITIONS(-DDEBUG=2)
 ENDIF(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
 
+# --- HEADERS
+FOREACH(header ${headers})
+  get_filename_component(headerName ${header} NAME)
+  set(src_path ${${PROJECT_NAME}_SOURCE_DIR}/src/${header})
+  set(bin_path ${${PROJECT_NAME}_BINARY_DIR}/include/${PROJECT_NAME}/${headerName})
+  set(install_path ${CMAKE_INSTALL_PREFIX}/include/${PROJECT_NAME})
+  execute_process(COMMAND ${CMAKE_COMMAND} -E remove ${bin_path})
+  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${src_path} ${bin_path} )
+  install(FILES ${src_path} DESTINATION ${install_path}
+          PERMISSIONS OWNER_READ GROUP_READ WORLD_READ OWNER_WRITE)
+ENDFOREACH(header)
+INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/include)
 
+# --- COMPILATION OF PLUGINS
 FOREACH(lib ${libs})
   ADD_LIBRARY(${lib} SHARED ${lib}.cpp)
 

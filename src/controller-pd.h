@@ -41,59 +41,61 @@
 
 
 
-namespace sot {
-  namespace dyninv {
+namespace dynamicgraph {
+  namespace sot {
+    namespace dyninv {
 
-  /* --------------------------------------------------------------------- */
-  /* --- CLASS ----------------------------------------------------------- */
-  /* --------------------------------------------------------------------- */
+      /* --------------------------------------------------------------------- */
+      /* --- CLASS ----------------------------------------------------------- */
+      /* --------------------------------------------------------------------- */
 
 
-  class SOTCONTROLLERPD_EXPORT ControllerPD
-    :public ::dynamicgraph::Entity
-      ,public ::dynamicgraph::EntityHelper<ControllerPD>
-      {
+      class SOTCONTROLLERPD_EXPORT ControllerPD
+	:public ::dynamicgraph::Entity
+	,public ::dynamicgraph::EntityHelper<ControllerPD>
+	{
 
-      public: /* --- CONSTRUCTOR ---- */
+	public: /* --- CONSTRUCTOR ---- */
 
-	ControllerPD( const std::string & name );
+	  ControllerPD( const std::string & name );
 
-      protected:
-	/* Parameters of the torque-control function:
-	 * tau = kp * (qd-q) + kd* (dqd-dq) */
-	int _dimension;
+	protected:
+	  /* Parameters of the torque-control function:
+	   * tau = kp * (qd-q) + kd* (dqd-dq) */
+	  int _dimension;
 
-      public:
-	void size(const int & dimension);
-	int size(void) const;
-	void setStandardGains( const std::string & config );
-	void setGainVelocityOnly( void );
+	public:
+	  void size(const int & dimension);
+	  int size(void) const;
+	  void setStandardGains( const std::string & config );
+	  void setGainVelocityOnly( void );
 
-      public: /* --- ENTITY INHERITANCE --- */
+	public: /* --- ENTITY INHERITANCE --- */
 
-	static const std::string CLASS_NAME;
-	virtual void display( std::ostream& os ) const;
-	virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
+	  static const std::string CLASS_NAME;
+	  virtual void display( std::ostream& os ) const;
+	  virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
 
-	virtual void commandLine( const std::string& cmdLine,
-				  std::istringstream& cmdArgs,
-				  std::ostream& os );
+	  virtual void commandLine( const std::string& cmdLine,
+				    std::istringstream& cmdArgs,
+				    std::ostream& os );
 
-      public:  /* --- SIGNALS --- */
+	public:  /* --- SIGNALS --- */
 
-	DECLARE_SIGNAL_IN(Kp,ml::Vector);
-	DECLARE_SIGNAL_IN(Kd,ml::Vector);
-	DECLARE_SIGNAL_IN(position,ml::Vector);
-	DECLARE_SIGNAL_IN(positionRef,ml::Vector);
-	DECLARE_SIGNAL_IN(velocity,ml::Vector);
-	DECLARE_SIGNAL_IN(velocityRef,ml::Vector);
+	  DECLARE_SIGNAL_IN(Kp,ml::Vector);
+	  DECLARE_SIGNAL_IN(Kd,ml::Vector);
+	  DECLARE_SIGNAL_IN(position,ml::Vector);
+	  DECLARE_SIGNAL_IN(positionRef,ml::Vector);
+	  DECLARE_SIGNAL_IN(velocity,ml::Vector);
+	  DECLARE_SIGNAL_IN(velocityRef,ml::Vector);
 
-	DECLARE_SIGNAL_OUT(control,ml::Vector);
+	  DECLARE_SIGNAL_OUT(control,ml::Vector);
 
-      }; // class ControllerPD
+	}; // class ControllerPD
 
-  } // namespace dyninv
-} // namespace sot
+    } // namespace dyninv
+  } // namespace sot
+} // namespace dynamicgraph
 
 
 
