@@ -43,7 +43,7 @@ namespace dynamicgraph
 	: Device(name)
 
 	,CONSTRUCT_SIGNAL_IN(acceleration,ml::Vector)
-	,CONSTRUCT_SIGNAL(velocity,OUT,ml::Vector)
+	,CONSTRUCT_SIGNAL_OUT(velocity,ml::Vector,sotNOSIGNAL)
 
       {
 	Entity::signalRegistration( accelerationSIN << velocitySOUT );
@@ -52,6 +52,17 @@ namespace dynamicgraph
 	addCommand("setVelocity",
 		   makeDirectSetter(*this,&velocity_,
 				    docDirectSetter("velocity","vector")));
+	std::string docstring;
+	/* Command increment. */
+	docstring =
+	  "\n"
+	  "    Integrate dynamics for time step provided as input\n"
+	  "\n"
+	  "      take one floating point number as input\n"
+	  "\n";
+	addCommand("increment",
+		   command::makeCommandVoid1((Device&)*this,
+					     &Device::increment, docstring));
 
       }
 
@@ -61,12 +72,29 @@ namespace dynamicgraph
 	os << "RobotDynSimu, nothing more to say yet." << std::endl;
       }
 
+      ml::Vector& RobotDynSimu::
+      velocitySOUT_function( ml::Vector& v, int )
+      {
+	if( velocity_.size()!=state_.size() )
+	  {
+	    velocity_.resize( state_.size() );
+	    velocity_.fill(0.0);
+	  }
+	v = velocity_;
+	return v;
+      }
+
       /* ---------------------------------------------------------------------- */
       void RobotDynSimu::
       integrate( const double & dt )
       {
 	const ml::Vector & acceleration = accelerationSIN( controlSIN.getTime() );
 
+	if( velocity_.size()!=state_.size() )
+	  {
+	    velocity_.resize( state_.size() );
+	    velocity_.fill(0.0);
+	  }
 	assert( velocity_.size() == state_.size()
 		&& velocity_.size() == acceleration.size() );
 
@@ -76,14 +104,14 @@ namespace dynamicgraph
 	for( unsigned int i=6;i<state_.size();++i )
 	  { state_(i) += velocity_(i)*dt; }
 
-	velocitySOUT.setConstant( velocity_);
+	velocitySOUT.setReady();
       }
 
       void RobotDynSimu::
       setVelocity( const ml::Vector& v )
       {
 	velocity_ = v;
-	velocitySOUT.setConstant( velocity_);
+	velocitySOUT.setReady();
       }
 
     } // namespace dyninv

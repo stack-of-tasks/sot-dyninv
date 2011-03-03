@@ -71,7 +71,7 @@ namespace dynamicgraph {
 	public:  /* --- SIGNALS --- */
 
 	  DECLARE_SIGNAL_IN( acceleration,ml::Vector );
-	  DECLARE_SIGNAL( velocity,OUT,ml::Vector );
+	  DECLARE_SIGNAL_OUT( velocity,ml::Vector );
 
 	protected:
 	  virtual void integrate( const double & dt );
