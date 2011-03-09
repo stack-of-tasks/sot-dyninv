@@ -54,6 +54,7 @@ SET(libs
 	zmp-estimator
 	pseudo-robot-dynamic
 	robot-dyn-simu
+	task-dyn-joint-limits
   )
 
 LIST(APPEND LOGGING_WATCHED_TARGETS ${libs})
@@ -69,6 +70,7 @@ SET(headers
 
 	controller-pd.h
 	task-dyn-pd.h
+	task-dyn-joint-limits.h
 	dynamic-integrator.h
 	solver-op-space.h
 	solver-kine.h

@@ -21,3 +21,6 @@ ZmpEstimator('')
 
 from robot_dyn_simu import RobotDynSimu
 RobotDynSimu('')
+
+from task_dyn_joint_limits import TaskDynJointLimits
+TaskDynJointLimits('')
