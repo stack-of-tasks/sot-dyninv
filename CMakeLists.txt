@@ -46,15 +46,18 @@ ADD_REQUIRED_DEPENDENCY("soth >= 0.0.1")
 
 # List plug-ins that will be compiled.
 SET(libs
-	controller-pd
-	task-dyn-pd
 	dynamic-integrator
-	solver-op-space
-	solver-kine
 	zmp-estimator
 	pseudo-robot-dynamic
 	robot-dyn-simu
+
+	controller-pd
+	task-dyn-pd
 	task-dyn-joint-limits
+	solver-op-space
+
+	solver-kine
+	task-joint-limits
   )
 
 LIST(APPEND LOGGING_WATCHED_TARGETS ${libs})
@@ -64,6 +67,11 @@ SET(headers
 	entity-helper.h
 	signal-helper.h
 
+	dynamic-integrator.h
+	zmp-estimator.h
+	pseudo-robot-dynamic.h
+	robot-dyn-simu.h
+
 	mal-to-eigen.h
 	stack-template.h
 	stack-template.t.cpp
@@ -71,13 +79,11 @@ SET(headers
 	controller-pd.h
 	task-dyn-pd.h
 	task-dyn-joint-limits.h
-	dynamic-integrator.h
 	solver-op-space.h
+
+	task-joint-limits.h
 	solver-kine.h
 
-	zmp-estimator.h
-	pseudo-robot-dynamic.h
-	robot-dyn-simu.h
 )
 
 # Add subdirectories.
