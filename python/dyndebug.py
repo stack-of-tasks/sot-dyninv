@@ -3,11 +3,14 @@ from dynamic_graph.sot.core import *
 from dynamic_graph.sot.core.math_small_entities import Derivator_of_Matrix
 from dynamic_graph.sot.dynamics import *
 from dynamic_graph.sot.dyninv import *
-import dynamic_graph.script_shortcuts
-from dynamic_graph.matlab import matlab
+import script_shortcuts
+from matlab import matlab
+
+#import dynamic_graph.script_shortcuts
+#from dynamic_graph.matlab import matlab
 
 # --- Dynamic parameters ---
-hrp2_14_pkgdatarootdir = "/home/nmansard/compil/devgiri/hpp2/share/hrp2_14"
+hrp2_14_pkgdatarootdir = "/home/oramos/compil/fafnir/hpp2/share/hrp2_14"
 modelDir = hrp2_14_pkgdatarootdir
 xmlDir = hrp2_14_pkgdatarootdir
 modelName = 'HRP2JRLmainsmall.wrl'

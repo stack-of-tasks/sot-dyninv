@@ -15,3 +15,6 @@ SolverOpSpace('')
 
 from zmp_estimator import ZmpEstimator
 ZmpEstimator('')
+
+from task_dyn_joint_limits import TaskDynJointLimits
+TaskDynJointLimits('')
