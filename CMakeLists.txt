@@ -50,6 +50,7 @@ SET(libs
 	task-dyn-pd
 	dynamic-integrator
 	solver-op-space
+	solver-kine
 	zmp-estimator
 	pseudo-robot-dynamic
 	robot-dyn-simu
@@ -70,6 +71,8 @@ SET(headers
 	task-dyn-pd.h
 	dynamic-integrator.h
 	solver-op-space.h
+	solver-kine.h
+
 	zmp-estimator.h
 	pseudo-robot-dynamic.h
 	robot-dyn-simu.h

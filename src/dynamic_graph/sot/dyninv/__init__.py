@@ -13,6 +13,9 @@ PseudoRobotDynamic('')
 from solver_op_space import SolverOpSpace
 SolverOpSpace('')
 
+from solver_kine import SolverKine
+SolverKine('')
+
 from zmp_estimator import ZmpEstimator
 ZmpEstimator('')
 

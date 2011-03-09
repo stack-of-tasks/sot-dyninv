@@ -71,7 +71,7 @@ namespace dynamicgraph
 	,CONSTRUCT_SIGNAL_IN(breakFactor,double)
 	,CONSTRUCT_SIGNAL_OUT(control,ml::Vector,
 			      matrixInertiaSIN << dyndriftSIN
-			      << velocitySIN << controlSOUT)
+			      << velocitySIN )
 	,CONSTRUCT_SIGNAL(zmp,OUT,ml::Vector)
 	,CONSTRUCT_SIGNAL(acceleration,OUT,ml::Vector)
 
