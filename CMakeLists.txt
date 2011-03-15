@@ -58,6 +58,7 @@ SET(libs
 
 	solver-kine
 	task-joint-limits
+	task-inequality
   )
 
 LIST(APPEND LOGGING_WATCHED_TARGETS ${libs})
@@ -82,6 +83,7 @@ SET(headers
 	solver-op-space.h
 
 	task-joint-limits.h
+	task-inequality.h
 	solver-kine.h
 
 )

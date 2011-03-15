@@ -27,3 +27,6 @@ TaskDynJointLimits('')
 
 from task_joint_limits import TaskJointLimits
 TaskJointLimits('')
+
+from task_inequality import TaskInequality
+TaskInequality('')
