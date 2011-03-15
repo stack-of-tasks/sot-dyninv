@@ -87,6 +87,8 @@ namespace dynamicgraph {
 	  priority in the task. The other are projected
 	  in the null-space of their predecessors. */
 	virtual TaskGeneric& pop( void );
+	/*! \brief same as pop, but no return. */
+	void pop0( void );
 
 	/*! \brief This method allows to know if a task exists or not */
 	virtual bool exist( const TaskGeneric& task );

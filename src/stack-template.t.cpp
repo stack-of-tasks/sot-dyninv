@@ -62,10 +62,16 @@ namespace dynamicgraph
     pop( void )
     {
       TaskGeneric* res = stack.back();
-      stack.pop_back();
       removeDependancy( getTaskDependancyList( *res ) );
+      stack.pop_back();
       resetReady();
       return *res;
+    }
+    template< typename TaskGeneric >
+    void Stack<TaskGeneric>::
+    pop0( void )
+    {
+      pop();
     }
     template< typename TaskGeneric >
     bool Stack<TaskGeneric>::
@@ -350,7 +356,7 @@ namespace dynamicgraph
     addCommand("pop",							\
 	       makeCommandVoid0(*this,					\
 				(void (EntityClassName::*)(void))	\
-				&stack_t::pop,				\
+				&stack_t::pop0,				\
 				docCommandVoid0("Remove the last (lowest) task of the stack."))); \
 									\
     addCommand("setSize",						\
