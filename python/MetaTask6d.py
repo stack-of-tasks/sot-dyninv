@@ -4,6 +4,17 @@ from dynamic_graph.sot.core.math_small_entities import Derivator_of_Matrix
 from dynamic_graph.sot.dynamics import *
 from dynamic_graph.sot.dyninv import *
 
+def toFlags(arr):
+    l=max(arr)+1
+    lres=[0]*l
+    for i in arr:
+        lres[i]=1
+    lres.reverse()
+    res=''
+    for i in lres:
+        res+=str(i)
+    return res
+
 class MetaTask6d(object):
     name=''
     opPoint=''
