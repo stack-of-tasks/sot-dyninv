@@ -6,16 +6,10 @@ from dynamic_graph.sot.dyninv import *
 import dynamic_graph.script_shortcuts
 from dynamic_graph.script_shortcuts import optionalparentheses
 from dynamic_graph.matlab import matlab
-from MetaTask6d import MetaTask6d
+from MetaTask6d import MetaTask6d,toFlags
 
-# --- Dynamic parameters ---
-hrp2_14_pkgdatarootdir = "/home/nmansard/compil/devgiri/hpp2/share/hrp2_14"
-modelDir = hrp2_14_pkgdatarootdir
-xmlDir = hrp2_14_pkgdatarootdir
-modelName = 'HRP2JRLmainsmall.wrl'
-specificitiesPath = xmlDir + '/HRP2SpecificitiesSmall.xml'
-jointRankPath = xmlDir + '/HRP2LinkJointRankSmall.xml'
-robotDim=36
+from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
+robotName = 'hrp10small'
 
 from numpy import *
 def totuple( a ):
@@ -26,16 +20,15 @@ def totuple( a ):
     return tuple(res)
 
 
-
 # --- ROBOT SIMU ---------------------------------------------------------------
 # --- ROBOT SIMU ---------------------------------------------------------------
 # --- ROBOT SIMU ---------------------------------------------------------------
 
+robotDim=robotDimension[robotName]
 robot = RobotSimu("robot")
 robot.resize(robotDim)
-#robot.set( (0,0,0,0,0,0, -0.0091163033083694940822,-0.091409963793829082657,-0.47197874328281280709,0.84038019261713603481,-0.47023279905304871118,0.089662407859063653071,0.0095078180225693850747,0.091110286804129178573,-0.4694503518480188653,0.83530799538565336793,-0.46768619090392338222,-0.093802946636709280681,-8.7564658296357018321e-05,0.0032643187737393364843,-7.8338082008638037324e-06,0.00019474257801330629915,0.25837025731361307201,-0.17509910214200960499,-6.1173425555032122825e-05,-0.52495354876847799552,3.1825099712999219606e-06,-0.00025760004742291479777,-3.4121048192112107608e-06,0.25836727162795458668,0.17432209754621175168,-8.8902395499734237117e-05,-0.52498369084585783106,-3.4610294148795152394e-07,-0.00026540143977199129972,1.004984814529256132e-06) )
-robot.set( ( 0.0274106623863, 0.143843868989, 0.646921914726, 0.00221064938462, 0.101393756965, 1.36729741242e-05, -0.00911630330837, -0.0914099637938, -0.471978743283, 0.840380192617, -0.470232799053, 0.0896624078591, 0.00950781802257, 0.0911102868041, -0.469450351848, 0.835307995386, -0.467686190904, -0.0938029466367, -8.75646582964e-05, 0.00326431877374, -7.83380820086e-06, 0.000194742578013, 0.258370257314, -0.175099102142, -6.1173425555e-05, -0.524953548768, 3.1825099713e-06, -0.000257600047423, -3.41210481921e-06, 0.258367271628, 0.174322097546, -8.89023954997e-05, -0.524983690846, -3.46102941488e-07, -0.000265401439772, 1.00498481453e-06 ) )
 
+robot.set( initialConfig[robotName] )
 dt=5e-3
 
 # --- VIEWER -------------------------------------------------------------------
@@ -45,9 +38,7 @@ try:
     import robotviewer
 
     def stateFullSize(robot):
-        simulation_angles = [float(val) for val in robot.state.value]
-        simulation_angles += 10*[0.0]
-        return simulation_angles
+        return [float(val) for val in robot.state.value]+10*[0.0]
     RobotSimu.stateFullSize = stateFullSize
 
     robot.viewer = robotviewer.client('XML-RPC')
@@ -63,9 +54,17 @@ except:
     robot.viewer = None
 
 # --- MAIN LOOP ------------------------------------------
+
+qs=[]
+breaktime=[]
 def inc():
     robot.increment(dt)
     tr.triger.recompute( robot.control.time )
+    qs.append(robot.state.value)
+    if sot.control.time in breaktime:
+        print 'pause'
+        runner.pause()
+
 from ThreadInterruptibleLoop import *
 @loopInThread
 def loop():
@@ -83,12 +82,17 @@ def next(): runner.once()
 # --- DYN ----------------------------------------------------------------------
 # --- DYN ----------------------------------------------------------------------
 
+modelDir = pkgDataRootDir[robotName]
+xmlDir = pkgDataRootDir[robotName]
+specificitiesPath = xmlDir + '/HRP2SpecificitiesSmall.xml'
+jointRankPath = xmlDir + '/HRP2LinkJointRankSmall.xml'
+
 dyn = Dynamic("dyn")
-dyn.setFiles(modelDir, modelName,specificitiesPath,jointRankPath)
+dyn.setFiles(modelDir, modelName[robotName],specificitiesPath,jointRankPath)
 dyn.parse()
 
-dyn.inertiaRotor.value = (0,0,0,0,0,0,1.01e-4,6.96e-4,1.34e-4,1.34e-4,6.96e-4,6.96e-4,1.01e-4,6.96e-4,1.34e-4,1.34e-4,6.96e-4,6.96e-4,6.96e-4,6.96e-4,1.10e-4,1.10e-4,6.96e-4,6.60e-4,1.00e-4,6.60e-4,1.10e-4,1.00e-4,1.00e-4,6.96e-4,6.60e-4,1.00e-4,6.60e-4,1.10e-4,1.00e-4,1.00e-4)
-dyn.gearRatio.value = (0,0,0,0,0,0,384.0,240.0,180.0,200.0,180.0,100.0,384.0,240.0,180.0,200.0,180.0,100.0,207.69,381.54,100.0,100.0,219.23,231.25,266.67,250.0,145.45,350.0,200.0,219.23,231.25,266.67,250.0,145.45,350.0,200.0)
+dyn.inertiaRotor.value = inertiaRotor[robotName]
+dyn.gearRatio.value = gearRatio[robotName]
 
 plug(robot.state,dyn.position)
 dyn.velocity.value = robotDim*(0.,)
@@ -124,9 +128,9 @@ class MetaTaskKine6d( MetaTask6d ):
 
 # Task right hand
 taskRH=MetaTaskKine6d('rh',dyn,'rh','right-wrist')
-task.ref = ((0,0,-1,0.22),(0,1,0,-0.37),(1,0,0,.74),(0,0,0,1))
+taskRH.ref = ((0,0,-1,0.22),(0,1,0,-0.37),(1,0,0,.74),(0,0,0,1))
 taskLH=MetaTaskKine6d('lh',dyn,'lh','left-wrist')
-task.ref = ((0,0,-1,0.22),(0,1,0,0.37),(1,0,0,.74),(0,0,0,1))
+#TODO taskLH.ref = ((0,0,-1,0.22),(0,1,0,0.37),(1,0,0,.74),(0,0,0,1))
 
 # Task LFoot: Move the right foot up.
 taskRF=MetaTaskKine6d('rf',dyn,'rf','right-ankle')
@@ -150,6 +154,18 @@ plug(taskCom.error,gCom.error)
 plug(gCom.gain,taskCom.controlGain)
 gCom.set(1,1,1)
 
+# --- TASK SUPPORT --------------------------------------------------
+featureSupport    = FeatureGeneric('featureSupport')
+plug(dyn.com,featureSupport.errorIN)
+plug(dyn.Jcom,featureSupport.jacobianIN)
+
+taskSupport=TaskInequality('taskSupport')
+taskSupport.add(featureSupport.name)
+taskSupport.selec.value = '011'
+taskSupport.referenceInf.value = (-0.08,-0.045,0)    # Xmin, Ymin
+taskSupport.referenceSup.value = (0.11,0.335,0)  # Xmax, Ymax
+taskSupport.dt.value=dt
+
 # --- TASK POSTURE --------------------------------------------------
 featurePosture    = FeatureGeneric('featurePosture')
 featurePostureDes = FeatureGeneric('featurePostureDes')
@@ -166,12 +182,12 @@ plug(taskPosture.error,gPosture.error)
 plug(gPosture.gain,taskPosture.controlGain)
 gPosture.set(1,1,1)
 
-featurePosture.selec.value = 0
-featurePosture.selec.value = '|0:3'     # right leg
-featurePosture.selec.value = '|6:9'     # left leg
-featurePosture.selec.value = '|12:15'   # chest+head
-featurePosture.selec.value = '|16:19'   # right arm
-featurePosture.selec.value = '|23:26'   # left arm
+postureSelec = range(0,3)      # right leg
+postureSelec += range(6,9)     # left leg
+postureSelec += range(12,15)   # chest+head
+#postureSelec += range(16,19)   # right arm
+#postureSelec += range(23,26)   # left arm
+featurePosture.selec.value = toFlags(postureSelec)
 
 # --- TASK JL ------------------------------------------------------
 taskJL = TaskJointLimits('taskJL')
@@ -179,12 +195,12 @@ plug(dyn.position,taskJL.position)
 plug(dyn.lowerJl,taskJL.referenceInf)
 plug(dyn.upperJl,taskJL.referenceSup)
 taskJL.dt.value = dt
-taskJL.selec.value = '|6:'
+taskJL.selec.value = toFlags(range(6,robotDim))
 
 # --- SOT Dyn OpSpaceH --------------------------------------
 # SOT controller.
 sot = SolverKine('sot')
-sot.setSize(36)
+sot.setSize(robotDim)
 #sot.damping.value = 2e-2
 
 plug(sot.control,robot.control)
@@ -216,23 +232,73 @@ tr.add('dyn.position','state')
 
 tr.add('sot.control','')
 
-# --- RUN ------------------------------------------------
-featureComDes.errorIN.value = (0.06,0,0.8)
-sot.push(taskJL.name)
-sot.addContact(taskLF)
-sot.addContact(taskRF)
-sot.push(taskCom.name)
-
-#inc()
-tr.add('taskJL.normalizedPosition','qn')
-
-
-robot.after.addSignal('taskJL.normalizedPosition')
-
+# --- shortcuts -------------------------------------------------
 qn=taskJL.normalizedPosition
 q=taskJL.position
 comref=featureComDes.errorIN
 
-sot.damping.value=.1
+@optionalparentheses
+def iter():
+    print 'iter = ',robot.state.time
+@optionalparentheses
+def dump():
+    tr.dump()
 
-comref.value=(0,0,0.45)
+# --- A FIRST MOTION ---------------------------------------------
+
+if 0:
+  sot.addContact(taskLF)
+  sot.addContact(taskRF)
+  sot.push(taskCom.name)
+  sot.push(taskRH.task.name)
+
+  taskRH.ref = ((0,0,-1,0.22),(0,1,0,-0.5),(1,0,0,1.24),(0,0,0,1))
+  taskRH.gain.setConstant(1)
+  comref.value=( 0.059949815729,  0.2098857010921,  0.750396505072 )
+
+# --- RUN ------------------------------------------------
+
+#sot.damping.value=.1
+sot.addContact(taskLF)
+sot.addContact(taskRF)
+#sot.push(taskCom.name)
+#sot.push(taskJL.name)
+sot.push(taskSupport.name)
+sot.push(taskRH.task.name)
+
+taskRH.ref = ((0,0,-1,0.22),(0,1,0,-0.5),(1,0,0,1.24),(0,0,0,1))
+taskRH.gain.setConstant(1)
+comref.value=( 0.059949815729,  0.2098857010921,  0.750396505072 )
+
+tr.add('taskJL.normalizedPosition','qn')
+robot.after.addSignal('taskJL.normalizedPosition')
+robot.after.addSignal('taskJL.task')
+
+taskRH.ref = ((0,0,-1,0.32),(0,1,0,-0.5),(1,0,0,1.24),(0,0,0,1))
+# impossible position (ok with damping):
+taskRH.ref = ((0,0,-1,0.32),(0,1,0,-0.75),(1,0,0,1.24),(0,0,0,1))
+# feasible
+taskRH.ref = ((0,0,-1,0.32),(0,1,0,-0.63),(1,0,0,1.24),(0,0,0,1))
+taskRH.gain.setConstant(10)
+
+breaktime.append(400)
+
+taskRH.gain.setConstant(2)
+#sot.push(taskCom.name)
+#comref.value=( 0.06,  0.12,  0.75)
+#gCom.setConstant(10)
+sot.damping.value=.05
+
+sot.damping.value=.1
+#sot.push(taskPosture.name)
+postureSelec=[]
+postureSelec = range(0,3)      # right leg
+postureSelec += range(6,9)     # left leg
+postureSelec += range(12,15)   # chest+head
+#postureSelec += range(16,18)   # right arm
+#postureSelec += range(23,25)   # left arm
+featurePosture.selec.value = toFlags(postureSelec)
+
+
+def m1():
+    taskRH.ref=((0,0,-1,0.2),(0,1,0,-0.2),(1,0,0,1.24),(0,0,0,1))
