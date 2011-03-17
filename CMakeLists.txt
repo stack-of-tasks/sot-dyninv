@@ -59,6 +59,7 @@ SET(libs
 	solver-kine
 	task-joint-limits
 	task-inequality
+	feature-projected-line
   )
 
 LIST(APPEND LOGGING_WATCHED_TARGETS ${libs})
@@ -85,7 +86,7 @@ SET(headers
 	task-joint-limits.h
 	task-inequality.h
 	solver-kine.h
-
+	feature-projected-line.h
 )
 
 # Add subdirectories.
