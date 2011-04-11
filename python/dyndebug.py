@@ -9,7 +9,7 @@ from dynamic_graph.matlab import matlab
 from MetaTask6d import MetaTask6d
 
 # --- Dynamic parameters ---
-hrp2_14_pkgdatarootdir = "/home/oramos/compil/fafnir/hpp2/share/hrp2_14"
+hrp2_14_pkgdatarootdir = "/home/nmansard/compil/devgiri/hpp2/share/hrp2_14"
 modelDir = hrp2_14_pkgdatarootdir
 xmlDir = hrp2_14_pkgdatarootdir
 modelName = 'HRP2JRLmainsmall.wrl'

@@ -34,7 +34,7 @@ class Calendar:
                         selfdeco.__doc__ += " (will be run at time "+str(selfdeco.iterRef)+")"
                 selfdeco.fun=functer
                 selfdeco.calendarRef.registerEvent(selfdeco.iterRef,functer,functer.__doc__)
-            def __call__(deco,*args):
+            def __call__(selfdeco,*args):
                 selfdeco.fun(*args)
         return calendarDeco
 

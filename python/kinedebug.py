@@ -43,16 +43,27 @@ try:
     RobotSimu.stateFullSize = stateFullSize
 
     robot.viewer = robotviewer.client('XML-RPC')
-    robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
+#    robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
 
+    def refreshView( robot ):
+        robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
+    RobotSimu.refresh = refreshView
     def incrementView( robot,dt ):
         robot.incrementNoView(dt)
-        robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
+        robot.refresh()
     RobotSimu.incrementNoView = RobotSimu.increment
     RobotSimu.increment = incrementView
+    def setView( robot,*args ):
+        robot.setNoView(*args)
+        robot.refresh()
+    RobotSimu.setNoView = RobotSimu.set
+    RobotSimu.set = setView
+
+    robot.refresh()
 except:
     print "No robot viewer, sorry."
     robot.viewer = None
+
 
 # --- MAIN LOOP ------------------------------------------
 
@@ -299,6 +310,7 @@ for i in range(len(umbrellaPolygon)):
     point=umbrellaPolygon[i]
     name=umbrellaPointNames[i]
     modif=OpPointModifier('modif'+name)
+    modif.setEndEffector(False)
     plug(dyn.rh,modif.positionIN)
     plug(dyn.Jrh0,modif.jacobianIN)
     Mi=copy.copy(M)
@@ -328,23 +340,11 @@ for i in range(len(umbrellaPointNames)):
 # Adding everything to the tracer
 for name in umbrellaPointNames:
     tr.add(umbrellaModif[name].name+'.position',name)
-    robot.after.addSignal(umbrellaModif[name].name+'.position')
+    #robot.after.addSignal(umbrellaModif[name].name+'.position')
 for name,feature in umbrellaFeature.items():
     tr.add(feature.name+'.error','e'+name)
-    robot.after.addSignal(feature.name+'.error')
+    #robot.after.addSignal(feature.name+'.error')
 
-# And finally, creating the task.
-taskUmbrella=Task('taskUmbrella')
-taskUmbrella.add(umbrellaFeature['ab'].name)
-taskUmbrella.add(umbrellaFeature['bc'].name)
-taskUmbrella.add(umbrellaFeature['cd'].name)
-taskUmbrella.add(umbrellaFeature['da'].name)
-taskUmbrella.controlGain.value = 10
-tr.add('taskUmbrella.error','error')
-
-taskAB=Task('taskAB')
-taskAB.add(umbrellaFeature['bc'].name)
-taskAB.controlGain.value = 10
 
 A=umbrellaModif['a'].position
 B=umbrellaModif['b'].position
@@ -368,19 +368,64 @@ AB.xc.value=(0.8,0.2)
 BC.xc.value=AB.xc.value
 
 robot.set((0.15787508826861599, 0.045511651751362708, 0.58971500036966162, -0.0040107700215134432, -0.45564238401733737, -0.52686538178073516, 0.44716913166621519, 0.30513254004984031, 0.080434789095732442, 1.1705171307901581, -0.84322874602000764, -0.085337729992559314, 0.34519179463400057, 0.51096319874334073, 0.39729314896741563, 0.79637015282207479, -0.74524853791029155, -0.3113477017777998, 0.59528786833733205, -0.0060236125952612008, 0.042089394399565112, 0.028985249939047025, -0.37671405575009481, -0.29002038141976838, -0.43761993851863368, -2.0077185039386283, -0.50346194284379353, 1.3345805041453564, 0.030948677237969232, 0.13701711567791786, 0.43501758221426229, 0.11316541844882388, -0.17894103295334104, 0.00080661744280727005, 0.054276071429870718, 0.0050874263605387498))
-sot.clear()
-#sot.push(taskUmbrella.name)
-sot.push(taskAB.name)
-inc()
 
-@attime(600)
+#AB.xc.value = (0,0,0)
+#BC.xc.value = (0,0,1.2)
+#CD.xc.value = (0,0,1.2)
+#DA.xc.value = (0,0,1.2)
+
+taskAB=Task('taskAB')
+taskAB.add(umbrellaFeature['ab'].name)
+#taskAB.add(umbrellaFeature['bc'].name)
+#taskAB.add(umbrellaFeature['cd'].name)
+#taskAB.add(umbrellaFeature['da'].name)
+taskAB.controlGain.value = 10
+
+taskBC=Task('taskBC')
+taskBC.add(umbrellaFeature['bc'].name)
+taskBC.controlGain.value = 10
+
+taskCD=Task('taskCD')
+taskCD.add(umbrellaFeature['cd'].name)
+taskCD.controlGain.value = 10
+
+
+# And finally, creating the task.
+taskUmbrella=TaskInequality('taskUmbrella')
+taskUmbrella.controlGain.value = .01
+taskUmbrella.referenceSup.value = (0,0,0,0)
+taskUmbrella.dt.value=dt
+for name,feature in umbrellaFeature.items():
+    taskUmbrella.add(feature.name)
+    feature.xc.value = (0.5,-0.7)
+tr.add('taskUmbrella.error','error')
+
+
+sot.clear()
+sot.push(taskUmbrella.name)
+
+
+@attime(100)
 def m1():
     "adding COM"
-#    comref.value = ( -0.05,0.06,0.7 )
-    comref.value = ( 0.05,0.06,0.5 )
+    comref.value = ( 0.05,0.16,0.7 )
     sot.addContact(taskLF)
     sot.addContact(taskRF)
     sot.push(taskCom.name)
+    gCom.setByPoint(10,1,.1,.8)
+
+@attime(200)
+def m2():
+    "adding RH"
+    taskRH.feature.selec.value = '111'
+    X=mat(identity(4))
+    X[0:3,3]=mat( (.3,-.6,1.3 )).H
+    taskRH.ref = totuple(X)
+    sot.push(taskRH.task.name)
+
 
 attime(1000,stop,'pause')
 attime(1000,dump,'dump')
+
+matlab.prec=4
+#matlab.fullPrec=0
