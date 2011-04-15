@@ -86,16 +86,6 @@ def next(): inc() #runner.once()
 
 # --- shortcuts -------------------------------------------------
 @optionalparentheses
-def n():
-    inc()
-    qdot()
-@optionalparentheses
-def n5():
-    for loopIdx in range(5): inc()
-@optionalparentheses
-def n10():
-    for loopIdx in range(10): inc()
-@optionalparentheses
 def q():
     if 'dyn' in globals(): print dyn.ffposition.__repr__()
     print robot.state.__repr__()
@@ -167,6 +157,19 @@ plug(gCom.gain,taskCom.controlGain)
 # Current choice
 gCom.set(1050,45,125e3)
 
+# ---- CONTACT -----------------------------------------
+# Left foot contact
+contactLF = MetaTaskDyn6d('contact_lleg',dyn,'lf','left-ankle')
+contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
+contactLF.feature.frame('desired')
+sot._LF_p.value = contactLF.support
+
+# Right foot contact
+contactRF = MetaTaskDyn6d('contact_rleg',dyn,'rf','right-ankle')
+contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
+contactRF.feature.frame('desired')
+sot._RF_p.value = contactRF.support
+
 # --- SOT Dyn OpSpaceH --------------------------------------
 # SOT controller.
 sot = SolverOpSpace('sot')
@@ -179,31 +182,15 @@ plug(dyn.dynamicDrift,sot.dyndrift)
 plug(dyn.velocity,sot.velocity)
 
 plug(sot.control,robot.control)
-
 # For the integration of q = int(int(qddot)).
 plug(sot.acceleration,robot.acceleration)
-
-# ---- CONTACT -----------------------------------------
-# Contact definition
-
-supportLF = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
-supportRF = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
-
-# Left foot contact
-contactLF = MetaTaskDyn6d('contact_lleg',dyn,'lf','left-ankle')
-contactLF.feature.frame('desired')
-sot.addContactFromTask(contactLF.task.name,'LF')
-sot._LF_p.value = supportLF
-
-# Right foot contact
-contactRF = MetaTaskDyn6d('contact_rleg',dyn,'rf','right-ankle')
-contactRF.feature.frame('desired')
-sot.addContactFromTask(contactRF.task.name,'RF')
-sot._RF_p.value = supportRF
 
 # --- RUN ------------------------------------------------
 
 featureComDes.errorIN.value = (0.06,0,0.8)
+
+sot.addContactFromTask(contactLF.task.name,'LF')
+sot.addContactFromTask(contactRF.task.name,'RF')
 sot.push('taskCom')
 
 #go
