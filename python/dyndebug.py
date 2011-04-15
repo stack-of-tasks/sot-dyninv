@@ -162,13 +162,11 @@ gCom.set(1050,45,125e3)
 contactLF = MetaTaskDyn6d('contact_lleg',dyn,'lf','left-ankle')
 contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
 contactLF.feature.frame('desired')
-sot._LF_p.value = contactLF.support
 
 # Right foot contact
 contactRF = MetaTaskDyn6d('contact_rleg',dyn,'rf','right-ankle')
 contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
 contactRF.feature.frame('desired')
-sot._RF_p.value = contactRF.support
 
 # --- SOT Dyn OpSpaceH --------------------------------------
 # SOT controller.
@@ -190,7 +188,9 @@ plug(sot.acceleration,robot.acceleration)
 featureComDes.errorIN.value = (0.06,0,0.8)
 
 sot.addContactFromTask(contactLF.task.name,'LF')
+sot._LF_p.value = contactLF.support
 sot.addContactFromTask(contactRF.task.name,'RF')
+sot._RF_p.value = contactRF.support
 sot.push('taskCom')
 
 #go

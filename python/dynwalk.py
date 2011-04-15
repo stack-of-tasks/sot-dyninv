@@ -19,6 +19,9 @@ def totuple( a ):
         res.append( tuple(al[i]) )
     return tuple(res)
 
+initialConfig.clear()
+initialConfig['hrp10small'] = (0,0,0.648697398115,0,0,0)+(0, 0, -0.4538, 0.8727, -0.4189, 0, 0, 0, -0.4538, 0.8727, -0.4189, 0, 0, 0, 0, 0, 0.2618, -0.1745, 0, -0.5236, 0, 0, 0, 0, 0.2618, 0.1745, 0, -0.5236, 0, 0, 0, 0 )
+
 # --- ROBOT SIMU ---------------------------------------------------------------
 # --- ROBOT SIMU ---------------------------------------------------------------
 # --- ROBOT SIMU ---------------------------------------------------------------
@@ -134,16 +137,8 @@ dyn.setProperty('ComputeAccelerationCoM','true')
 
 robot.control.unplug()
 
-# ---- CONTACT -----------------------------------------
-# Left foot contact
-contactLF = MetaTaskDyn6d('contact_lleg',dyn,'lf','left-ankle')
-contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
-contactLF.feature.frame('desired')
-
-# Right foot contact
-contactRF = MetaTaskDyn6d('contact_rleg',dyn,'rf','right-ankle')
-contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
-contactRF.feature.frame('desired')
+dyn.createOpPoint('rf','right-ankle')
+dyn.createOpPoint('lf','left-ankle')
 
 # --- SOT Dyn OpSpaceH --------------------------------------
 # SOT controller.
@@ -227,7 +222,6 @@ wa_zmp = Multiply_matrixHomo_vector('wa_zmp')
 plug(wa_H_pg.sout,wa_zmp.sin1)
 plug(pg.zmpref,wa_zmp.sin2)
 
-
 # --- PLUGS PG --------------------------------------------------------
 # --- Pass the dyn from ref left_foot to ref pg.
 ffpos_from_pg = MatrixHomoToPoseRollPitchYaw('ffpos_from_pg')
@@ -280,6 +274,17 @@ pg.velocitydes.value =(0.1,0.0,0.0)
 
 # ---- TASKS -------------------------------------------------------------------
 
+# ---- CONTACT -----------------------------------------
+# Left foot contact
+contactLF = MetaTaskDyn6d('contact_lleg',dyn,'lf','left-ankle')
+contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
+contactLF.feature.frame('desired')
+
+# Right foot contact
+contactRF = MetaTaskDyn6d('contact_rleg',dyn,'rf','right-ankle')
+contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
+contactRF.feature.frame('desired')
+
 # ---- WAIST TASK ---
 taskWaist=MetaTaskDyn6d('waist',dyn,'waist','waist')
 
@@ -294,7 +299,7 @@ plug(waistReferenceVector.sout,waistReference.sin)
 plug(waistReference.sout,taskWaist.featureDes.position)
 
 taskWaist.feature.selec.value = '011100'
-taskWaist.task.controlGain.value = 500
+taskWaist.task.controlGain.value = 5
 
 # --- TASK COM ---
 featureCom = FeatureGeneric('featureCom')
@@ -311,7 +316,7 @@ taskCom.add('featureCom')
 #plug(featureCom.errordot,taskCom.errorDot)
 taskCom.controlGain.value = 400
 #taskCom.setBeta(-1)
-plug(dyn.velocity,taskCom.qdot)
+plug(robot.velocity,taskCom.qdot)
 taskCom.dt.value = dt
 
 # --- TASK RIGHT FOOT
@@ -320,9 +325,9 @@ taskRF=MetaTaskDyn6d('rf',dyn,'rf','right-ankle')
 taskLF=MetaTaskDyn6d('lf',dyn,'lf','left-ankle')
 
 plug(pg.rightfootref,taskRF.featureDes.position)
-taskRF.task.controlGain.value = 500
+taskRF.task.controlGain.value = 5
 plug(pg.leftfootref,taskLF.featureDes.position)
-taskLF.task.controlGain.value = 500
+taskLF.task.controlGain.value = 5
 
 
 # --- RUN ------------------------------------------------
@@ -332,8 +337,9 @@ sot._LF_p.value = contactLF.support
 sot.addContactFromTask(contactRF.task.name,'RF')
 sot._RF_p.value = contactRF.support
 
-#sot.push('taskCom')
+sot.push(taskCom.name)
 
-#go
-robot.control.value = (robotDim-6)*(0,)
-robot.acceleration.value = (robotDim)*(0,)
+
+robot.after.addSignal('comRef.ref')
+#robot.control.value = (robotDim-6)*(0,)
+#robot.acceleration.value = (robotDim)*(0,)
