@@ -329,9 +329,7 @@ taskRF.task.controlGain.value = 5
 plug(pg.leftfootref,taskLF.featureDes.position)
 taskLF.task.controlGain.value = 5
 
-
 # --- RUN ------------------------------------------------
-
 sot.addContactFromTask(contactLF.task.name,'LF')
 sot._LF_p.value = contactLF.support
 sot.addContactFromTask(contactRF.task.name,'RF')
