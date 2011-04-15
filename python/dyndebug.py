@@ -6,7 +6,7 @@ from dynamic_graph.sot.dyninv import *
 import dynamic_graph.script_shortcuts
 from dynamic_graph.script_shortcuts import optionalparentheses
 from dynamic_graph.matlab import matlab
-from MetaTask6d import MetaTaskDyn6d
+from meta_task_dyn_6d import MetaTaskDyn6d
 
 from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 robotName = 'hrp10small'
