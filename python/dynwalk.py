@@ -69,7 +69,47 @@ except:
 # --- MAIN LOOP ------------------------------------------
 
 qs=[]
+left=1
+right=0
+both=2
+incontact=both
 def inc():
+    t=robot.state.time
+#    print t,pg.SupportFoot.time, pg.doubleSupportPhase.time
+#    pg.doubleSupportPhase.recompute(t)
+#    pg.SupportFoot.recompute(t)
+    incontac=globals()['incontact']
+    if (incontac==left) & (pg.doubleSupportPhase.value==1):
+        print ' ************************************************************************* t = ',t,': Added RF'
+        print 'contacts = ', incontac, pg.SupportFoot.value, pg.doubleSupportPhase.value
+        sot.rm(taskRF.task.name)
+        sot.addContactFromTask(contactRF.task.name,'RF')
+        sot._RF_p.value = contactRF.support
+        incontac=both
+    else:
+        if (incontac==right) & (pg.doubleSupportPhase.value==1):
+            print ' ************************************************************************* t = ',t,': Added LF'
+            print 'contacts = ', incontac, pg.SupportFoot.value, pg.doubleSupportPhase.value
+            sot.rm(taskLF.task.name)
+            sot.addContactFromTask(contactLF.task.name,'LF')
+            sot._LF_p.value = contactLF.support
+            incontac=both
+        else:
+            if (incontac==both) & (pg.doubleSupportPhase.value==0):
+                pg.SupportFoot.recompute(t)
+                if pg.SupportFoot.value==right:
+                    print ' ************************************************************************* t = ',t,': UP LF'
+                    print 'contacts = ', incontac, pg.SupportFoot.value, pg.doubleSupportPhase.value
+                    sot.rmContact('LF')
+                    sot.push(taskLF.task.name)
+                    incontac=right
+                else: # pg.SupportFoot.value==left
+                    print ' ************************************************************************* t = ',t,': UP RF'
+                    print 'contacts = ', incontac, pg.SupportFoot.value, pg.doubleSupportPhase.value
+                    sot.rmContact('RF')
+                    sot.push(taskRF.task.name)
+                    incontac=left
+    globals()['incontact']=incontac
     robot.increment(dt)
     qs.append(robot.state.value)
 
@@ -80,7 +120,10 @@ def loop():
 runner=loop()
 
 @optionalparentheses
-def go(): runner.play()
+def go():
+    if runner.isQuit:
+        globals()['runner']=loop()
+    runner.play()
 @optionalparentheses
 def stop(): runner.pause()
 @optionalparentheses
@@ -226,7 +269,7 @@ plug(pg.zmpref,wa_zmp.sin2)
 # --- Pass the dyn from ref left_foot to ref pg.
 ffpos_from_pg = MatrixHomoToPoseRollPitchYaw('ffpos_from_pg')
 plug(pg_H_wa.sout,ffpos_from_pg.sin)
-plug(ffpos_from_pg.sout,dyn.ffposition)
+#plug(ffpos_from_pg.sout,dyn.ffposition)
 
 # --- Connect the ZMPref to OpenHRP in the waist reference frame.
 pg.parseCmd(':SetZMPFrame world')
@@ -325,9 +368,9 @@ taskRF=MetaTaskDyn6d('rf',dyn,'rf','right-ankle')
 taskLF=MetaTaskDyn6d('lf',dyn,'lf','left-ankle')
 
 plug(pg.rightfootref,taskRF.featureDes.position)
-taskRF.task.controlGain.value = 5
+taskRF.task.controlGain.value = 5000
 plug(pg.leftfootref,taskLF.featureDes.position)
-taskLF.task.controlGain.value = 5
+taskLF.task.controlGain.value = 5000
 
 # --- RUN ------------------------------------------------
 sot.addContactFromTask(contactLF.task.name,'LF')
@@ -341,3 +384,17 @@ sot.push(taskCom.name)
 robot.after.addSignal('comRef.ref')
 #robot.control.value = (robotDim-6)*(0,)
 #robot.acceleration.value = (robotDim)*(0,)
+
+
+# --- TRACER -----------------------------------------------------------------
+from dynamic_graph.tracer import *
+from dynamic_graph.tracer_real_time import *
+tr = Tracer('tr')
+tr.open('/tmp/','','.dat')
+tr.start()
+robot.after.addSignal('tr.triger')
+tr.add('pg.doubleSupportPhase','')
+tr.add('pg.SupportFoot','')
+
+robot.before.addSignal('pg.SupportFoot')
+robot.before.addSignal('pg.doubleSupportPhase')
