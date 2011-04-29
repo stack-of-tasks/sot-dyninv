@@ -30,3 +30,6 @@ TaskJointLimits('')
 
 from task_inequality import TaskInequality
 TaskInequality('')
+
+from feature_projected_line import FeatureProjectedLine
+FeatureProjectedLine('')

@@ -7,9 +7,10 @@ import dynamic_graph.script_shortcuts
 from dynamic_graph.script_shortcuts import optionalparentheses
 from dynamic_graph.matlab import matlab
 from MetaTask6d import MetaTask6d,toFlags
+from attime import attime
 
 from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
-robotName = 'hrp10small'
+robotName = 'hrp14small'
 
 from numpy import *
 def totuple( a ):
@@ -42,28 +43,36 @@ try:
     RobotSimu.stateFullSize = stateFullSize
 
     robot.viewer = robotviewer.client('XML-RPC')
-    robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
+#    robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
 
+    def refreshView( robot ):
+        robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
+    RobotSimu.refresh = refreshView
     def incrementView( robot,dt ):
         robot.incrementNoView(dt)
-        robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
+        robot.refresh()
     RobotSimu.incrementNoView = RobotSimu.increment
     RobotSimu.increment = incrementView
+    def setView( robot,*args ):
+        robot.setNoView(*args)
+        robot.refresh()
+    RobotSimu.setNoView = RobotSimu.set
+    RobotSimu.set = setView
+
+    robot.refresh()
 except:
     print "No robot viewer, sorry."
     robot.viewer = None
 
+
 # --- MAIN LOOP ------------------------------------------
 
 qs=[]
-breaktime=[]
 def inc():
+    attime.run(robot.control.time+1)
     robot.increment(dt)
     tr.triger.recompute( robot.control.time )
     qs.append(robot.state.value)
-    if sot.control.time in breaktime:
-        print 'pause'
-        runner.pause()
 
 from ThreadInterruptibleLoop import *
 @loopInThread
@@ -184,7 +193,7 @@ gPosture.set(1,1,1)
 
 postureSelec = range(0,3)      # right leg
 postureSelec += range(6,9)     # left leg
-postureSelec += range(12,15)   # chest+head
+postureSelec += range(12,16)   # chest+head
 #postureSelec += range(16,19)   # right arm
 #postureSelec += range(23,26)   # left arm
 featurePosture.selec.value = toFlags(postureSelec)
@@ -238,11 +247,11 @@ q=taskJL.position
 comref=featureComDes.errorIN
 
 @optionalparentheses
-def iter():
-    print 'iter = ',robot.state.time
+def iter():         print 'iter = ',robot.state.time
 @optionalparentheses
-def dump():
-    tr.dump()
+def dump():         tr.dump()
+@optionalparentheses
+def status():       print runner.isPlay
 
 # --- A FIRST MOTION ---------------------------------------------
 
@@ -262,7 +271,7 @@ if 0:
 sot.addContact(taskLF)
 sot.addContact(taskRF)
 #sot.push(taskCom.name)
-#sot.push(taskJL.name)
+sot.push(taskJL.name)
 sot.push(taskSupport.name)
 sot.push(taskRH.task.name)
 
@@ -274,31 +283,149 @@ tr.add('taskJL.normalizedPosition','qn')
 robot.after.addSignal('taskJL.normalizedPosition')
 robot.after.addSignal('taskJL.task')
 
-taskRH.ref = ((0,0,-1,0.32),(0,1,0,-0.5),(1,0,0,1.24),(0,0,0,1))
 # impossible position (ok with damping):
 taskRH.ref = ((0,0,-1,0.32),(0,1,0,-0.75),(1,0,0,1.24),(0,0,0,1))
 # feasible
 taskRH.ref = ((0,0,-1,0.32),(0,1,0,-0.63),(1,0,0,1.24),(0,0,0,1))
-taskRH.gain.setConstant(10)
 
-breaktime.append(400)
+# --- UMBRELLA ----------------------------------------------------
+# --- UMBRELLA ----------------------------------------------------
+# --- UMBRELLA ----------------------------------------------------
+import copy
 
-taskRH.gain.setConstant(2)
-#sot.push(taskCom.name)
-#comref.value=( 0.06,  0.12,  0.75)
-#gCom.setConstant(10)
-sot.damping.value=.05
+# M is the position of the top of the umbrella.
+M=identity(4)
+M[0][3]=.595 # Stick lenght
+M[0][3]=.45  # without unbrella lenght
+M[2][3]=-.19 # Lenght of the wrist
+widthUmbrella=.41 # Width of the umbrella
+# List of the polygon defining the umbrella hat.
+umbrellaPolygon = [ [ +1,+1 ],[+1,-1],[-1,-1],[-1,+1] ]
+umbrellaPointNames = [ 'a','b','c','d' ]
 
-sot.damping.value=.1
-#sot.push(taskPosture.name)
-postureSelec=[]
-postureSelec = range(0,3)      # right leg
-postureSelec += range(6,9)     # left leg
-postureSelec += range(12,15)   # chest+head
-#postureSelec += range(16,18)   # right arm
-#postureSelec += range(23,25)   # left arm
-featurePosture.selec.value = toFlags(postureSelec)
+# Creation of the Op Point modifiers for each vertex of the polygon.
+dyn.createJacobian('Jrh0','right-wrist')
+umbrellaModif = dict()
+for i in range(len(umbrellaPolygon)):
+    point=umbrellaPolygon[i]
+    name=umbrellaPointNames[i]
+    modif=OpPointModifier('modif'+name)
+    modif.setEndEffector(False)
+    plug(dyn.rh,modif.positionIN)
+    plug(dyn.Jrh0,modif.jacobianIN)
+    Mi=copy.copy(M)
+    Mi[1][3]+=widthUmbrella*point[0]
+    Mi[2][3]+=widthUmbrella*point[1]
+    modif.setTransformation(totuple(Mi))
+    umbrellaModif[name]=modif
+
+# Creation of the features for the edges of the polygon.
+umbrellaFeature=dict()
+for i in range(len(umbrellaPointNames)):
+    nameA=umbrellaPointNames[i]
+    if i+1<len(umbrellaPointNames):
+        nameB=umbrellaPointNames[i+1]
+    else:
+        nameB=umbrellaPointNames[0]
+    A=umbrellaModif[nameA]
+    B=umbrellaModif[nameB]
+    feature=FeatureProjectedLine('feature'+nameA+nameB)
+    plug(A.position,feature.xa)
+    plug(A.jacobian,feature.Ja)
+    plug(B.position,feature.xb)
+    plug(B.jacobian,feature.Jb)
+    feature.xc.value = (0,0)
+    umbrellaFeature[nameA+nameB]=feature
+
+# Adding everything to the tracer
+for name in umbrellaPointNames:
+    tr.add(umbrellaModif[name].name+'.position',name)
+    #robot.after.addSignal(umbrellaModif[name].name+'.position')
+for name,feature in umbrellaFeature.items():
+    tr.add(feature.name+'.error','e'+name)
+    #robot.after.addSignal(feature.name+'.error')
 
 
+A=umbrellaModif['a'].position
+B=umbrellaModif['b'].position
+C=umbrellaModif['c'].position
+D=umbrellaModif['d'].position
+
+AB=umbrellaFeature['ab']
+BC=umbrellaFeature['bc']
+CD=umbrellaFeature['cd']
+DA=umbrellaFeature['da']
+
+# Position at starting point: error is null
+CD.xc.value=(-0.001012500000,-0.609998000000)
+DA.xc.value=CD.xc.value
+AB.xc.value=(0.818988000000,0.210001000000)
+BC.xc.value=AB.xc.value
+
+CD.xc.value=(0.0,-0.6)
+DA.xc.value=CD.xc.value
+AB.xc.value=(0.8,0.2)
+BC.xc.value=AB.xc.value
+
+robot.set((0.15787508826861599, 0.045511651751362708, 0.58971500036966162, -0.0040107700215134432, -0.45564238401733737, -0.52686538178073516, 0.44716913166621519, 0.30513254004984031, 0.080434789095732442, 1.1705171307901581, -0.84322874602000764, -0.085337729992559314, 0.34519179463400057, 0.51096319874334073, 0.39729314896741563, 0.79637015282207479, -0.74524853791029155, -0.3113477017777998, 0.59528786833733205, -0.0060236125952612008, 0.042089394399565112, 0.028985249939047025, -0.37671405575009481, -0.29002038141976838, -0.43761993851863368, -2.0077185039386283, -0.50346194284379353, 1.3345805041453564, 0.030948677237969232, 0.13701711567791786, 0.43501758221426229, 0.11316541844882388, -0.17894103295334104, 0.00080661744280727005, 0.054276071429870718, 0.0050874263605387498))
+
+#AB.xc.value = (0,0,0)
+#BC.xc.value = (0,0,1.2)
+#CD.xc.value = (0,0,1.2)
+#DA.xc.value = (0,0,1.2)
+
+taskAB=Task('taskAB')
+taskAB.add(umbrellaFeature['ab'].name)
+#taskAB.add(umbrellaFeature['bc'].name)
+#taskAB.add(umbrellaFeature['cd'].name)
+#taskAB.add(umbrellaFeature['da'].name)
+taskAB.controlGain.value = 10
+
+taskBC=Task('taskBC')
+taskBC.add(umbrellaFeature['bc'].name)
+taskBC.controlGain.value = 10
+
+taskCD=Task('taskCD')
+taskCD.add(umbrellaFeature['cd'].name)
+taskCD.controlGain.value = 10
+
+
+# And finally, creating the task.
+taskUmbrella=TaskInequality('taskUmbrella')
+taskUmbrella.controlGain.value = .01
+taskUmbrella.referenceSup.value = (0,0,0,0)
+taskUmbrella.dt.value=dt
+for name,feature in umbrellaFeature.items():
+    taskUmbrella.add(feature.name)
+    feature.xc.value = (0.5,-0.7)
+tr.add('taskUmbrella.error','error')
+
+
+sot.clear()
+sot.push(taskUmbrella.name)
+
+
+@attime(100)
 def m1():
-    taskRH.ref=((0,0,-1,0.2),(0,1,0,-0.2),(1,0,0,1.24),(0,0,0,1))
+    "adding COM"
+    comref.value = ( 0.05,0.16,0.7 )
+    sot.addContact(taskLF)
+    sot.addContact(taskRF)
+    sot.push(taskCom.name)
+    gCom.setByPoint(10,1,.1,.8)
+
+@attime(200)
+def m2():
+    "adding RH"
+    taskRH.feature.selec.value = '111'
+    X=mat(identity(4))
+    X[0:3,3]=mat( (.3,-.6,1.3 )).H
+    taskRH.ref = totuple(X)
+    sot.push(taskRH.task.name)
+
+
+attime(1000,stop,'pause')
+attime(1000,dump,'dump')
+
+matlab.prec=4
+#matlab.fullPrec=0

@@ -73,6 +73,7 @@ namespace dynamicgraph
 	jacobianSOUT.addDependency( sizeSOUT );
 
 	controlGainSIN = 1.0;
+	selecSIN = true;
 	signalRegistration( referenceSupSIN << referenceInfSIN << dtSIN
 			    << selecSIN << sizeSOUT << normalizedPositionSOUT );
       }
@@ -96,20 +97,33 @@ namespace dynamicgraph
       dg::sot::VectorMultiBound& TaskInequality::
       computeTask( dg::sot::VectorMultiBound& res,int time )
       {
+	ml::Vector dummy;
+	const bool withInf = referenceInfSIN, withSup = referenceSupSIN;
+	MultiBound::SupInfType bound = withInf ? MultiBound::BOUND_INF : MultiBound::BOUND_SUP;
+
 	const ml::Vector & error = errorSOUT(time);
-	const ml::Vector & refInf = referenceInfSIN(time);
-	const ml::Vector & refSup = referenceSupSIN(time);
+	const ml::Vector & refInf = withInf ? referenceInfSIN(time) : dummy;
+	const ml::Vector & refSup = withSup ? referenceSupSIN(time) : dummy;
 	const Flags & selec = selecSIN(time);
 	const int insize = error.size(), outsize=sizeSOUT(time);
-	const double K = 1.0/(dtSIN(time)*controlGainSIN(time));
-	assert( insize==(int)refInf.size() && insize==(int)refSup.size() );
+	const double K = controlGainSIN(time)/dtSIN(time);
+	assert( !withInf || insize==(int)refInf.size() );
+	assert( !withSup || insize==(int)refSup.size() );
 
 	res.resize(outsize); int idx=0;
 	for( int i=0;i<insize;++i )
 	  {
 	    if( selec(i) )
-	      res[idx++] = dg::sot::MultiBound( (refInf(i)-error(i))*K,
-						(refSup(i)-error(i))*K );
+	      {
+		const double inf = withInf ? (refInf(i)-error(i))*K : 0.0;
+		const double sup = withSup ? (refSup(i)-error(i))*K : 0.0;
+
+		if( withInf && withSup )
+		  res[idx++] = dg::sot::MultiBound( (refInf(i)-error(i))*K,
+						    (refSup(i)-error(i))*K );
+		else
+		  res[idx++] = dg::sot::MultiBound( inf+sup,bound );
+	      }
 	  }
 
 	sotDEBUG(15) << "taskU = "<< res << std::endl;
