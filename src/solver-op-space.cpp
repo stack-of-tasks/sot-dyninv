@@ -69,6 +69,9 @@ namespace dynamicgraph
 	,CONSTRUCT_SIGNAL_IN(dyndrift,ml::Vector)
 	,CONSTRUCT_SIGNAL_IN(damping,double)
 	,CONSTRUCT_SIGNAL_IN(breakFactor,double)
+	,CONSTRUCT_SIGNAL_IN(posture,ml::Vector)
+	,CONSTRUCT_SIGNAL_IN(position,ml::Vector)
+
 	,CONSTRUCT_SIGNAL_OUT(control,ml::Vector,
 			      matrixInertiaSIN << dyndriftSIN
 			      << velocitySIN )
@@ -86,7 +89,8 @@ namespace dynamicgraph
 	signalRegistration( matrixInertiaSIN << dyndriftSIN
 			    << velocitySIN << controlSOUT
 			    << zmpSOUT << accelerationSOUT
-			    << dampingSIN << breakFactorSIN );
+			    << dampingSIN << breakFactorSIN
+			    << postureSIN << positionSIN );
 
 	/* Command registration. */
 	boost::function<void(SolverOpSpace*,const std::string&)> f_addContact
@@ -637,9 +641,20 @@ namespace dynamicgraph
 	Czero.COLS_Q.rightCols(nbDofs).setIdentity();
 	Czero.COLS_TAU.setZero();
 	Czero.COLS_F.setZero();
+	VectorXd ref;
 	const double Kv = breakFactorSIN(t);
+	if( postureSIN && positionSIN )
+	  {
+	    EIGEN_VECTOR_FROM_SIGNAL(qref,postureSIN(t));
+	    EIGEN_VECTOR_FROM_SIGNAL(q,positionSIN(t));
+	    const double Kp = Kv*Kv;
+	    ref = (-Kp*(q-qref)-Kv*dq).tail(nbDofs);
+	  }
+	else
+	  {	    ref = (-Kv*dq).tail(nbDofs);	  }
 	for( int i=0;i<nbDofs;++i )
-	  bzero[i] = -Kv*dq[i+6];
+	  bzero[i] = ref[i];
+
 	sotDEBUG(15) << "Czero = "     << (MATLAB)Czero << std::endl;
 	sotDEBUG(1) << "bzero = "     << bzero << std::endl;
 

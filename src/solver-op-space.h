@@ -90,6 +90,8 @@ namespace dynamicgraph {
 	  DECLARE_SIGNAL_IN(dyndrift,ml::Vector);
 	  DECLARE_SIGNAL_IN(damping,double);
 	  DECLARE_SIGNAL_IN(breakFactor,double);
+	  DECLARE_SIGNAL_IN(posture,ml::Vector);
+	  DECLARE_SIGNAL_IN(position,ml::Vector);
 
 	  DECLARE_SIGNAL_OUT(control,ml::Vector);
 

@@ -163,7 +163,6 @@ jointRankPath = xmlDir + '/HRP2LinkJointRankSmall.xml'
 dyn = Dynamic("dyn")
 dyn.setFiles(modelDir,modelName[robotName],specificitiesPath,jointRankPath)
 dyn.parse()
-
 dyn.inertiaRotor.value = inertiaRotor[robotName]
 dyn.gearRatio.value = gearRatio[robotName]
 
@@ -179,9 +178,6 @@ dyn.setProperty('ComputeBackwardDynamics','true')
 dyn.setProperty('ComputeAccelerationCoM','true')
 
 robot.control.unplug()
-
-dyn.createOpPoint('rf','right-ankle')
-dyn.createOpPoint('lf','left-ankle')
 
 # --- SOT Dyn OpSpaceH --------------------------------------
 # SOT controller.
@@ -231,72 +227,11 @@ pg.zmppreviouscontroller.value = (0,0,0)
 
 pg.initState()
 
-# --- PG INIT FRAMES ---
-geom = Dynamic("geom")
-geom.setFiles(modelDir, modelName[robotName],specificitiesPath,jointRankPath)
-geom.parse()
-geom.createOpPoint('rf','right-ankle')
-geom.createOpPoint('lf','left-ankle')
-plug(dyn.position,geom.position)
-geom.ffposition.value = 6*(0,)
-geom.velocity.value = robotDim*(0,)
-geom.acceleration.value = robotDim*(0,)
-
-#from dynamic_graph.sot.pattern_generator.meta_selector import SelectorPy
-#import dynamic_graph.sot.pattern_generator.meta_selector
-# --- Selector of the foot on the ground
-SelectorPy=Selector
-selecSupportFoot = Selector('selecSupportFoot'
-                            ,['matrixHomo','pg_H_sf',pg.rightfootref,pg.leftfootref]
-                            ,['matrixHomo','wa_H_sf',geom.rf,geom.lf]
-                            )
-
-plug(pg.SupportFoot,selecSupportFoot.selec)
-sf_H_wa = Inverse_of_matrixHomo('sf_H_wa')
-plug(selecSupportFoot.wa_H_sf,sf_H_wa.sin)
-pg_H_wa = Multiply_of_matrixHomo('pg_H_wa')
-plug(selecSupportFoot.pg_H_sf,pg_H_wa.sin1)
-plug(sf_H_wa.sout,pg_H_wa.sin2)
-
-# --- Compute the ZMP ref in the Waist reference frame.
-wa_H_pg = Inverse_of_matrixHomo('wa_H_pg')
-plug(pg_H_wa.sout,wa_H_pg.sin)
-wa_zmp = Multiply_matrixHomo_vector('wa_zmp')
-plug(wa_H_pg.sout,wa_zmp.sin1)
-plug(pg.zmpref,wa_zmp.sin2)
-
-# --- PLUGS PG --------------------------------------------------------
-# --- Pass the dyn from ref left_foot to ref pg.
-ffpos_from_pg = MatrixHomoToPoseRollPitchYaw('ffpos_from_pg')
-plug(pg_H_wa.sout,ffpos_from_pg.sin)
-#plug(ffpos_from_pg.sout,dyn.ffposition)
-
-# --- Connect the ZMPref to OpenHRP in the waist reference frame.
-pg.parseCmd(':SetZMPFrame world')
-plug(wa_zmp.sout,robot.zmp)
-
-# --- Extract pose and attitude from ffpos
-ffattitude_from_pg = Selec_of_vector('ffattitude_from_pg')
-plug(ffpos_from_pg.sout,ffattitude_from_pg.sin)
-ffattitude_from_pg.selec(3,6)
-plug(ffattitude_from_pg.sout,robot.attitudeIN)
-
 # --- REFERENCES ---------------------------------------------------------------
 # --- Selector of Com Ref: when pg is stopped, pg.inprocess becomes 0
-comRef = SelectorPy('comRef'
-                     ,['vector','ref',dyn.com,pg.comref])
+comRef = Selector('comRef'
+                  ,['vector','ref',dyn.com,pg.comref])
 plug(pg.inprocess,comRef.selec)
-
-
-footSelection = SelectorPy('refFootSelection'
-                              ,[ 'matrixHomo','desFoot',pg.rightfootref,pg.leftfootref] # Ref of the flying foot
-                              ,[ 'matrixHomo','desRefFoot',pg.leftfootref,pg.rightfootref] # Ref of the support foot
-                              ,[ 'matrixHomo','foot',dyn.rf,dyn.lf]  # actual pos of the flying foot
-                              ,[ 'matrixHomo','refFoot',dyn.lf,dyn.rf] # actual pos of the support foot
-                              ,['matrix','Jfoot',dyn.Jrf,dyn.Jlf] # jacobian of .foot
-                              ,['matrix','JrefFoot',dyn.Jlf,dyn.Jrf] # jacobian of .refFoot
-                              )
-plug(pg.SupportFoot,footSelection.selec)
 
 # --- HERDT PG AND START -------------------------------------------------------
 # Set the algorithm generating the ZMP reference trajectory to Herdt's one.
@@ -307,11 +242,8 @@ pg.parseCmd(':singlesupporttime 0.7')
 pg.parseCmd(':numberstepsbeforestop 4')
 # Set constraints on XY
 pg.parseCmd(':setfeetconstraint XY 0.09 0.06')
-
-# The next command must be runned after a OpenHRP.inc ... ???
 # Start the robot with a speed of 0.1 m/0.8 s.
 pg.parseCmd(':HerdtOnline 0.1 0.0 0.0')
-
 # You can now modifiy the speed of the robot using set pg.velocitydes [3]( x, y, yaw)
 pg.velocitydes.value =(0.1,0.0,0.0)
 
@@ -342,7 +274,7 @@ plug(waistReferenceVector.sout,waistReference.sin)
 plug(waistReference.sout,taskWaist.featureDes.position)
 
 taskWaist.feature.selec.value = '011100'
-taskWaist.task.controlGain.value = 5
+taskWaist.task.controlGain.value = 5000
 
 # --- TASK COM ---
 featureCom = FeatureGeneric('featureCom')
@@ -357,7 +289,7 @@ taskCom = TaskDynPD('taskCom')
 taskCom.add('featureCom')
 #plug(pg.dcomref,featureComDes.errordotIN)
 #plug(featureCom.errordot,taskCom.errorDot)
-taskCom.controlGain.value = 400
+taskCom.controlGain.value = 5000
 #taskCom.setBeta(-1)
 plug(robot.velocity,taskCom.qdot)
 taskCom.dt.value = dt
@@ -365,10 +297,10 @@ taskCom.dt.value = dt
 # --- TASK RIGHT FOOT
 # Task right hand
 taskRF=MetaTaskDyn6d('rf',dyn,'rf','right-ankle')
-taskLF=MetaTaskDyn6d('lf',dyn,'lf','left-ankle')
-
 plug(pg.rightfootref,taskRF.featureDes.position)
 taskRF.task.controlGain.value = 5000
+
+taskLF=MetaTaskDyn6d('lf',dyn,'lf','left-ankle')
 plug(pg.leftfootref,taskLF.featureDes.position)
 taskLF.task.controlGain.value = 5000
 
@@ -379,12 +311,7 @@ sot.addContactFromTask(contactRF.task.name,'RF')
 sot._RF_p.value = contactRF.support
 
 sot.push(taskCom.name)
-
-
-robot.after.addSignal('comRef.ref')
-#robot.control.value = (robotDim-6)*(0,)
-#robot.acceleration.value = (robotDim)*(0,)
-
+sot.push(taskWaist.task.name)
 
 # --- TRACER -----------------------------------------------------------------
 from dynamic_graph.tracer import *
