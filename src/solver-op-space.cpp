@@ -647,7 +647,7 @@ namespace dynamicgraph
 	  {
 	    EIGEN_VECTOR_FROM_SIGNAL(qref,postureSIN(t));
 	    EIGEN_VECTOR_FROM_SIGNAL(q,positionSIN(t));
-	    const double Kp = Kv*Kv;
+	    const double Kp = .25*Kv*Kv;
 	    ref = (-Kp*(q-qref)-Kv*dq).tail(nbDofs);
 	  }
 	else
