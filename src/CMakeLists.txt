@@ -32,6 +32,7 @@ FOREACH(header ${headers})
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ OWNER_WRITE)
 ENDFOREACH(header)
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/include)
+INCLUDE_DIRECTORIES(${${PROJECT_NAME}_SOURCE_DIR}/include)
 
 # --- COMPILATION OF PLUGINS
 FOREACH(lib ${libs})
@@ -46,6 +47,10 @@ FOREACH(lib ${libs})
     TARGET_LINK_LIBRARIES(${lib} "${${lib}_plugins_dependencies}")
   ENDIF(${lib}_plugins_dependencies)
 
+  IF(${lib}_ext_plugins_dependencies)
+    TARGET_LINK_LIBRARIES(${lib} "${${lib}_ext_plugins_dependencies}")
+  ENDIF(${lib}_ext_plugins_dependencies)
+
   PKG_CONFIG_USE_DEPENDENCY(${lib} sot-core)
   PKG_CONFIG_USE_DEPENDENCY(${lib} dynamic-graph)
   PKG_CONFIG_USE_DEPENDENCY(${lib} soth)
@@ -53,19 +58,12 @@ FOREACH(lib ${libs})
   INSTALL(TARGETS ${lib} DESTINATION lib/plugin)
   # build python submodule
   STRING(REPLACE - _ PYTHON_LIBRARY_NAME ${lib})
-  ADD_DEPENDENCIES(${lib} MKDIR_${PYTHON_LIBRARY_NAME})
-  ADD_CUSTOM_TARGET(MKDIR_${PYTHON_LIBRARY_NAME}
-    mkdir -p dynamic_graph/sot/dyninv/${PYTHON_LIBRARY_NAME}
-    )
+  FILE(MAKE_DIRECTORY dynamic_graph/sot/dyninv/${PYTHON_LIBRARY_NAME})
   DYNAMIC_GRAPH_PYTHON_MODULE("sot/dyninv/${PYTHON_LIBRARY_NAME}"
     ${lib}
-    sot/dyninv/${PYTHON_LIBRARY_NAME}/wrap
+    sot-dyninv-${PYTHON_LIBRARY_NAME}-wrap
     )
 ENDFOREACH(lib)
-
-#EXEC_PROGRAM(${PYTHON_EXECUTABLE} ARGS "-c \"from distutils import sysconfig; print sysconfig.get_python_lib(0,0,prefix='')\""
-#  OUTPUT_VARIABLE PYTHON_SITELIB
-#  )
 
 # Install empty __init__.py files in intermediate directories.
 INSTALL(FILES

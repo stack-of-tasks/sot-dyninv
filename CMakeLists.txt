@@ -102,6 +102,27 @@ SET(headers
 
 )
 
+list(APPEND task-dyn-joint-limits_plugins_dependencies task-dyn-pd)
+list(APPEND pseudo-robot-dynamic_plugins_dependencies dynamic-integrator)
+
+foreach(lib task-inequality task-dyn-pd task-joint-limits task-dyn-joint-limits)
+	IF(WIN32)
+		list(APPEND ${lib}_ext_plugins_dependencies
+			${DYNAMIC_GRAPH_PLUGINDIR}/task${CMAKE_LINK_LIBRARY_SUFFIX})
+	ELSE(WIN32)
+		list(APPEND ${lib}_ext_plugins_dependencies
+			${DYNAMIC_GRAPH_PLUGINDIR}/task${CMAKE_SHARED_LIBRARY_SUFFIX})
+	ENDIF(WIN32)
+endforeach(lib)
+
+IF(WIN32)
+	list(APPEND solver-op-space_ext_plugins_dependencies
+		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_LINK_LIBRARY_SUFFIX})
+ELSE(WIN32)
+	list(APPEND solver-op-space_ext_plugins_dependencies
+		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_SHARED_LIBRARY_SUFFIX})
+ENDIF(WIN32)
+
 # Add subdirectories.
 ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(unitTesting)
