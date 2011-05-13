@@ -27,12 +27,15 @@ FOREACH(header ${headers})
   set(bin_path ${${PROJECT_NAME}_BINARY_DIR}/include/${PROJECT_NAME}/${headerName})
   set(install_path ${CMAKE_INSTALL_PREFIX}/include/${PROJECT_NAME})
   execute_process(COMMAND ${CMAKE_COMMAND} -E remove ${bin_path})
+  IF(WIN32)
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src_path} ${bin_path} )
+  ELSE(WIN32)
   execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${src_path} ${bin_path} )
+  ENDIF(WIN32)
   install(FILES ${src_path} DESTINATION ${install_path}
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ OWNER_WRITE)
 ENDFOREACH(header)
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/include)
-INCLUDE_DIRECTORIES(${${PROJECT_NAME}_SOURCE_DIR}/include)
 
 # --- COMPILATION OF PLUGINS
 FOREACH(lib ${libs})
