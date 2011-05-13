@@ -21,7 +21,7 @@
 /* --------------------------------------------------------------------- */
 
 #if defined (WIN32)
-#  if defined (dynamic_interpretor_EXPORTS)
+#  if defined (zmp_estimator_EXPORTS)
 #    define SOTZMPESTIMATOR_EXPORT __declspec(dllexport)
 #  else
 #    define SOTZMPESTIMATOR_EXPORT __declspec(dllimport)

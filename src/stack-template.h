@@ -21,7 +21,7 @@
 /* --------------------------------------------------------------------- */
 
 #if defined (WIN32)
-#  if defined (dynamic_interpretor_EXPORTS)
+#  if defined (stack_template_EXPORTS)
 #    define SOTSTACKTEMPLATE_EXPORT __declspec(dllexport)
 #  else
 #    define SOTSTACKTEMPLATE_EXPORT __declspec(dllimport)
@@ -46,7 +46,7 @@ namespace dynamicgraph {
     namespace dg = dynamicgraph;
 
     template< typename TaskGeneric >
-      class SOTSTACKTEMPLATE_EXPORT Stack
+      class Stack
       {
 
       protected:

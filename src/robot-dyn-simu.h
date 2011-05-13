@@ -21,7 +21,7 @@
 /* --------------------------------------------------------------------- */
 
 #if defined (WIN32)
-#  if defined (pseudo_robot_dynamic_EXPORTS)
+#  if defined (robot_dyn_simu_EXPORTS)
 #    define SOTROBOTDYNSIMU_EXPORT __declspec(dllexport)
 #  else
 #    define SOTROBOTDYNSIMU_EXPORT __declspec(dllimport)

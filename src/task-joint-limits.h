@@ -21,7 +21,7 @@
 /* --------------------------------------------------------------------- */
 
 #if defined (WIN32)
-#  if defined (task_dyn_joint_limits_EXPORTS)
+#  if defined (task_joint_limits_EXPORTS)
 #    define SOTTASKDYNJOINTLIMITS_EXPORT __declspec(dllexport)
 #  else
 #    define SOTTASKDYNJOINTLIMITS_EXPORT __declspec(dllimport)

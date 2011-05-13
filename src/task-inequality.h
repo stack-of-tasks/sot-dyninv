@@ -21,7 +21,7 @@
 /* --------------------------------------------------------------------- */
 
 #if defined (WIN32)
-#  if defined (task_dyn_inequality_EXPORTS)
+#  if defined (task_inequality_EXPORTS)
 #    define SOTTASKDYNINEQUALITY_EXPORT __declspec(dllexport)
 #  else
 #    define SOTTASKDYNINEQUALITY_EXPORT __declspec(dllimport)

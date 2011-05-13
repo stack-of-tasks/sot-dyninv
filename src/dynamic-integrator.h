@@ -21,7 +21,7 @@
 /* --------------------------------------------------------------------- */
 
 #if defined (WIN32)
-#  if defined (dynamic_interpretor_EXPORTS)
+#  if defined (dynamic_integrator_EXPORTS)
 #    define SOTDYNAMICINTEGRATOR_EXPORT __declspec(dllexport)
 #  else
 #    define SOTDYNAMICINTEGRATOR_EXPORT __declspec(dllimport)
