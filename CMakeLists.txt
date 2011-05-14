@@ -104,6 +104,7 @@ SET(headers
 
 list(APPEND task-dyn-joint-limits_plugins_dependencies task-dyn-pd)
 list(APPEND pseudo-robot-dynamic_plugins_dependencies dynamic-integrator)
+list(APPEND solver-op-space_plugins_dependencies task-dyn-pd)
 
 foreach(lib task-inequality task-dyn-pd task-joint-limits task-dyn-joint-limits)
 	IF(WIN32)
