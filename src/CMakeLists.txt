@@ -15,6 +15,7 @@
 # sot-dyninv. If not, see <http://www.gnu.org/licenses/>.
 
 INCLUDE(../cmake/python.cmake)
+FINDPYTHON()
 
 IF(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
   ADD_DEFINITIONS(-DDEBUG=2)
@@ -36,6 +37,7 @@ FOREACH(header ${headers})
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ OWNER_WRITE)
 ENDFOREACH(header)
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/include)
+LINK_DIRECTORIES(${PYTHON_LIBRARY_DIRS})
 
 # --- COMPILATION OF PLUGINS
 FOREACH(lib ${libs})
