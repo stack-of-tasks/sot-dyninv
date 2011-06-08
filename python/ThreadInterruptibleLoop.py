@@ -1,4 +1,4 @@
-import signal, threading, time
+import threading, time
 
 class ThreadInterruptibleLoop(threading.Thread):
     isQuit=False
@@ -11,7 +11,7 @@ class ThreadInterruptibleLoop(threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
-        self.setSigHandler()
+        self.daemon = True
 
     def quit(self): self.isQuit = True
     def setPlay(self,mode):
@@ -36,22 +36,17 @@ class ThreadInterruptibleLoop(threading.Thread):
         self.isRunning=False
         print 'Thread loop will now end.'
 
-    def sigHandler(self,signum, frame):
-        print 'Catch signal ', signum
-        signal.signal(signum, self.previousHandler)
-        self.quit()
-    def setSigHandler(self):
-        self.previousHandler = signal.getsignal(signal.SIGINT)
-        signal.signal(signal.SIGINT, (lambda x,y: self.sigHandler(x,y)) )
 
     def start(self):
         self.setPlay(True)
         threading.Thread.start(self)
+
     def restart(self):
         self.join()
         self.play()
         self.setSigHandler()
         threading.Thread.start(self)
+
     def loop(self):
         None
 
