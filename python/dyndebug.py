@@ -34,7 +34,7 @@ dt=5e-3
 # --- VIEWER -------------------------------------------------------------------
 # --- VIEWER -------------------------------------------------------------------
 # --- VIEWER -------------------------------------------------------------------
-if 1:#try:
+try:
    import robotviewer
 
    def stateFullSize(robot):
@@ -59,7 +59,6 @@ if 1:#try:
    RobotClass.set = setView
 
    robot.refresh()
-try:pass
 except:
     print "No robot viewer, sorry."
     robot.viewer = None
