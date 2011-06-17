@@ -6,7 +6,7 @@ from dynamic_graph.sot.dyninv import *
 import dynamic_graph.script_shortcuts
 from dynamic_graph.script_shortcuts import optionalparentheses
 from dynamic_graph.matlab import matlab
-from MetaTask6d import MetaTask6d,toFlags
+from dynamic_graph.sot.core.meta_task_6d import MetaTask6d,toFlags
 from attime import attime
 
 from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
