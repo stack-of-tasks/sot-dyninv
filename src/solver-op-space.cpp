@@ -282,7 +282,7 @@ namespace dynamicgraph
 
 	template< typename D1, typename D2  >
 	void computeForceNormalConversion( Eigen::MatrixBase<D1> & Ci,
-					   Eigen::MatrixBase<D2> & positions )
+					   const Eigen::MatrixBase<D2> & positions )
 	{
 	  /* General Constraint is: phi^0 = Psi.fi, with Psi = [ I; skew(OP1);
 	     skew(OP2); skew(OP3); skew(OP4) ].  But phi^0 = X_c^0*phi^c (both feet
@@ -446,9 +446,9 @@ namespace dynamicgraph
 
 	// if( t==1112 ) { hsolver->debugOnce(); }
 
-	EIGEN_VECTOR_FROM_SIGNAL(b,dyndriftSIN(t));
-	EIGEN_MATRIX_FROM_SIGNAL(A,matrixInertiaSIN(t));
-	EIGEN_VECTOR_FROM_SIGNAL(dq,velocitySIN(t));
+	EIGEN_CONST_VECTOR_FROM_SIGNAL(b,dyndriftSIN(t));
+	EIGEN_CONST_MATRIX_FROM_SIGNAL(A,matrixInertiaSIN(t));
+	EIGEN_CONST_VECTOR_FROM_SIGNAL(dq,velocitySIN(t));
 
 	using namespace sotOPH;
 	using namespace soth;
@@ -500,7 +500,7 @@ namespace dynamicgraph
 	BOOST_FOREACH(contacts_t::value_type& pContact, contactMap)
 	  {
 	    Contact & contact = pContact.second;
-	    EIGEN_MATRIX_FROM_SIGNAL(Jc,(*contact.jacobianSIN)(t));
+	    EIGEN_CONST_MATRIX_FROM_SIGNAL(Jc,(*contact.jacobianSIN)(t));
 	    const int ri = contact.range.first;
 	    Cdyn.COLS_F.COLS(ri,ri+6) = Jc.transpose();
 	  }
@@ -520,20 +520,20 @@ namespace dynamicgraph
 	  BOOST_FOREACH(contacts_t::value_type& pContact, contactMap)
 	    {
 	      Contact& contact = pContact.second;  const int n6 = nci*6;
-	      EIGEN_MATRIX_FROM_SIGNAL(Jc,(*contact.jacobianSIN)(t));
+	      EIGEN_CONST_MATRIX_FROM_SIGNAL(Jc,(*contact.jacobianSIN)(t));
 	      Ccontact.COLS_Q.ROWS(n6,n6+6) = Jc;
 
 	      VectorXd reference = VectorXd::Zero(6);
 	      if( (*contact.JdotSIN) )
 		{
 		  sotDEBUG(5) << "Accounting for Jcontact_dot. " << std::endl;
-		  EIGEN_MATRIX_FROM_SIGNAL(Jcdot,(*contact.JdotSIN)(t));
+		  EIGEN_CONST_MATRIX_FROM_SIGNAL(Jcdot,(*contact.JdotSIN)(t));
 		  reference -= Jcdot*dq;
 		}
 	      if( (*contact.correctorSIN) )
 		{
 		  sotDEBUG(5) << "Accounting for contact_xddot. " << std::endl;
-		  EIGEN_VECTOR_FROM_SIGNAL(xdd,(*contact.correctorSIN)(t));
+		  EIGEN_CONST_VECTOR_FROM_SIGNAL(xdd,(*contact.correctorSIN)(t));
 		  reference += xdd;
 		}
 	      for( int r=0;r<6;++r ) bcontact[n6+r] = reference[r];
@@ -551,7 +551,7 @@ namespace dynamicgraph
 	  BOOST_FOREACH(const contacts_t::value_type& pContact, contactMap)
 	    {
 	      const Contact & contact = pContact.second;
-	      EIGEN_MATRIX_FROM_SIGNAL(support,(*contact.supportSIN)(t));
+	      EIGEN_CONST_MATRIX_FROM_SIGNAL(support,(*contact.supportSIN)(t));
 	      const int nbP = support.cols();
 	      const int ri = contact.range.first, rs=contact.range.second;
 
@@ -585,8 +585,8 @@ namespace dynamicgraph
 	    MatrixXd & Ctask1 = Ctasks[i];
 	    VectorBound & btask1 = btasks[i];
 
-	    EIGEN_MATRIX_FROM_SIGNAL(Jdot,task.JdotSOUT(t));
-	    EIGEN_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
+	    EIGEN_CONST_MATRIX_FROM_SIGNAL(Jdot,task.JdotSOUT(t));
+	    EIGEN_CONST_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
 	    const dg::sot::VectorMultiBound & ddx = task.taskSOUT(t);
 
 	    const int nx1 = ddx.size();
@@ -645,8 +645,8 @@ namespace dynamicgraph
 	const double Kv = breakFactorSIN(t);
 	if( postureSIN && positionSIN )
 	  {
-	    EIGEN_VECTOR_FROM_SIGNAL(qref,postureSIN(t));
-	    EIGEN_VECTOR_FROM_SIGNAL(q,positionSIN(t));
+	    EIGEN_CONST_VECTOR_FROM_SIGNAL(qref,postureSIN(t));
+	    EIGEN_CONST_VECTOR_FROM_SIGNAL(q,positionSIN(t));
 	    const double Kp = .25*Kv*Kv;
 	    ref = (-Kp*(q-qref)-Kv*dq).tail(nbDofs);
 	  }

@@ -23,17 +23,34 @@
 namespace Eigen
 {
   typedef Matrix<double,Dynamic,Dynamic,RowMajor> MatrixRXd;
+  typedef Map<MatrixRXd> SigMatrixXd;
+  typedef Map<VectorXd> SigVectorXd;
+  typedef const Map<const MatrixRXd> const_SigMatrixXd;
+  typedef const Map<const VectorXd> const_SigVectorXd;
 }
 
-#define EIGEN_MATRIX_FROM_SIGNAL(name,signal)	                         \
-  Eigen::Map<Eigen::MatrixRXd> name			                 \
+#define EIGEN_CONST_MATRIX_FROM_SIGNAL(name,signal)	                 \
+  Eigen::const_SigMatrixXd name						\
   (							                 \
-   const_cast<double*>(signal.accessToMotherLib().data().begin()),	 \
+   signal.accessToMotherLib().data().begin(),                      	 \
    signal.nbRows(),				               	         \
    signal.nbCols()				               	         \
 						               	         )
+#define EIGEN_MATRIX_FROM_SIGNAL(name,signal)	                         \
+  Eigen::SigMatrixXd name			                         \
+  (							                 \
+   signal.accessToMotherLib().data().begin(),	                         \
+   signal.nbRows(),				               	         \
+   signal.nbCols()				               	         \
+						               	         )
+#define EIGEN_CONST_VECTOR_FROM_SIGNAL(name,signal)	                 \
+  Eigen::const_SigVectorXd name		               	                 \
+  (						               	         \
+   signal.accessToMotherLib().data().begin(),	               	         \
+   signal.size()				               	         \
+						               	         )
 #define EIGEN_VECTOR_FROM_SIGNAL(name,signal)	                         \
-  Eigen::Map<Eigen::VectorXd> name		               	         \
+  Eigen::SigVectorXd name	 	               	                 \
   (						               	         \
    signal.accessToMotherLib().data().begin(),	               	         \
    signal.size()				               	         \

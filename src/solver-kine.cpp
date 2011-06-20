@@ -225,7 +225,7 @@ namespace dynamicgraph
 	    MatrixXd & Ctask = Ctasks[i];
 	    VectorBound & btask = btasks[i];
 
-	    EIGEN_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
+	    EIGEN_CONST_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
 	    const dg::sot::VectorMultiBound & ddx = task.taskSOUT(t);
 	    const int nx = ddx.size();
 
@@ -240,7 +240,6 @@ namespace dynamicgraph
 	    sotDEBUG(15) << "Ctask"<<i<<" = "     << (MATLAB)Ctask << std::endl;
 	    sotDEBUG(1) << "btask"<<i<<" = "     << btask << std::endl;
 	  }
-
 
 	/* --- */
 	sotDEBUG(1) << "Initial config." << std::endl;

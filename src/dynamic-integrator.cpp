@@ -314,7 +314,7 @@ namespace dynamicgraph
 	sotDEBUGIN(15);
 
 	/* --- Convert acceleration, velocity and position to amelif style  ------- */
-	EIGEN_VECTOR_FROM_SIGNAL( acceleration,mlacceleration );
+	EIGEN_CONST_VECTOR_FROM_SIGNAL( acceleration,mlacceleration );
 	EIGEN_VECTOR_FROM_SIGNAL( velocity,mlvelocity );
 	EIGEN_VECTOR_FROM_SIGNAL( position,mlposition );
 
@@ -323,21 +323,21 @@ namespace dynamicgraph
 	sotDEBUG(1) << "velocity = " << (MATLAB)velocity << std::endl;
 	sotDEBUG(1) << "position = " << (MATLAB)position << std::endl;
 
-	VectorBlock< Map<VectorXd> > fftrans = position.head(3);
-	VectorBlock< Map<VectorXd> > ffeuler = position.segment(3,3);
+	VectorBlock<SigVectorXd> fftrans = position.head(3);
+	VectorBlock<SigVectorXd> ffeuler = position.segment(3,3);
 	Matrix3d ffrot = computeRotationMatrixFromEuler(ffeuler);
 	sotDEBUG(15) << "Rff_start = " << (MATLAB)ffrot << std::endl;
 	sotDEBUG(15) << "tff_start = " << (MATLAB)fftrans << std::endl;
 
-	const VectorBlock< Map<VectorXd> > ffvtrans = velocity.head(3);
-	const VectorBlock< Map<VectorXd> > ffvrot = velocity.segment(3,3);
+	VectorBlock<SigVectorXd> ffvtrans = velocity.head(3);
+	VectorBlock<SigVectorXd> ffvrot = velocity.segment(3,3);
 	Vector3d v_lin,v_ang;
 	djj2amelif( v_ang,v_lin,ffvrot,ffvtrans,fftrans,ffrot );
 	sotDEBUG(15) << "vff_start = " << (MATLAB)v_lin << std::endl;
 	sotDEBUG(15) << "wff_start = " << (MATLAB)v_ang << std::endl;
 
-	const VectorBlock< Map<VectorXd> > ffatrans = acceleration.head(3);
-	const VectorBlock< Map<VectorXd> > ffarot = acceleration.segment(3,3);
+	const VectorBlock<const_SigVectorXd> ffatrans = acceleration.head(3);
+	const VectorBlock<const_SigVectorXd> ffarot = acceleration.segment(3,3);
 	Vector3d a_lin,a_ang;
 	djj2amelif( a_ang,a_lin,ffarot,ffatrans,fftrans,ffrot );
 	sotDEBUG(15) << "alff_start = " << (MATLAB)a_lin << std::endl;

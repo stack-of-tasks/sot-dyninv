@@ -96,7 +96,7 @@ namespace dynamicgraph
 	controlSIN(time);
 	integrateFromSignals(time);
 
-	EIGEN_VECTOR_FROM_SIGNAL(v,velocity );
+	EIGEN_CONST_VECTOR_FROM_SIGNAL(v,velocity );
 	EIGEN_VECTOR_FROM_VECTOR( qdot,mlqdot,v.size()-6 );
 	qdot = v.tail(v.size()-6);
 
@@ -243,7 +243,7 @@ namespace dynamicgraph
 	using namespace Eigen;
 	using PseudoRobotDynamic_Static::computeEulerFromRotationMatrix;
 
-	EIGEN_MATRIX_FROM_SIGNAL(M,mlM);
+	EIGEN_CONST_MATRIX_FROM_SIGNAL(M,mlM);
 	Vector3d r = computeEulerFromRotationMatrix( M.topLeftCorner(3,3) );
 	EIGEN_VECTOR_FROM_SIGNAL( q,position );
 	if( q.size()<6 )
