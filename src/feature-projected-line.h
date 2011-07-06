@@ -36,7 +36,7 @@
 /* --------------------------------------------------------------------- */
 
 #if defined (WIN32)
-#  if defined (feature_projectedLine_EXPORTS)
+#  if defined (feature_projected_line_EXPORTS)
 #    define SOTFEATUREPROJECTEDLINE_EXPORT __declspec(dllexport)
 #  else
 #    define SOTFEATUREPROJECTEDLINE_EXPORT __declspec(dllimport)
