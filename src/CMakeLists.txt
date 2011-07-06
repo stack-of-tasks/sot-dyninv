@@ -63,7 +63,6 @@ FOREACH(lib ${libs})
   INSTALL(TARGETS ${lib} DESTINATION lib/plugin)
   # build python submodule
   STRING(REPLACE - _ PYTHON_LIBRARY_NAME ${lib})
-  FILE(MAKE_DIRECTORY dynamic_graph/sot/dyninv/${PYTHON_LIBRARY_NAME})
   DYNAMIC_GRAPH_PYTHON_MODULE("sot/dyninv/${PYTHON_LIBRARY_NAME}"
     ${lib}
     sot-dyninv-${PYTHON_LIBRARY_NAME}-wrap
