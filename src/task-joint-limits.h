@@ -53,7 +53,6 @@ namespace dynamicgraph {
 	:public TaskAbstract
 	,public EntityHelper<TaskJointLimits>
 	{
-
 	public: /* --- CONSTRUCTOR ---- */
 
 	  TaskJointLimits( const std::string& name );
