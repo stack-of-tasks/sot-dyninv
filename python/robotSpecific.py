@@ -9,12 +9,12 @@ initialConfig=dict()
 gearRatio=dict()
 inertiaRotor=dict()
 
-pkgDataRootDir['hrp10small'] = "/home/nmansard/compil/devgiri/hpp2/share/hrp2_10-small"
-pkgDataRootDir['hrp14small'] = "/home/nmansard/compil/devgiri/hpp2/share/hrp2_14"
-pkgDataRootDir['hrp14aug'] = "/home/nmansard/compil/devgiri/hpp2/share/hrp2_14_augmented2dof"
-pkgDataRootDir['hrp10aug'] = "/home/nmansard/compil/devgiri/hpp2/share/hrp2_10-augmented"
+pkgDataRootDir['hrp10small'] = "/home/nmansard/compil/devgiri/hpp2/share/hrp2-10-small"
+pkgDataRootDir['hrp14small'] = "/home/nmansard/compil/devgiri/hpp2/share/hrp2-14"
+pkgDataRootDir['hrp14aug'] = "/home/nmansard/compil/devgiri/hpp2/share/hrp2-14-augmented"
+pkgDataRootDir['hrp10aug'] = "/home/nmansard/compil/devgiri/hpp2/share/hrp2-10-augmented"
 
-modelName['hrp10small'] = 'HRP2JRLmainSmall.wrl'
+modelName['hrp10small'] = 'HRP2JRLmainsmall.wrl'
 modelName['hrp14small'] = 'HRP2JRLmainsmall.wrl'
 modelName['hrp14aug'] = 'HRP2JRLmainsmall.wrl'
 modelName['hrp10aug'] = 'HRP2JRLmainSmall.wrl'
