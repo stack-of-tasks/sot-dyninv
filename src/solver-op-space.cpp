@@ -20,7 +20,7 @@
 #ifdef VP_DEBUG
 class solver_op_space__INIT
 {
-public:solver_op_space__INIT( void ) { dynamicgraph::sot::DebugTrace::openFile(); }
+public:solver_op_space__INIT( void ) { dynamicgraph::sot::DebugTrace::openFile("/tmp/dynh.txt"); }
 };
 solver_op_space__INIT solver_op_space_initiator;
 #endif //#ifdef VP_DEBUG
@@ -173,7 +173,7 @@ namespace dynamicgraph
       {
 	using namespace dynamicgraph::sot;
 
-	TaskDynPD & task = dynamic_cast<TaskDynPD&> ( g_pool.getEntity( taskName ) );
+	TaskDynPD & task = dynamic_cast<TaskDynPD&> ( g_pool().getEntity( taskName ) );
 	assert( task.getFeatureList().size() == 1 );
 	BOOST_FOREACH( FeatureAbstract* fptr, task.getFeatureList() )
 	  {
@@ -501,8 +501,9 @@ namespace dynamicgraph
 	  {
 	    Contact & contact = pContact.second;
 	    EIGEN_CONST_MATRIX_FROM_SIGNAL(Jc,(*contact.jacobianSIN)(t));
-	    const int ri = contact.range.first;
+	    const int ri = contact.range.first,rs = contact.range.second;
 	    Cdyn.COLS_F.COLS(ri,ri+6) = Jc.transpose();
+	    Cdyn.COLS_F.COLS(ri+6,rs).setZero();
 	  }
 
 	for( int i=0;i<nbDofs+6;++i ) bdyn[i] = -b[i];
@@ -562,18 +563,23 @@ namespace dynamicgraph
 		::RowsBlockXpr::RowsBlockXpr    Czi
 		= Czmp.COLS_F.COLS(ri,rs). ROWS(rows,rows+3);
 	      computeForceNormalConversion(Czi,support);
-	      for( int i=0;i<3;++i ) bzmp. ROWS(rows,rows+3)[i] = 0;
+	      //for( int i=0;i<3;++i ) bzmp. ROWS(rows,rows+3)[i] = 0;
+	      bzmp. ROWS(rows,rows+3).fill( 0 );
 
-	      for( int p=0;p<nbP;++p )
-		{
-		  Czmp.COLS_F.COLS(ri+6,rs).ROWS(rows+3,rows+3+nbP)
-		    (p,p) = 1;
-		  bzmp.ROWS(rows+3,rows+3+nbP)
-		    [p] = soth::Bound(0,soth::Bound::BOUND_SUP);
-		}
+	      Czmp.COLS_F.COLS(ri,ri+6).ROWS(rows+3,rows+3+nbP).setZero();
+	      Czmp.COLS_F.COLS(ri+6,rs).ROWS(rows+3,rows+3+nbP).setIdentity();
+	      bzmp.ROWS(rows+3,rows+3+nbP).fill( soth::Bound(0,soth::Bound::BOUND_SUP) );
+	      // for( int p=0;p<nbP;++p )
+	      // 	{
+	      // 	  Czmp.COLS_F.COLS(ri+6,rs).ROWS(rows+3,rows+3+nbP)
+	      // 	    (p,p) = 1;
+	      // 	  bzmp.ROWS(rows+3,rows+3+nbP)
+	      // 	    [p] = soth::Bound(0,soth::Bound::BOUND_SUP);
+	      // 	}
 	      rows += 3+nbP;
 	    }
 	  sotDEBUG(15) << "Czmp = "     << (MATLAB)Czmp << std::endl;
+	  sotDEBUG(15) << "Czmp = "     << Czmp << std::endl;
 	  sotDEBUG(1) << "bzmp = "     << bzmp << std::endl;
 	}
 
@@ -666,9 +672,14 @@ namespace dynamicgraph
 	sotDEBUG(1) << "Run for a solution." << std::endl;
 	hsolver->activeSearch(solution);
 	sotDEBUG(1) << "solution = " << (MATLAB)solution << std::endl;
+	sotDEBUG(1) << "solution = " << solution << std::endl;
 
 	EIGEN_VECTOR_FROM_VECTOR( tau,control,nbDofs );
+	sotDEBUG(1) << "controlb = " << control << std::endl;
 	tau = solution.transpose().COLS_TAU;
+	sotDEBUG(1) << "tau = " << tau << std::endl;
+	sotDEBUG(1) << "stct = " << (MATLAB)solution.transpose().COLS_TAU << std::endl;
+	sotDEBUG(1) << "controla = " << control << std::endl;
 
 	/* --- forces signal --- */
 	BOOST_FOREACH(contacts_t::value_type& pContact, contactMap)

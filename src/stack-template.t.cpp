@@ -195,7 +195,7 @@ namespace dynamicgraph
     void  Stack<TaskGeneric>::					\
     ACT##ByTaskName( const std::string& tname )			\
     {								\
-      dg::Entity & taska = dg::g_pool.getEntity( tname );	\
+      dg::Entity & taska = dg::g_pool().getEntity( tname );	\
       TaskGeneric & task = dynamic_cast<TaskGeneric&>( taska );	\
       ACT(task);						\
     }

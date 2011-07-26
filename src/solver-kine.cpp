@@ -14,7 +14,7 @@
  * with sot-dyninv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VP_DEBUG
+//#define VP_DEBUG
 #define VP_DEBUG_MODE 50
 #include <sot/core/debug.hh>
 #ifdef VP_DEBUG

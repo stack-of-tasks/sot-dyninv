@@ -201,10 +201,10 @@ namespace dynamicgraph
       replaceSimulatorEntity( const std::string& formerName, const bool & plug )
       {
 	assert( formerOpenHRP == NULL );
-	formerOpenHRP = &dg::g_pool.getEntity( formerName );
-	dg::g_pool.deregisterEntity( formerName );
+	formerOpenHRP = &dg::g_pool().getEntity( formerName );
+	dg::g_pool().deregisterEntity( formerName );
 	// former.name = formerName+".old";
-	dg::g_pool.registerEntity( formerName+"-old",formerOpenHRP );
+	dg::g_pool().registerEntity( formerName+"-old",formerOpenHRP );
 
 	entityDeregistration(); name = formerName; entityRegistration();
 
