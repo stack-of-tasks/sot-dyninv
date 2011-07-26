@@ -60,8 +60,7 @@ namespace dynamicgraph {
 
 	public: /* --- ENTITY INHERITANCE --- */
 
-	  static const std::string CLASS_NAME;
-	  virtual const std::string& getClassName( void ) { return CLASS_NAME; }
+	  DYNAMIC_GRAPH_ENTITY_DECL();
 	  virtual void display( std::ostream& os ) const;
 
 	public:  /* --- SIGNALS --- */
