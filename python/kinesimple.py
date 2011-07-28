@@ -43,7 +43,7 @@ try:
     RobotSimu.stateFullSize = stateFullSize
 
     robot.viewer = robotviewer.client('XML-RPC')
-    robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
+#    robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
 
     def refreshView( robot ):
         robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
@@ -78,6 +78,7 @@ from ThreadInterruptibleLoop import *
 @loopInThread
 def loop():
     inc()
+
 runner=loop()
 
 @optionalparentheses
@@ -137,13 +138,13 @@ class MetaTaskKine6d( MetaTask6d ):
 
 # Task right hand
 taskRH=MetaTaskKine6d('rh',dyn,'rh','right-wrist')
+taskRH.ref = ((0,0,-1,0.22),(0,1,0,-0.37),(1,0,0,.74),(0,0,0,1))
 taskLH=MetaTaskKine6d('lh',dyn,'lh','left-wrist')
+#TODO taskLH.ref = ((0,0,-1,0.22),(0,1,0,0.37),(1,0,0,.74),(0,0,0,1))
 
 # Task LFoot: Move the right foot up.
 taskRF=MetaTaskKine6d('rf',dyn,'rf','right-ankle')
 taskLF=MetaTaskKine6d('lf',dyn,'lf','left-ankle')
-taskRF.task.controlGain.value = 10 #.5/dt
-taskLF.task.controlGain.value = 10 #.5/dt
 
 # --- TASK COM ------------------------------------------------------
 dyn.setProperty('ComputeCoM','true')
@@ -161,7 +162,7 @@ taskCom.add('featureCom')
 gCom = GainAdaptive('gCom')
 plug(taskCom.error,gCom.error)
 plug(gCom.gain,taskCom.controlGain)
-gCom.setConstant(1)
+gCom.set(1,1,1)
 
 # --- TASK SUPPORT --------------------------------------------------
 featureSupport    = FeatureGeneric('featureSupport')
@@ -206,11 +207,11 @@ plug(dyn.upperJl,taskJL.referenceSup)
 taskJL.dt.value = dt
 taskJL.selec.value = toFlags(range(6,robotDim))
 
-# --- SOT KINE OpSpaceH -------------------------------------------
+# --- SOT Dyn OpSpaceH --------------------------------------
 # SOT controller.
 sot = SolverKine('sot')
 sot.setSize(robotDim)
-sot.damping.value = 1e-6
+#sot.damping.value = 2e-2
 
 plug(sot.control,robot.control)
 
@@ -227,7 +228,7 @@ from dynamic_graph.tracer import *
 from dynamic_graph.tracer_real_time import *
 tr = TracerRealTime('tr')
 tr.setBufferSize(10485760)
-tr.open('/tmp/','','.dat')
+tr.open('/tmp/','dyn_','.dat')
 tr.start()
 
 #robot.periodicCall addSignal tr.triger
@@ -240,14 +241,11 @@ tr.add('dyn.position','state')
 # tr.add('gCom.error','gerror')
 
 tr.add('sot.control','')
-tr.add('taskJL.'+taskJL.normalizedPosition.name,'')
-robot.after.addSignal('taskJL.'+taskJL.normalizedPosition.name)
 
 # --- shortcuts -------------------------------------------------
 qn=taskJL.normalizedPosition
 q=taskJL.position
 comref=featureComDes.errorIN
-com=featureCom.errorIN
 
 @optionalparentheses
 def iter():         print 'iter = ',robot.state.time
@@ -255,40 +253,31 @@ def iter():         print 'iter = ',robot.state.time
 def dump():         tr.dump()
 @optionalparentheses
 def status():       print runner.isPlay
-
-matlab.prec=4
-#matlab.fullPrec=0
+@optionalparentheses
+def iter():         print 'iter = ',robot.state.time
 
 # --- RUN ------------------------------------------------
-
-gCom.setByPoint(10,1,.1,.8)
-#comref.value = ( 0.05,0.16,0.7 )
-comref.value = ( -0.02,-0.02,0.8 )
-
-#taskRH.feature.selec.value = '111'
-taskRH.gain.setConstant(1)
-
-# Hit the Y-border border of the COM
-#taskRH.ref = ((0,0,-1,0.22),(0,1,0,-0.64),(1,0,0,1.24),(0,0,0,1))
-# Hit both X and Y borders of the COM
-taskRH.ref = ((0,0,-1,0.25),(0,1,0,-0.64),(1,0,0,1.24),(0,0,0,1))
-
 
 #sot.damping.value=.1
 sot.addContact(taskLF)
 sot.addContact(taskRF)
-#sot.push(taskCom.name)
-sot.push(taskJL.name)
-sot.push(taskSupport.name)
+sot.push(taskCom.name)
+#sot.push(taskJL.name)
+#sot.push(taskSupport.name)
 sot.push(taskRH.task.name)
-#sot.push(taskCom.name)
 
+taskRH.ref = ((0,0,-1,0.22),(0,1,0,-0.5),(1,0,0,1.24),(0,0,0,1))
+taskRH.gain.setConstant(1)
+comref.value=( 0.05,  0.1,  0.75 )
 
-#@attime(200)
-def freeComZ():
-    'Free the Z component of the COM'
-    featureCom.selec.value = '11'
+tr.add('taskJL.normalizedPosition','qn')
+
+@attime(100)
+def m1():
+    "Timer 1... done"
 
 attime(1000,stop,'pause')
 attime(1000,dump,'dump')
 
+#matlab.prec=4
+#matlab.fullPrec=0

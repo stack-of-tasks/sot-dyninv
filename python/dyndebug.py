@@ -10,6 +10,7 @@ from meta_task_dyn_6d import MetaTaskDyn6d
 
 from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 robotName = 'hrp10small'
+robotName = 'hrp14small'
 
 from numpy import *
 def totuple( a ):
