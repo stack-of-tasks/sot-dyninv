@@ -676,12 +676,9 @@ namespace dynamicgraph
 	    sotDEBUG(25) << "J"<<i<<" = " << J << std::endl;
 	    sotDEBUG(45) << "Jdot"<<i<<" = " << Jdot << std::endl;
 
-	    assert( Ctask1.rows() == nx1 && btask1.size() == nx1 );
-	    assert( J.rows()==nx1 && J.cols()==nq && (int)ddx.size()==nx1 );
-	    assert( Jdot.rows()==nx1 && Jdot.cols()==nq );
-	    Ctask1.COLS_Q = J;
-	    Ctask1.COLS_TAU.setZero();
-	    Ctask1.COLS_F.setZero();
+	    // assert( Ctask1.rows() == nx1 && btask1.size() == nx1 );
+	    // assert( J.rows()==nx1 && J.cols()==nq && (int)ddx.size()==nx1 );
+	    // assert( Jdot.rows()==nx1 && Jdot.cols()==nq );
 
 	  }
 
