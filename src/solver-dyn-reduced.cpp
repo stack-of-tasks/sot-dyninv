@@ -14,7 +14,7 @@
  * with sot-dyninv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VP_DEBUG
+//#define VP_DEBUG
 #define VP_DEBUG_MODE 50
 #include <sot/core/debug.hh>
 #ifdef VP_DEBUG
@@ -369,6 +369,70 @@ namespace dynamicgraph
 	  for( int i=0;i<vx.size();++i ){ vb[i] = vx[i]; }
 	  return vb;
 	}
+	soth::VectorBound& vbAssign ( soth::VectorBound& vb,
+				      const dg::sot::VectorMultiBound& vx )
+	{
+	  vb.resize(vx.size());
+	  for( int c=0;c<vx.size();++c )
+	    {
+	      if( vx[c].getMode() == dg::sot::MultiBound::MODE_SINGLE )
+		vb[c] = vx[c].getSingleBound();
+	      else
+		{
+		  using dg::sot::MultiBound;
+		  using namespace soth;
+		  const bool binf = vx[c].getDoubleBoundSetup( MultiBound::BOUND_INF ),
+		    bsup = vx[c].getDoubleBoundSetup( MultiBound::BOUND_SUP );
+		  if( binf&&bsup )
+		    {
+		      vb[c]
+			= std::make_pair( vx[c].getDoubleBound(MultiBound::BOUND_INF),
+					  vx[c].getDoubleBound(MultiBound::BOUND_SUP) );
+		    }
+		  else if( binf )
+		    {
+		      vb[c] = Bound( vx[c].getDoubleBound(MultiBound::BOUND_INF),
+				     Bound::BOUND_INF );
+		    }
+		  else
+		    {
+		      assert( bsup );
+		      vb[c] = Bound( vx[c].getDoubleBound(MultiBound::BOUND_SUP),
+				     Bound::BOUND_SUP );
+		    }
+
+		}
+	    }
+	  return vb;
+	}
+	template<typename D>
+	soth::VectorBound& vbSubstract ( soth::VectorBound& vb,
+					 const Eigen::MatrixBase<D> &vx )
+	{
+	  using namespace soth;
+	  assert( vb.size() == vx.size() );
+	  for( int c=0;c<vx.size();++c )
+	    {
+	      const Bound::bound_t & type = vb[c].getType();
+	      switch( type )
+		{
+		case Bound::BOUND_INF:
+		case Bound::BOUND_SUP:
+		  vb[c] = Bound( type,vb[c].getBound(type)-vx[c] );
+		  break;
+		case Bound::BOUND_DOUBLE:
+		  vb[c] = std::make_pair( vb[c].getBound(Bound::BOUND_INF)-vx[c],
+					  vb[c].getBound(Bound::BOUND_SUP)-vx[c] );
+		  break;
+		case Bound::BOUND_TWIN:
+		  vb[c] = vb[c].getBound(type) - vx[c];
+		  break;
+		case Bound::BOUND_NONE:
+		  assert( false &&"This switch should not happen." );
+		  break;
+		}
+	    }
+	}
       }
 
       /* --- SIGNALS ---------------------------------------------------------- */
@@ -496,11 +560,12 @@ namespace dynamicgraph
 	MatrixXd Gt = (J*B.triangularView<Eigen::Upper>()).transpose();
 	FullPivHouseholderQR<MatrixXd> qr( Gt );
 	qr.setThreshold( 1e-3 );
+	const unsigned int freeRank = nq-qr.rank();
 
-	EIGEN_MATRIX_FROM_MATRIX(V,mlV,nq,nf-qr.rank());
+	EIGEN_MATRIX_FROM_MATRIX(V,mlV,nq,freeRank);
 	assert( qr.matrixQ().cols()==nq && qr.matrixQ().rows()==nq
 		&& qr.matrixQ().rows()==nq );
-	V = qr.matrixQ().rightCols(nf-qr.rank());
+	V = qr.matrixQ().rightCols(freeRank);
 	return mlV;
       }
 
@@ -588,6 +653,7 @@ namespace dynamicgraph
 	EIGEN_CONST_MATRIX_FROM_SIGNAL(V,freeMotionBaseSOUT(t));
 	EIGEN_CONST_MATRIX_FROM_SIGNAL(Jc,JcSOUT(t));
 	EIGEN_CONST_VECTOR_FROM_SIGNAL(b,dyndriftSIN(t));
+	EIGEN_CONST_VECTOR_FROM_SIGNAL(qdot,velocitySIN(t));
 	Eigen::TriangularView<const_SigMatrixXd,Eigen::Upper> B(sB);
 	Eigen::TriangularView<const_SigMatrixXd,Eigen::Upper> Bi(sBi);
 
@@ -629,7 +695,6 @@ namespace dynamicgraph
 	 * 2.. [ Ji*B       0     ] = xddi
 	 */
 
-
 #define COLS_U leftCols( nu )
 #define COLS_F rightCols( nf )
 #define ROWS_FF topRows( 6 )
@@ -638,7 +703,7 @@ namespace dynamicgraph
 	/* -1- */
 	assert( Cforce.cols()==nu+nf && Cforce.rows()==6+nf/3 && (nf%3)==0 );
 	/* C[Upart] = Sbar*Bi^T*V = [ Bi^T[FFpart] 0 ]*V
-	 *          = Bi^T[FFpart] * V[FFpart] because Bi^T is lower triangular. */ 
+	 *          = Bi^T[FFpart] * V[FFpart] because Bi^T is lower triangular. */
 	Cforce.ROWS_FF.COLS_U
 	  = sBi.transpose().topLeftCorner(6,6).triangularView<Upper>()*V.ROWS_FF;
 	Cforce.ROWS_FF.COLS_F = Jc.transpose().ROWS_FF;
@@ -673,18 +738,26 @@ namespace dynamicgraph
 	    const int nx = ddx.size();
 
 	    sotDEBUG(5) << "ddx"<<i<<" = " << ddx << std::endl;
-	    sotDEBUG(25) << "J"<<i<<" = " << J << std::endl;
-	    sotDEBUG(45) << "Jdot"<<i<<" = " << Jdot << std::endl;
+	    sotDEBUG(25) << "J"<<i<<" = " << (MATLAB)J << std::endl;
+	    sotDEBUG(45) << "Jdot"<<i<<" = " << (MATLAB)Jdot << std::endl;
 
-	    // assert( Ctask1.rows() == nx1 && btask1.size() == nx1 );
-	    // assert( J.rows()==nx1 && J.cols()==nq && (int)ddx.size()==nx1 );
-	    // assert( Jdot.rows()==nx1 && Jdot.cols()==nq );
+	    assert( Ctask1.rows() == nx && btask1.size() == nx );
+	    assert( J.rows()==nx && J.cols()==nq && (int)ddx.size()==nx );
+	    assert( Jdot.rows()==nx && Jdot.cols()==nq );
 
+	    Ctask1.COLS_U = J*BV;	    Ctask1.COLS_F.fill(0);
+	    VectorXd Jdqd = Jdot*qdot;
+	    vbAssign(btask1,ddx);
+	    vbSubstract(btask1,Jdqd);
+
+	    sotDEBUG(45) << "Ctask"<<i<<" = " << (MATLAB)Ctask1 << std::endl;
+	    sotDEBUG(45) << "btask"<<i<<" = " << btask1 << std::endl;
 	  }
 
 	/* -3- */
 	/* Czero = [ BV 0 ] */
 	assert( Czero.cols() == nu+nf && Czero.rows()==nq-6 && bzero.size() ==nq-6 );
+	assert( nbDofs+6 == nq );
 	Czero.COLS_U = BV.ROWS_ACT;
 	Czero.COLS_F.setZero();
 	const double & Kv = breakFactorSIN(t);
