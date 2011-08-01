@@ -28,6 +28,7 @@ FOREACH(test ${tests})
     )
 
   PKG_CONFIG_USE_DEPENDENCY(${EXECUTABLE_NAME} sot-core)
+  PKG_CONFIG_USE_DEPENDENCY(${EXECUTABLE_NAME} soth)
 
   IF(${test}_plugins_dependencies)
     ADD_DEPENDENCIES(${EXECUTABLE_NAME} "${${test}_plugins_dependencies}")
