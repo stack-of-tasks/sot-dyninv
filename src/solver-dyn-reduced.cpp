@@ -14,7 +14,7 @@
  * with sot-dyninv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//#define VP_DEBUG
+#define VP_DEBUG
 #define VP_DEBUG_MODE 50
 #include <sot/core/debug.hh>
 #ifdef VP_DEBUG
@@ -86,6 +86,8 @@ namespace dynamicgraph
 	,CONSTRUCT_SIGNAL_OUT(Jc,ml::Matrix, sotNOSIGNAL)
 	,CONSTRUCT_SIGNAL_OUT(freeMotionBase,ml::Matrix,
 			      JcSOUT << inertiaSqrootInvSIN)
+	,CONSTRUCT_SIGNAL_OUT(driftContact,ml::Vector,
+			      freeMotionBaseSOUT<<JcSOUT )
 
 	,CONSTRUCT_SIGNAL_OUT(solution,ml::Vector,
 			      freeMotionBaseSOUT << inertiaSqrootInvSIN << inertiaSqrootSIN
@@ -100,6 +102,8 @@ namespace dynamicgraph
 			      solutionSOUT)
 	,CONSTRUCT_SIGNAL_OUT(torque,ml::Vector,
 			      JcSOUT << forcesSOUT << reducedControlSOUT << inertiaSqrootSIN )
+
+	,CONSTRUCT_SIGNAL(Jcdot,OUT,ml::Matrix)
 
 	,hsolver()
 
@@ -122,11 +126,15 @@ namespace dynamicgraph
 			    << inertiaSqrootInvOutSOUT
 			    << JcSOUT
 			    << freeMotionBaseSOUT
+			    << driftContactSOUT
+
 			    << solutionSOUT
 			    << reducedControlSOUT
 			    << accelerationSOUT
 			    << forcesSOUT
 			    << torqueSOUT
+
+			    << JcdotSOUT
 			    );
 
 	inertiaSqrootInvSIN.plug( &inertiaSqrootInvOutSOUT );
@@ -432,6 +440,25 @@ namespace dynamicgraph
 		  break;
 		}
 	    }
+	  return vb;
+	}
+
+	/* TODO: inherite from JacobiSVD a structure where rank can be computed dynamically. */
+	inline int svdRankDefEval( const Eigen::JacobiSVD<Eigen::MatrixXd >& Msvd,
+				   const double threshold = 1e-5 )
+	{
+	  return (Msvd.singularValues().array() > threshold ).count();
+	}
+  	template<typename D2>
+	Eigen::VectorXd svdRankDefSolve( const Eigen::JacobiSVD<Eigen::MatrixXd >& Msvd,
+					 const Eigen::MatrixBase<D2>& y,
+					 const int rank )
+	{
+	  assert( Msvd.computeU() && Msvd.computeV() );
+	  return
+	    Msvd.matrixV().leftCols(rank) *
+	    Msvd.singularValues().array().head(rank).inverse().matrix().asDiagonal() *
+	    Msvd.matrixU().leftCols(rank).transpose()*y;
 	}
       }
 
@@ -523,14 +550,21 @@ namespace dynamicgraph
 	using namespace Eigen;
 
 	const int& nf = sizeForceSOUT(t);
+	EIGEN_CONST_VECTOR_FROM_SIGNAL(qdot,velocitySIN(t));
 	const int nq= velocitySIN(t).size();
+
 	EIGEN_MATRIX_FROM_MATRIX(J,mlJ,nf,nq);
+	ml::Matrix mlJdot;
+	EIGEN_MATRIX_FROM_MATRIX(Jdot,mlJdot,nf,nq);
+	forceDrift.resize(nf);
 
 	BOOST_FOREACH(contacts_t::value_type& pContact, contactMap)
 	  {
 	    Contact& contact = pContact.second;
 	    EIGEN_CONST_MATRIX_FROM_SIGNAL(Ji,(*contact.jacobianSIN)(t));
+	    EIGEN_CONST_MATRIX_FROM_SIGNAL(Jdoti,(*contact.JdotSIN)(t));
 	    EIGEN_CONST_MATRIX_FROM_SIGNAL(support,(*contact.supportSIN)(t));
+	    EIGEN_CONST_VECTOR_FROM_SIGNAL(corrector,(*contact.correctorSIN)(t));
 	    const int n0 = contact.range.first, n1 = contact.range.second;
 	    assert( Ji.rows()==6 && Ji.cols()==nq );
 	    assert( n0>=0 && J.rows()>=n1 );
@@ -538,13 +572,21 @@ namespace dynamicgraph
 	    const int nbp = support.cols();
 	    assert( ((n1-n0) % 3 == 0) && nbp == (n1-n0)/3);
 	    Matrix3d X;
+	    VectorXd taskDrift = corrector - Jdoti*qdot;
+
 	    for( int i=0;i<nbp;++i )
 	      {
 		sotSolverDyn::preCross(support.col(i),X);
 		J.ROWS(n0+i*3,n0+(i+1)*3)
 		  = Ji.ROWS(0,3) - X* Ji.ROWS(3,6);
+		Jdot.ROWS(n0+i*3,n0+(i+1)*3)
+		  = Jdoti.ROWS(0,3) - X* Jdoti.ROWS(3,6);
+		forceDrift.ROWS(n0+i*3,n0+(i+1)*3)
+		  = taskDrift.ROWS(0,3) - X*taskDrift.ROWS(3,6);
 	      }
 	  }
+
+	JcdotSOUT = mlJdot;
 	return mlJ;
       }
 
@@ -554,18 +596,18 @@ namespace dynamicgraph
 	using namespace Eigen;
 	EIGEN_CONST_MATRIX_FROM_SIGNAL(B,inertiaSqrootInvSIN(t));
 	EIGEN_CONST_MATRIX_FROM_SIGNAL(J,JcSOUT(t));
-	const int nf = J.rows(), nq = B.cols();
+	const int nq = B.cols();
 	assert( J.cols()==nq && B.rows() == nq );
 
-	MatrixXd Gt = (J*B.triangularView<Eigen::Upper>()).transpose();
-	FullPivHouseholderQR<MatrixXd> qr( Gt );
-	qr.setThreshold( 1e-3 );
-	const unsigned int freeRank = nq-qr.rank();
+	MatrixXd G = (J*B.triangularView<Eigen::Upper>());
+	G_svd.compute(G,ComputeFullV|ComputeThinU);
+	G_rank = sotSolverDyn::svdRankDefEval(G_svd,1e-3);
+	const unsigned int freeRank = nq-G_rank;
 
 	EIGEN_MATRIX_FROM_MATRIX(V,mlV,nq,freeRank);
-	assert( qr.matrixQ().cols()==nq && qr.matrixQ().rows()==nq
-		&& qr.matrixQ().rows()==nq );
-	V = qr.matrixQ().rightCols(freeRank);
+	assert( G_svd.computeV() && G_svd.matrixV().cols()==nq && G_svd.matrixV().rows()==nq );
+	V = G_svd.matrixV().rightCols(freeRank);
+
 	return mlV;
       }
 
@@ -580,7 +622,7 @@ namespace dynamicgraph
 
 	bool toBeResize = hsolver==NULL
 	  || (nu+nf)!=(int)hsolver->sizeProblem
-	  || stack.size()+2!= (int)hsolver->nbStages();
+	  || stack.size()+2!= hsolver->nbStages();
 
 	/* Resize the force level. */
 	if( Cforce.rows()!=nf/3+6 || Cforce.cols()!=nf+nu || bforce.size()!=nf/3+6)
@@ -639,6 +681,28 @@ namespace dynamicgraph
 	  }
       }
 
+      ml::Vector& SolverDynReduced::
+      driftContactSOUT_function( ml::Vector &mlres, int t )
+      {
+	/* BV has already been computed, but I don't know if it is the best
+	 * idea to go for it a second time. This suppose that the matrix has
+	 * not been modified in between. It should work, but start with that if
+	 * you are looking for a bug in ddq. */
+	/* Same for G_svd. */
+	using soth::MATLAB;
+	using namespace sotSolverDyn;
+	using namespace Eigen;
+
+	EIGEN_CONST_MATRIX_FROM_SIGNAL(sB,inertiaSqrootInvSIN(t));
+	Eigen::TriangularView<const_SigMatrixXd,Eigen::Upper> B(sB);
+	EIGEN_VECTOR_FROM_VECTOR(res,mlres,B.rows());
+	sotDEBUG(40) << "fdrift = " << (MATLAB)forceDrift << std::endl;
+	Eigen::VectorXd drift = svdRankDefSolve( G_svd,forceDrift,G_rank );
+	sotDEBUG(40) << "drift = " << (MATLAB)drift << std::endl;
+	res = B*drift;
+
+	return mlres;
+      }
       ml::Vector& SolverDynReduced::
       solutionSOUT_function( ml::Vector &mlres, int t )
       {
@@ -735,15 +799,14 @@ namespace dynamicgraph
 	    EIGEN_CONST_MATRIX_FROM_SIGNAL(Jdot,task.JdotSOUT(t));
 	    EIGEN_CONST_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
 	    const dg::sot::VectorMultiBound & ddx = task.taskSOUT(t);
-	    const int nx = ddx.size();
 
 	    sotDEBUG(5) << "ddx"<<i<<" = " << ddx << std::endl;
 	    sotDEBUG(25) << "J"<<i<<" = " << (MATLAB)J << std::endl;
 	    sotDEBUG(45) << "Jdot"<<i<<" = " << (MATLAB)Jdot << std::endl;
 
-	    assert( Ctask1.rows() == nx && btask1.size() == nx );
-	    assert( J.rows()==nx && J.cols()==nq && (int)ddx.size()==nx );
-	    assert( Jdot.rows()==nx && Jdot.cols()==nq );
+	    assert( Ctask1.rows() == ddx.size() && btask1.size() == ddx.size() );
+	    assert( J.rows()==ddx.size() && J.cols()==nq && (int)ddx.size()==ddx.size() );
+	    assert( Jdot.rows()==ddx.size() && Jdot.cols()==nq );
 
 	    Ctask1.COLS_U = J*BV;	    Ctask1.COLS_F.fill(0);
 	    VectorXd Jdqd = Jdot*qdot;
@@ -808,7 +871,14 @@ namespace dynamicgraph
 	 * idea to go for it a second time. This suppose that the matrix has
 	 * not been modified in between. It should work, but start with that if
 	 * you are looking for a bug in ddq. */
-	ddq = BV*u;
+	/* Same for G_svd. */
+
+	using soth::MATLAB;
+	using namespace sotSolverDyn;
+
+	EIGEN_CONST_VECTOR_FROM_SIGNAL(Bdrift,driftContactSOUT(t));
+	sotDEBUG(40) << "drift = " << (MATLAB)Bdrift << std::endl;
+	ddq = BV*u + Bdrift;
 	return mlddq;
       }
       ml::Vector& SolverDynReduced::

@@ -41,6 +41,8 @@
 #include <sot-dyninv/stack-template.h>
 #include <sot-dyninv/task-dyn-pd.h>
 #include <soth/HCOD.hpp>
+#include <Eigen/QR>
+#include <Eigen/SVD>
 
 namespace dynamicgraph {
   namespace sot {
@@ -101,13 +103,16 @@ namespace dynamicgraph {
 	  DECLARE_SIGNAL_OUT(Jc,ml::Matrix);
 
 	  DECLARE_SIGNAL_OUT(freeMotionBase,ml::Matrix);
+	  DECLARE_SIGNAL_OUT(driftContact,ml::Vector);
+
 	  DECLARE_SIGNAL_OUT(solution,ml::Vector);
 	  DECLARE_SIGNAL_OUT(reducedControl,ml::Vector);
 	  DECLARE_SIGNAL_OUT(acceleration,ml::Vector);
 	  DECLARE_SIGNAL_OUT(forces,ml::Vector);
 	  DECLARE_SIGNAL_OUT(torque,ml::Vector);
 
-
+	  /* Temporary time-dependant shared variables. */
+	  DECLARE_SIGNAL(Jcdot,OUT,ml::Matrix);
 
 	private:  /* --- CONTACT POINTS --- */
 
@@ -149,6 +154,10 @@ namespace dynamicgraph {
 	  typedef boost::shared_ptr<soth::HCOD> hcod_ptr_t;
 	  hcod_ptr_t hsolver;
 
+	  //Eigen::FullPivHouseholderQR<Eigen::MatrixXd> Gt_qr;
+	  Eigen::JacobiSVD<Eigen::MatrixXd> G_svd;
+	  int G_rank;
+
 	  Eigen::MatrixXd Cforce,Czero;
 	  soth::VectorBound bforce,bzero;
 	  std::vector< Eigen::MatrixXd > Ctasks;
@@ -156,7 +165,7 @@ namespace dynamicgraph {
 
 	  Eigen::MatrixXd BV;
 
-	  Eigen::VectorXd solution;
+	  Eigen::VectorXd solution,forceDrift;
 
 	}; // class SolverDynReduced
 
