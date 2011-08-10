@@ -62,7 +62,7 @@ try:
 
    robot.refresh()
 except:
-    print "No robot viewer, sorry."
+    #print "No robot viewer, sorry."
     robot.viewer = None
 
 # --- MAIN LOOP ------------------------------------------
@@ -173,7 +173,8 @@ contactRF.feature.frame('desired')
 
 # --- SOT Dyn OpSpaceH --------------------------------------
 # SOT controller.
-sot = SolverDynReduced('sot')
+sot = SolverDynRed2('sot')
+#sot = SolverOpSpace('sot')
 sot.setSize(robotDim-6)
 #sot.damping.value = 2e-2
 sot.breakFactor.value = 10
@@ -194,12 +195,13 @@ tr.start()
 robot.after.addSignal('tr.triger')
 
 tr.add('dyn.position','')
-tr.add('sot.forces','')
+#tr.add('sot.forces','')
 tr.add('sot.acceleration','')
 tr.add('sot.velocity','')
-robot.after.addSignal('sot.forces')
+#robot.after.addSignal('sot.forces')
 robot.after.addSignal('sot.acceleration')
 
+tr.add('taskCom.error','com')
 tr.add('taskCom.task','')
 tr.add(contactLF.task.name+'.error','lf')
 
@@ -226,7 +228,28 @@ sot.posture.value = ( 0,0,0,0,0,0,  -0.009116303,  -0.091409964,  -0.471978743, 
 matlab.prec=9
 matlab.fullPrec=0
 
+for i in range(100):    inc()
+print sot.velocity.m
+print sot.dyndrift.m
+print sot.forceGenerator.m
+print sot.Jc.m
+print sot.freeMotionBase.m
+print sot.freeForceBase.m
+print sot.inertiaSqroot.m
+print sot.inertiaSqrootInv.m
+print sot.driftContact.m
+print taskCom.jacobian.m
+print taskCom.task.m
+print taskCom.Jdot.m
+print "dq=velocity; X=forceGenerator; V=freeMotionBase; K = freeForceBase; B=inertiaSqrootInv; Bi=inertiaSqroot; Jcom=jacobian; b=dyndrift; A=Bi'*Bi; dc = driftContact; J=X*Jc; G=J*B; Gc=Jc*B;"
 
-sot.solution.recompute(1)
-sot.acceleration.recompute(1)
+print sot.solution.m
+print sot.acceleration.m
+sot.forces.recompute(sot.acceleration.time)
+print sot.forces.m
+print "x=solution; ddq=acceleration; f=forces; phi = X'*f;"
+print "u=x(1:24); psi=x(25:end);"
+
+#sot.solution.recompute(1)
+#sot.acceleration.recompute(1)
 
