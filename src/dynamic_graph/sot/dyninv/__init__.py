@@ -12,7 +12,9 @@ PseudoRobotDynamic('')
 
 from solver_op_space import SolverOpSpace
 SolverOpSpace('')
-from solver_dyn_reduced import SolverDynReduced
+#from solver_dyn_reduced import SolverDynReduced
+from solver_dyn_red2 import SolverDynRed2
+SolverDynReduced = SolverDynRed2
 SolverDynReduced('')
 
 from solver_kine import SolverKine
