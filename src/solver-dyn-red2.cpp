@@ -14,7 +14,7 @@
  * with sot-dyninv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VP_DEBUG
+//#define VP_DEBUG
 #define VP_DEBUG_MODE 50
 #include <sot/core/debug.hh>
 #ifdef VP_DEBUG
@@ -119,6 +119,12 @@ namespace dynamicgraph
 	,CONSTRUCT_SIGNAL_OUT(torque,ml::Vector,
 			      JcSOUT << forcesSOUT << reducedControlSOUT << inertiaSqrootSIN )
 
+	,CONSTRUCT_SIGNAL_OUT(forcesNormal,ml::Vector,
+			      solutionSOUT)
+	,CONSTRUCT_SIGNAL_OUT(activeForces,ml::Vector,
+			      solutionSOUT)
+
+
 	,CONSTRUCT_SIGNAL(Jcdot,OUT,ml::Matrix)
 
 	,hsolver()
@@ -161,6 +167,7 @@ namespace dynamicgraph
 
 			   << JcdotSOUT
 			   );
+	signalRegistration( forcesNormalSOUT << activeForcesSOUT );
 
 	inertiaSqrootInvSIN.plug( &inertiaSqrootInvOutSOUT );
 	inertiaSqrootSIN.plug( &inertiaSqrootOutSOUT );
@@ -703,7 +710,7 @@ namespace dynamicgraph
 		assert( n0+3*(i+1)<=X.rows() && r+6<=X.cols() );
 		X.block(n0+3*i,r, 3,3) = Matrix3d::Identity();
 		Block<SigMatrixXd> px = X.block(n0+3*i,r+3, 3,3);
-		sotSolverDyn::preCross(support.col(i),px);
+		sotSolverDyn::preCross(-support.col(i),px);
 	      }
 	  }
 
@@ -736,14 +743,21 @@ namespace dynamicgraph
       freeForceBaseSOUT_function( ml::Matrix& mlK,int t )
       {
 	using namespace Eigen;
+	using soth::MATLAB;
+	using std::endl;
 	EIGEN_CONST_MATRIX_FROM_SIGNAL(X,forceGeneratorSOUT(t));
+	EIGEN_CONST_MATRIX_FROM_SIGNAL(Jc,JcSOUT(t));
 	const int & nf = sizeForcePointSOUT(t);
 	assert( X.rows()==nf );
 
-	X_qr.compute(X);
+	X_qr.compute( (MatrixXd)((X*Jc).leftCols(6)));
 	X_qr.setThreshold(1e-3);
 	const unsigned int freeRank = nf-X_qr.rank();
-	assert( X_qr.rank()==X.cols() );
+	assert( X_qr.rank()==6 );
+	//assert( X_qr.rank()==X.cols() );
+
+	sotDEBUG(5) << "JSb = " << (MATLAB)( (MatrixXd)((X*Jc).leftCols(6)) ) << endl;
+	sotDEBUG(5) << "Q = " << (MATLAB)X_qr.matrixQ()  << endl;
 
 	EIGEN_MATRIX_FROM_MATRIX(K,mlK,nf,freeRank);
 	K = X_qr.matrixQ().rightCols(freeRank);
@@ -908,7 +922,7 @@ namespace dynamicgraph
 	 */
 
 #define COLS_U leftCols( nu )
-#define COLS_F rightCols( nphi )
+#define COLS_F rightCols( npsi )
 #define ROWS_FF topRows( 6 )
 #define ROWS_ACT bottomRows( nq-6 )
 
@@ -934,7 +948,7 @@ namespace dynamicgraph
 	    {
 	      Cforce.COLS_U.row(i) = XJSptSBV.row(3*i+2);
 	      Cforce.COLS_F.row(i) = K.row(3*i+2);
-	      bforce[i] = Bound( ref[3*i+1], Bound::BOUND_INF );
+	      bforce[i] = Bound( ref[3*i+2], Bound::BOUND_SUP );
 	    }
 	}
 	sotDEBUG(15) << "Cforce = "     << (MATLAB)Cforce << std::endl;
@@ -969,7 +983,8 @@ namespace dynamicgraph
 	    VectorXd Jdqd = Jdot*qdot;
 	    vbAssign(btask1,ddx);
 	    vbSubstract(btask1,Jdqd);
-	    vbAdd(btask1,J*B*drift);
+	    sotDEBUG(45) << "JBdc"<<i<<" = " << (MATLAB)(MatrixXd)(J*B*drift) << std::endl;
+	    vbSubstract(btask1,(VectorXd)(J*B*drift));
 
 	    /* TODO: account for the contact drift. */
 
@@ -995,6 +1010,7 @@ namespace dynamicgraph
 	else
 	  {	vbAssign(bzero,(-Kv*dq).tail(nbDofs));	  }
 	/* TODO: account for the contact drift. */
+	vbSubstract(bzero,((VectorXd)(B*drift)).ROWS_ACT  );
 	sotDEBUG(15) << "Czero = "     << (MATLAB)Czero << std::endl;
 	sotDEBUG(1) << "bzero = "     << bzero << std::endl;
 
@@ -1008,6 +1024,10 @@ namespace dynamicgraph
 	sotDEBUG(1) << "solution = " << (MATLAB)solution << std::endl;
 	EIGEN_VECTOR_FROM_VECTOR(res,mlres,nx);
 	res=solution;
+
+	// Small verif:
+	sotDEBUG(1) << "ddx0 = " << (MATLAB)(VectorXd)(Ctasks[0]*solution) << std::endl;
+	sotDEBUG(1) << "ddx0 = " << btasks[0] << std::endl;
 
 	sotDEBUGOUT(15);
 	return mlres;
@@ -1087,7 +1107,7 @@ namespace dynamicgraph
 	HouseholderQR<MatrixXd> qr(XJS);
 
 	MatrixXd XJSp = qr.solve( MatrixXd::Identity(nf,nf) );
-	VectorXd SBVu // = Sb( B^-T( -Vu+delta ) - b )
+	VectorXd SBVu // = Sb( B^-T( -Vu-delta ) - b )
 	  = sBi.transpose().topLeftCorner(6,6).triangularView<Lower>()
 	  * ( -V.ROWS_FF*u - drift.ROWS_FF )
 	  - b.ROWS_FF;
@@ -1096,6 +1116,37 @@ namespace dynamicgraph
 
 	f = XJSp.transpose() * SBVu + K*psi;
 	sotDEBUG(15) << "f = "     << (MATLAB)f << std::endl;
+
+	return res;
+      }
+      ml::Vector& SolverDynReduced::
+      forcesNormalSOUT_function( ml::Vector& res,int t )
+      {
+	using namespace Eigen;
+	using namespace soth;
+	EIGEN_CONST_VECTOR_FROM_SIGNAL(solution,solutionSOUT(t));
+	const int & nfn = Cforce.rows();
+	EIGEN_VECTOR_FROM_VECTOR(fn,res,nfn);
+	fn = Cforce*solution;
+
+	for( int i=0;i<nfn;++i )
+	  {
+	    fn[i] -= bforce[i].getBound( bforce[i].getType() );
+	  }
+
+
+	return res;
+      }
+      ml::Vector& SolverDynReduced::
+      activeForcesSOUT_function( ml::Vector& res,int t )
+      {
+	using namespace Eigen;
+	using namespace soth;
+	EIGEN_CONST_VECTOR_FROM_SIGNAL(solution,solutionSOUT(t));
+	Stage & stf = *hsolver->stages.front();
+	EIGEN_VECTOR_FROM_VECTOR(a,res,stf.sizeA());
+
+	VectorXd atmp(stf.nbConstraints()); atmp=stf.eactive(atmp);
 
 	return res;
       }

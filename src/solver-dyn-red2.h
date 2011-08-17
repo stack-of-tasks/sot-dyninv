@@ -117,6 +117,10 @@ namespace dynamicgraph {
 	  DECLARE_SIGNAL_OUT(forces,ml::Vector);
 	  DECLARE_SIGNAL_OUT(torque,ml::Vector);
 
+	  DECLARE_SIGNAL_OUT(forcesNormal,ml::Vector);
+	  DECLARE_SIGNAL_OUT(activeForces,ml::Vector);
+
+
 	  /* Temporary time-dependant shared variables. */
 	  DECLARE_SIGNAL(Jcdot,OUT,ml::Matrix);
 
