@@ -716,7 +716,13 @@ namespace dynamicgraph
 	sotDEBUG(1) << "Vdyn = " << (MATLAB)(VectorXd)(Cdyn*solution) << std::endl;
 	sotDEBUG(1) << "Vcontact = " << (MATLAB)(VectorXd)(Ccontact*solution) << std::endl;
 	sotDEBUG(1) << "Vzmp = " << (MATLAB)(VectorXd)(Czmp*solution) << std::endl;
-
+	for( int i=0;i<(int)stack.size();++i )
+	  {
+	    MatrixXd & Ctask1 = Ctasks[i];
+	    VectorBound & btask1 = btasks[i];
+	    sotDEBUG(1) << "Vtask"<<i<<" = " << (MATLAB)(VectorXd)(Ctask1*solution) << std::endl;
+	    sotDEBUG(1) << "btask"<<i<<" = " << btask1 << std::endl;
+	  }
 	sotDEBUG(1) << "control = " << control << std::endl;
 	return control;
       }
