@@ -93,23 +93,33 @@ namespace dynamicgraph {
 	  DECLARE_SIGNAL_IN(posture,ml::Vector);
 	  DECLARE_SIGNAL_IN(position,ml::Vector);
 
-
 	  DECLARE_SIGNAL_OUT(precompute,int);
 
 	  DECLARE_SIGNAL_OUT(inertiaSqrootOut,ml::Matrix);
 	  DECLARE_SIGNAL_OUT(inertiaSqrootInvOut,ml::Matrix);
 
-	  DECLARE_SIGNAL_OUT(sizeForce,int);
-	  DECLARE_SIGNAL_OUT(Jc,ml::Matrix);
+	  DECLARE_SIGNAL_OUT(sizeForcePoint,int);
+	  DECLARE_SIGNAL_OUT(sizeForceSpatial,int);
+	  DECLARE_SIGNAL_OUT(sizeConfiguration,int);
 
+	  DECLARE_SIGNAL_OUT(Jc,ml::Matrix);
+	  DECLARE_SIGNAL_OUT(forceGenerator,ml::Matrix);
 	  DECLARE_SIGNAL_OUT(freeMotionBase,ml::Matrix);
+	  DECLARE_SIGNAL_OUT(freeForceBase,ml::Matrix);
 	  DECLARE_SIGNAL_OUT(driftContact,ml::Vector);
+	  DECLARE_SIGNAL_OUT(sizeMotion,int);
+	  DECLARE_SIGNAL_OUT(sizeActuation,int);
 
 	  DECLARE_SIGNAL_OUT(solution,ml::Vector);
 	  DECLARE_SIGNAL_OUT(reducedControl,ml::Vector);
+	  DECLARE_SIGNAL_OUT(reducedForce,ml::Vector);
 	  DECLARE_SIGNAL_OUT(acceleration,ml::Vector);
 	  DECLARE_SIGNAL_OUT(forces,ml::Vector);
 	  DECLARE_SIGNAL_OUT(torque,ml::Vector);
+
+	  DECLARE_SIGNAL_OUT(forcesNormal,ml::Vector);
+	  DECLARE_SIGNAL_OUT(activeForces,ml::Vector);
+
 
 	  /* Temporary time-dependant shared variables. */
 	  DECLARE_SIGNAL(Jcdot,OUT,ml::Matrix);
@@ -126,6 +136,7 @@ namespace dynamicgraph {
 	    matrixSINPtr supportSIN;
 	    vectorSINPtr correctorSIN;
 	    vectorSOUTPtr forceSOUT,fnSOUT;
+	    int position;
 	    std::pair<int,int> range;
 	  };
 	  typedef std::map< std::string,Contact > contacts_t;
@@ -149,7 +160,8 @@ namespace dynamicgraph {
 	private: /* --- INTERNAL COMPUTATIONS --- */
 	  void refreshTaskTime( int time );
 	  void resizeSolver( void );
-
+	  void computeSizesForce( int t );
+ 
 	private:
 	  typedef boost::shared_ptr<soth::HCOD> hcod_ptr_t;
 	  hcod_ptr_t hsolver;
@@ -157,6 +169,7 @@ namespace dynamicgraph {
 	  //Eigen::FullPivHouseholderQR<Eigen::MatrixXd> Gt_qr;
 	  Eigen::JacobiSVD<Eigen::MatrixXd> G_svd;
 	  int G_rank;
+	  Eigen::FullPivHouseholderQR<Eigen::MatrixXd> X_qr;
 
 	  Eigen::MatrixXd Cforce,Czero;
 	  soth::VectorBound bforce,bzero;
@@ -165,6 +178,7 @@ namespace dynamicgraph {
 
 	  Eigen::MatrixXd BV;
 
+	  /* Force drift = xddot^* - Jdot qdot. */
 	  Eigen::VectorXd solution,forceDrift;
 
 	}; // class SolverDynReduced

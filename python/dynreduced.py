@@ -179,8 +179,8 @@ contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-
 contactRF.feature.frame('desired')
 
 # --- SOT Dyn OpSpaceH --------------------------------------
-rs=True # Regular solver
-#rs=False # Reduced solver
+#rs=True # Regular solver
+rs=False # Reduced solver
 
 # SOT controller.
 if rs:
@@ -207,7 +207,7 @@ sot._RF_p.value = contactRF.support
 
 
 # --- TRACE ----------------------------------------------
-
+'''
 from dynamic_graph.tracer import *
 tr = Tracer('tr')
 tr.open('/tmp/','','.dat')
@@ -241,41 +241,10 @@ if not rs:
     robot.after.addSignal('sot.forcesNormal')
     tr.add('sot.activeForces','')
     robot.after.addSignal('sot.activeForces')
+'''
 
-# --- RUN ------------------------------------------------
+# --- DEBUG ----------------------------------------------
 
-taskCom.controlGain.value = 100
-#featureComDes.errorIN.value = (0.06,  0.15,  0.8)
-#featureComDes.errorIN.value = (0.06,  0.145,  0.8  )
-
-featureComDes.errorIN.value = (0.1,  0.145,  0.8  )
-#Nominal: no zmp overshoot featureComDes.errorIN.value = (0.084,  0.144,  0.804  )
-sot.push('taskCom')
-
-#@attime(5)
-def rm():
-    featureComDes.errorIN.value = dyn.com.value
-attime(500,stop,'stop')
-
-
-#plug(robot.state,sot.position)
-#sot.posture.value = ( 0,0,0,0,0,0,  -0.009116303,  -0.091409964,  -0.471978743,   0.840380193,  -0.470232799,   0.089662408,   0.009507818,   0.091110287,  -0.469450352,   0.835307995,  -0.467686191,  -0.093802947,  -0.000087565,   0.003264319,  -0.000007834,   0.000194743,   0.258370257,  -0.175099102,  -0.000061173,  -0.524953549,   0.000003183,  -0.000257600,  -0.000003412,   0.258367272,   0.174322098,  -0.000088902,  -0.524983691,  -0.000000346,  -0.000265401,   0.3   )
-
-
-class Chrono:
-    t0=0
-    def __init__(self):
-        self.t0 = time.time()
-    def tic(self):
-        print 'elapsed time = ',time.time()-self.t0
-chrono=Chrono()
-attime(499,chrono.tic)
-
-go()
-
-
-matlab.prec=9
-matlab.fullPrec=0
 '''
 for i in range(25):    inc()
 
@@ -320,6 +289,7 @@ else:
 '''
 
 
+'''
 if 0: # double check
     sotreg = SolverOpSpace('sotreg')
     sotreg.setSize(robotDim-6)
@@ -346,6 +316,37 @@ if 0: # double check
     print "ddq1=acceleration; phil1= _LF_f; phir1 = _RF_f; phi1=[ phil1; phir1 ]; fnl1=_LF_fn; fnr1 = _RF_fn; fn1 = [fnl1; fnr1 ]; tau1=control;"
 
     print taskCom.task.m
+'''
+
+
+# --- CHRONO ------------------------------------------------
+class Chrono:
+    t0=0
+    def __init__(self):
+        self.t0 = time.time()
+    def tic(self):
+        print 'elapsed time = ',time.time()-self.t0
+chrono=Chrono()
+attime(499,chrono.tic)
+
+# --- RUN ------------------------------------------------
+matlab.prec=9
+matlab.fullPrec=0
+
+
+taskCom.controlGain.value = 100
+#featureComDes.errorIN.value = (0.06,  0.15,  0.8)
+#featureComDes.errorIN.value = (0.06,  0.145,  0.8  )
+
+featureComDes.errorIN.value = (0.1,  0.145,  0.8  )
+#Nominal: no zmp overshoot featureComDes.errorIN.value = (0.084,  0.144,  0.804  )
+sot.push('taskCom')
+
+#@attime(5)
+def rm():
+    featureComDes.errorIN.value = dyn.com.value
+attime(500,stop,'stop')
 
 
 
+go()
