@@ -25,6 +25,13 @@ def totuple( a ):
 # --- ROBOT SIMU ---------------------------------------------------------------
 # --- ROBOT SIMU ---------------------------------------------------------------
 
+initialConfig['hrp14small'] = ( 0.0274106623863, 0.143843868989, 0.646921914726, 0.00221064938462, 0.101393756965, 1.36729741242e-05,
+ -0.00911630330837, -0.0914099637938, -0.471978743283, 0.840380192617, -0.470232799053, 0.0896624078591,
+0.00950781802257, 0.0911102868041, -0.469450351848, 0.835307995386, -0.467686190904, -0.0938029466367,
+ 0.3, 0.3, 0, 0,
+ 0.6, -0.3, 0, -0.52, 0, -0.1, 0,
+-0.2,  0.17, 0, -0.52, 0,  0.1, 0 )
+
 robotDim=robotDimension[robotName]
 RobotClass = RobotDynSimu
 robot = RobotClass("robot")
@@ -172,9 +179,15 @@ contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-
 contactRF.feature.frame('desired')
 
 # --- SOT Dyn OpSpaceH --------------------------------------
+rs=True # Regular solver
+#rs=False # Reduced solver
+
 # SOT controller.
-sot = SolverDynRed2('sot')
-#sot = SolverOpSpace('sot')
+if rs:
+    sot = SolverOpSpace('sot')
+else:
+    sot = SolverDynRed2('sot')
+
 sot.setSize(robotDim-6)
 #sot.damping.value = 2e-2
 sot.breakFactor.value = 10
@@ -183,8 +196,15 @@ plug(dyn.inertiaReal,sot.matrixInertia)
 plug(dyn.dynamicDrift,sot.dyndrift)
 plug(dyn.velocity,sot.velocity)
 
-plug(sot.torque,robot.control)
+if rs: plug(sot.control,robot.control)
+else: plug(sot.solution,robot.control)
 plug(sot.acceleration,robot.acceleration)
+
+sot.addContactFromTask(contactLF.task.name,'LF')
+sot._LF_p.value = contactLF.support
+sot.addContactFromTask(contactRF.task.name,'RF')
+sot._RF_p.value = contactRF.support
+
 
 # --- TRACE ----------------------------------------------
 
@@ -205,15 +225,31 @@ tr.add('taskCom.error','com')
 tr.add('taskCom.task','')
 tr.add(contactLF.task.name+'.error','lf')
 
+if not rs: tr.add('sot.solution','')
+
+if rs:
+    tr.add('sot._LF_f','fl')
+    tr.add('sot._RF_f','fr')
+    tr.add('sot._LF_fn','fnl')
+    tr.add('sot._RF_fn','fnr')
+else:
+    tr.add('sot.forces','')
+    robot.after.addSignal('sot.forces')
+
+if not rs:
+    tr.add('sot.forcesNormal','')
+    robot.after.addSignal('sot.forcesNormal')
+    tr.add('sot.activeForces','')
+    robot.after.addSignal('sot.activeForces')
+
 # --- RUN ------------------------------------------------
-sot.addContactFromTask(contactLF.task.name,'LF')
-sot._LF_p.value = contactLF.support
-sot.addContactFromTask(contactRF.task.name,'RF')
-sot._RF_p.value = contactRF.support
 
 taskCom.controlGain.value = 100
 #featureComDes.errorIN.value = (0.06,  0.15,  0.8)
-featureComDes.errorIN.value = (0.06,  0.145,  0.8  )
+#featureComDes.errorIN.value = (0.06,  0.145,  0.8  )
+
+featureComDes.errorIN.value = (0.1,  0.145,  0.8  )
+#Nominal: no zmp overshoot featureComDes.errorIN.value = (0.084,  0.144,  0.804  )
 sot.push('taskCom')
 
 #@attime(5)
@@ -222,34 +258,94 @@ def rm():
 attime(500,stop,'stop')
 
 
-plug(robot.state,sot.position)
-sot.posture.value = ( 0,0,0,0,0,0,  -0.009116303,  -0.091409964,  -0.471978743,   0.840380193,  -0.470232799,   0.089662408,   0.009507818,   0.091110287,  -0.469450352,   0.835307995,  -0.467686191,  -0.093802947,  -0.000087565,   0.003264319,  -0.000007834,   0.000194743,   0.258370257,  -0.175099102,  -0.000061173,  -0.524953549,   0.000003183,  -0.000257600,  -0.000003412,   0.258367272,   0.174322098,  -0.000088902,  -0.524983691,  -0.000000346,  -0.000265401,   0.3   )
+#plug(robot.state,sot.position)
+#sot.posture.value = ( 0,0,0,0,0,0,  -0.009116303,  -0.091409964,  -0.471978743,   0.840380193,  -0.470232799,   0.089662408,   0.009507818,   0.091110287,  -0.469450352,   0.835307995,  -0.467686191,  -0.093802947,  -0.000087565,   0.003264319,  -0.000007834,   0.000194743,   0.258370257,  -0.175099102,  -0.000061173,  -0.524953549,   0.000003183,  -0.000257600,  -0.000003412,   0.258367272,   0.174322098,  -0.000088902,  -0.524983691,  -0.000000346,  -0.000265401,   0.3   )
+
+
+class Chrono:
+    t0=0
+    def __init__(self):
+        self.t0 = time.time()
+    def tic(self):
+        print 'elapsed time = ',time.time()-self.t0
+chrono=Chrono()
+attime(499,chrono.tic)
+
+go()
+
 
 matlab.prec=9
 matlab.fullPrec=0
+'''
+for i in range(25):    inc()
 
-for i in range(100):    inc()
 print sot.velocity.m
 print sot.dyndrift.m
-print sot.forceGenerator.m
-print sot.Jc.m
-print sot.freeMotionBase.m
-print sot.freeForceBase.m
-print sot.inertiaSqroot.m
-print sot.inertiaSqrootInv.m
-print sot.driftContact.m
-print taskCom.jacobian.m
-print taskCom.task.m
-print taskCom.Jdot.m
-print "dq=velocity; X=forceGenerator; V=freeMotionBase; K = freeForceBase; B=inertiaSqrootInv; Bi=inertiaSqroot; Jcom=jacobian; b=dyndrift; A=Bi'*Bi; dc = driftContact; J=X*Jc; G=J*B; Gc=Jc*B;"
-
-print sot.solution.m
+print sot.matrixInertia.m
 print sot.acceleration.m
-sot.forces.recompute(sot.acceleration.time)
-print sot.forces.m
-print "x=solution; ddq=acceleration; f=forces; phi = X'*f;"
-print "u=x(1:24); psi=x(25:end);"
+print "dq=velocity; b=dyndrift; A=matrixInertia; ddq=acceleration;"
 
-#sot.solution.recompute(1)
-#sot.acceleration.recompute(1)
+if rs:
+    print sot.control.m
+    print sot._LF_f.m
+    print sot._LF_fn.m
+    print sot._RF_f.m
+    print sot._RF_fn.m
+    print "ddq1=ddq; phil1= _LF_f; phir1 = _RF_f; phi1=[ phil1; phir1 ]; fnl1=_LF_fn; fnr1 = _RF_fn; fn1 = [fnl1; fnr1 ]; tau1=control;"
+
+else:
+    print sot.sizeForceSpatial.m
+    print sot.velocity.m
+    print sot.dyndrift.m
+    print sot.forceGenerator.m
+    print sot.Jc.m
+    print sot.freeMotionBase.m
+    print sot.freeForceBase.m
+    print sot.inertiaSqroot.m
+    print sot.inertiaSqrootInv.m
+    print sot.driftContact.m
+    print taskCom.jacobian.m
+    print taskCom.task.m
+    print taskCom.Jdot.m
+    print "X=forceGenerator; V=freeMotionBase; K = freeForceBase; B=inertiaSqrootInv; Bi=inertiaSqroot; Jcom=jacobian; Ab=Bi'*Bi; dc = driftContact; J=X*Jc; G=J*B; Gc=Jc*B; Sb=[eye(6) zeros(6,30)];"
+
+    print sot.solution.m
+    print sot.acceleration.m
+    sot.forces.recompute(sot.acceleration.time)
+    print sot.forces.m
+    print "x=solution; ddq=acceleration; f=forces; phi = X'*f;"
+    print "u=x(1:24); psi=x(25:end); "
+
+    print "ddq2= ddq; phi2=phi; f2=f; fn2=f(3:3:end);"
+'''
+
+
+if 0: # double check
+    sotreg = SolverOpSpace('sotreg')
+    sotreg.setSize(robotDim-6)
+    sotreg.breakFactor.value = 10
+
+    plug(dyn.inertiaReal,sotreg.matrixInertia)
+    plug(dyn.dynamicDrift,sotreg.dyndrift)
+    plug(dyn.velocity,sotreg.velocity)
+
+    sotreg.addContactFromTask(contactLF.task.name,'LF')
+    sotreg._LF_p.value = contactLF.support
+    sotreg.addContactFromTask(contactRF.task.name,'RF')
+    sotreg._RF_p.value = contactRF.support
+
+    sotreg.push('taskCom')
+    sotreg.control.recompute(sot.acceleration.time)
+
+    print sotreg.control.m
+    print sotreg._LF_f.m
+    print sotreg._LF_fn.m
+    print sotreg._RF_f.m
+    print sotreg._RF_fn.m
+    print sotreg.acceleration.m
+    print "ddq1=acceleration; phil1= _LF_f; phir1 = _RF_f; phi1=[ phil1; phir1 ]; fnl1=_LF_fn; fnr1 = _RF_fn; fn1 = [fnl1; fnr1 ]; tau1=control;"
+
+    print taskCom.task.m
+
+
 
