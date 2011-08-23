@@ -16,16 +16,17 @@
 ADD_DEFINITIONS(-DDEBUG=2)
 
 SET(tests
-  dummy)
+  dummy
+  qrt)
 
 FOREACH(test ${tests})
   SET(EXECUTABLE_NAME "${test}_exe")
   ADD_EXECUTABLE(${EXECUTABLE_NAME}
     ${test}.cpp)
 
-  TARGET_LINK_LIBRARIES(${EXECUTABLE_NAME}
-    controller-pd
-    )
+  #TARGET_LINK_LIBRARIES(${EXECUTABLE_NAME}
+    #controller-pd
+   # )
 
   PKG_CONFIG_USE_DEPENDENCY(${EXECUTABLE_NAME} sot-core)
   PKG_CONFIG_USE_DEPENDENCY(${EXECUTABLE_NAME} soth)
@@ -34,14 +35,5 @@ FOREACH(test ${tests})
     ADD_DEPENDENCIES(${EXECUTABLE_NAME} "${${test}_plugins_dependencies}")
     TARGET_LINK_LIBRARIES(${EXECUTABLE_NAME} "${${test}_plugins_dependencies}")
   ENDIF(${test}_plugins_dependencies)
-
-
-  ADD_TEST(${test} ${EXECUTABLE_NAME}
-    ${samplemodelpath} sample.wrl ${samplespec} ${sampleljr} )
-
-  IF (UNIX)
-    SET_PROPERTY(TEST ${test} PROPERTY
-      ENVIRONMENT "LD_LIBRARY_PATH=${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_BINARY_DIR}/src:${BOOST_ROOT}/lib")
-  ENDIF(UNIX)
 
 ENDFOREACH(test)
