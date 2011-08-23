@@ -23,36 +23,76 @@ std::ostream& p( const char * n ) { return std::cout << n << " = "; }
 
 namespace Eigen
 {
-  class FullRowRankColPivQR
-    : private ColPivHouseholderQR< MatrixXd >
+
+  /* This class add two methods to the classical ColPiv: solveInPlace for full
+   * col rank matrices (and the direct consequence of pseudoInverse for
+   * f-c-r). And solveTranposeInPlace for full row rank matrices (and the
+   * direct pseudoInverseTranspose).
+   */
+  class ColPivQRSolveInPlace
+    : public ColPivHouseholderQR< MatrixXd >
   {
   public:
 
-    void compute(const MatrixType& matrix)
-    {
-      assert( matrix.rows()<=matrix.cols() );
-      ColPivHouseholderQR< MatrixXd >::compute( matrix.transpose() );
-      assert( rank() == matrix.rows() );
-    }
-
+    /* Find a solution x to the problem G x = b. The input vector is b,
+     * completed by the 0 tail to obtain the x size.  The solver only works for
+     * full-col rank matrices, ie matrices G = Q [ R; 0 ], with R full-rank
+     * (full diag) upper triangular. */
     void solveInPlace( MatrixXd& Gp )
     {
-      /* r is the rank, nxm the size of the original matrix (ie whose transpose has
-       * been decomposed. */
+      const int r = rank(), m=cols(), n=rows();
+      assert( r==m );
+      assert( Gp.rows() == m ); // TODO: if not proper size, resize.
+
+      VectorXd workspace( n );
+      /* P2*P1*P0 ... */
+      for (int k = r-1; k >= 0 ; --k)
+	{
+	  int remainingSize = n-k;
+	  Gp.rightCols( Gp.cols()-k )
+	    .applyHouseholderOnTheRight(matrixQR().col(k).tail(remainingSize-1),
+					hCoeffs().coeff(k), &workspace.coeffRef(0));
+	}
+
+      matrixQR()
+	.topLeftCorner(r,r).triangularView<Upper>()
+	.solveInPlace(Gp);
+
+      Gp.applyOnTheLeft( colsPermutation() );
+    }
+
+    MatrixXd pseudoInverse( void )
+    {
+      MatrixXd res = MatrixXd::Identity( cols(),rows() );
+      solveInPlace( res );
+      return res;
+    }
+
+
+
+    /* Find a solution x to the problem G'x = b. The input vector is b,
+     * completed by the 0 tail to obtain the x size.  The solver only works for
+     * full-row rank matrices, ie matrices G' = [ L 0 ] Q, with L full-rank
+     * (full diag) lower triangular. */
+    void solveTransposeInPlace( MatrixXd& Gtp )
+    {
+      /* r is the rank, nxm the size of the original matrix (ie whose transpose
+       * has been decomposed. n is the number of cols of the original matrix,
+       * thus number of rows of the transpose we want to inverse. */
       const int r = rank(), n=cols(), m=rows();
       assert( r==n );
-      assert( Gp.rows() == m );
+      assert( Gtp.rows() == m ); // TODO: if not proper size, resize.
 
-      /* G'E = Q R
-       * => G^+ = Q R^+T E' */
+      /* G E = Q R  ::  E' G' = L Q', with L=R'
+       * => G^+T = Q R^+T E' */
 
       /* Compute E'*X. */
-      Gp.applyOnTheLeft( colsPermutation().transpose() );
+      Gtp.applyOnTheLeft( colsPermutation().transpose() );
 
       /* Compute R^+T E'*X. */
       matrixQR()
 	.topLeftCorner(r,r).transpose().triangularView<Lower>()
-	.solveInPlace(Gp.topRows(r));
+	.solveInPlace(Gtp.topRows(r));
 
       /* Compute Q R^+T E'*X. */
       /* Q = P1*P2* ... *Pn */
@@ -60,11 +100,19 @@ namespace Eigen
       for (int k = r-1; k >= 0 ; --k)
 	{
 	  int remainingSize = m-k;
-	  Gp.bottomRows( Gp.rows()-k )
+	  Gtp.bottomRows( Gtp.rows()-k )
 	    .applyHouseholderOnTheLeft(matrixQR().col(k).tail(remainingSize-1),
 				       hCoeffs().coeff(k), &workspace.coeffRef(0));
 	}
     }
+
+    MatrixXd pseudoInverseTranspose( void )
+    {
+      MatrixXd Gtp = MatrixXd::Identity( rows(),cols() );
+      solveTransposeInPlace( Gtp );
+      return Gtp;
+    }
+
   };
 }
 
@@ -75,7 +123,7 @@ int main (void)
 
   { /* Compute the pseudo inverse of a full-col rank matrix: G = V [ R; 0 ]. */
 
-    const unsigned int n=6, m=3, r=3;
+    const unsigned int n=12, m=9, r=9;
 
     MatrixXd G = MatrixXd::Random(n,m);
     p("G") << (MATLAB)G << endl;
@@ -134,10 +182,17 @@ int main (void)
       Gp.applyOnTheLeft( G_qr.colsPermutation() );
       p("Gp") << (MATLAB)Gp << endl;
     }
+
+    {
+      ColPivQRSolveInPlace G_qr; G_qr.compute(G);
+      p("Gp") << (MATLAB)G_qr.pseudoInverse() << endl;
+    }
+
+
   }
 
   { /* Compute the pseudo inverse of a full-row rank matrix: G = [ L; 0 ] V'. */
-    const unsigned int n=3, m=6, r=3;
+    const unsigned int n=9, m=12, r=9;
 
     MatrixXd G = MatrixXd::Random(n,m);
     p("G") << (MATLAB)G << endl;
@@ -174,10 +229,11 @@ int main (void)
     }
 
     {
-      FullRowRankColPivQR G_lq; G_lq.compute(G);
+      ColPivQRSolveInPlace Gt_qr; Gt_qr.compute(G.transpose());
       MatrixXd Gp = MatrixXd::Identity( m,r );
-      G_lq.solveInPlace(Gp);
+      Gt_qr.solveTransposeInPlace(Gp);
       p("Gp") << (MATLAB)Gp << endl;
+      p("Gp") << (MATLAB)Gt_qr.pseudoInverseTranspose() << endl;
     }
 
   }
