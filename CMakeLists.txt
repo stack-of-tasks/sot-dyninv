@@ -106,6 +106,7 @@ list(APPEND task-dyn-joint-limits_plugins_dependencies task-dyn-pd)
 list(APPEND pseudo-robot-dynamic_plugins_dependencies dynamic-integrator)
 list(APPEND solver-op-space_plugins_dependencies task-dyn-pd)
 list(APPEND solver-dyn-reduced_plugins_dependencies task-dyn-pd)
+list(APPEND solver-dyn-red2_plugins_dependencies task-dyn-pd)
 
 foreach(lib task-inequality task-dyn-pd task-joint-limits task-dyn-joint-limits)
 	IF(WIN32)
@@ -122,10 +123,14 @@ IF(WIN32)
 		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_LINK_LIBRARY_SUFFIX})
 	list(APPEND solver-dyn-reduced_ext_plugins_dependencies
 		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_LINK_LIBRARY_SUFFIX})
+	list(APPEND solver-dyn-red2_ext_plugins_dependencies
+		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_LINK_LIBRARY_SUFFIX})
 ELSE(WIN32)
 	list(APPEND solver-op-space_ext_plugins_dependencies
 		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_SHARED_LIBRARY_SUFFIX})
 	list(APPEND solver-dyn-reduced_ext_plugins_dependencies
+		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_SHARED_LIBRARY_SUFFIX})
+	list(APPEND solver-dyn-red2_ext_plugins_dependencies
 		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_SHARED_LIBRARY_SUFFIX})
 ENDIF(WIN32)
 
