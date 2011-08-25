@@ -73,10 +73,23 @@ except:
     robot.viewer = None
 
 # --- MAIN LOOP ------------------------------------------
+#rs=True # Regular solver
+rs=False # Reduced solver
 
+if rs:
+    toBeRecomputed = ['matrixInertia','dyndrift']
+else:
+    toBeRecomputed = ['Jc', 'driftContact','dyndrift', 'freeForceBase', 'freeMotionBase', 'inertiaSqrootInv']
 qs=[]
+chronos=[]
 def inc():
-    attime.run(robot.control.time+1)
+    tnext=robot.control.time+1
+    attime.run(tnext)
+    for sig in toBeRecomputed:
+        sot.signal(sig).recompute( tnext )
+    chrono=Chrono()
+    sot.triger.recompute(tnext)
+    chronos.append(chrono.tic())
     robot.increment(dt)
     qs.append(robot.state.value)
 
@@ -179,14 +192,14 @@ contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-
 contactRF.feature.frame('desired')
 
 # --- SOT Dyn OpSpaceH --------------------------------------
-#rs=True # Regular solver
-rs=False # Reduced solver
 
 # SOT controller.
 if rs:
     sot = SolverOpSpace('sot')
+    sot.triger = sot.control
 else:
-    sot = SolverDynRed2('sot')
+    sot = SolverDynReduced('sot')
+    sot.triger = sot.acceleration
 
 sot.setSize(robotDim-6)
 #sot.damping.value = 2e-2
@@ -207,7 +220,7 @@ sot._RF_p.value = contactRF.support
 
 
 # --- TRACE ----------------------------------------------
-'''
+
 from dynamic_graph.tracer import *
 tr = Tracer('tr')
 tr.open('/tmp/','','.dat')
@@ -241,12 +254,44 @@ if not rs:
     robot.after.addSignal('sot.forcesNormal')
     tr.add('sot.activeForces','')
     robot.after.addSignal('sot.activeForces')
-'''
+
+
+
+# --- CHRONO ------------------------------------------------
+class Chrono:
+    t0=0
+    def __init__(self):
+        self.t0 = time.time()
+    def tic(self):
+        return time.time()-self.t0
+chrono=Chrono()
+attime(499,chrono.tic)
+
+# --- RUN ------------------------------------------------
+matlab.prec=9
+matlab.fullPrec=0
+
+
+taskCom.controlGain.value = 100
+#featureComDes.errorIN.value = (0.06,  0.15,  0.8)
+#featureComDes.errorIN.value = (0.06,  0.145,  0.8  )
+
+featureComDes.errorIN.value = (0.1,  0.145,  0.8  )
+#Nominal: no zmp overshoot featureComDes.errorIN.value = (0.084,  0.144,  0.804  )
+sot.push('taskCom')
+
+#@attime(5)
+def rm():
+    featureComDes.errorIN.value = dyn.com.value
+attime(500,stop,'stop')
+
+
+
+go()
 
 # --- DEBUG ----------------------------------------------
-
 '''
-for i in range(25):    inc()
+for i in range(50):    inc()
 
 print sot.velocity.m
 print sot.dyndrift.m
@@ -288,7 +333,6 @@ else:
     print "ddq2= ddq; phi2=phi; f2=f; fn2=f(3:3:end);"
 '''
 
-
 '''
 if 0: # double check
     sotreg = SolverOpSpace('sotreg')
@@ -318,35 +362,3 @@ if 0: # double check
     print taskCom.task.m
 '''
 
-
-# --- CHRONO ------------------------------------------------
-class Chrono:
-    t0=0
-    def __init__(self):
-        self.t0 = time.time()
-    def tic(self):
-        print 'elapsed time = ',time.time()-self.t0
-chrono=Chrono()
-attime(499,chrono.tic)
-
-# --- RUN ------------------------------------------------
-matlab.prec=9
-matlab.fullPrec=0
-
-
-taskCom.controlGain.value = 100
-#featureComDes.errorIN.value = (0.06,  0.15,  0.8)
-#featureComDes.errorIN.value = (0.06,  0.145,  0.8  )
-
-featureComDes.errorIN.value = (0.1,  0.145,  0.8  )
-#Nominal: no zmp overshoot featureComDes.errorIN.value = (0.084,  0.144,  0.804  )
-sot.push('taskCom')
-
-#@attime(5)
-def rm():
-    featureComDes.errorIN.value = dyn.com.value
-attime(500,stop,'stop')
-
-
-
-go()

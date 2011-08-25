@@ -14,7 +14,7 @@
  * with sot-dyninv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//#define VP_DEBUG
+#define VP_DEBUG
 #define VP_DEBUG_MODE 50
 #include <sot/core/debug.hh>
 #ifdef VP_DEBUG
@@ -40,7 +40,6 @@ solver_op_space__INIT solver_op_space_initiator;
 #include <sstream>
 #include <soth/Algebra.hpp>
 #include <Eigen/QR>
-
 
 namespace dynamicgraph
 {
@@ -311,6 +310,7 @@ namespace dynamicgraph
 			  ( contactPointsSignal,
 			    "sotDynInvWB("+getName()+")::input(matrix)::_"+name+"_p" ) );
 	signalRegistration( *contactMap[name].supportSIN );
+	forceGeneratorSOUT.addDependency( *contactMap[name].supportSIN );
 
 	contactMap[name].correctorSIN
 	  = vectorSINPtr( new SignalPtr<ml::Vector,int>
@@ -341,8 +341,12 @@ namespace dynamicgraph
 
 	JcSOUT.removeDependency( *contactMap[name].jacobianSIN );
 	precomputeSOUT.removeDependency( *contactMap[name].jacobianSIN );
+	forceGeneratorSOUT.removeDependency( *contactMap[name].supportSIN );
+
 	JcSOUT.setReady();
 	precomputeSOUT.setReady();
+	forceGeneratorSOUT.setReady();
+
 	signalDeregistration( signalShortName(contactMap[name].jacobianSIN->getName()) );
 	signalDeregistration( signalShortName(contactMap[name].supportSIN->getName()) );
 	signalDeregistration( signalShortName(contactMap[name].forceSOUT->getName()) );
@@ -505,22 +509,22 @@ namespace dynamicgraph
 	}
 
 	/* TODO: inherite from JacobiSVD a structure where rank can be computed dynamically. */
-	inline int svdRankDefEval( const Eigen::JacobiSVD<Eigen::MatrixXd >& Msvd,
-				   const double threshold = 1e-5 )
-	{
-	  return (Msvd.singularValues().array() > threshold ).count();
-	}
-  	template<typename D2>
-	Eigen::VectorXd svdRankDefSolve( const Eigen::JacobiSVD<Eigen::MatrixXd >& Msvd,
-					 const Eigen::MatrixBase<D2>& y,
-					 const int rank )
-	{
-	  assert( Msvd.computeU() && Msvd.computeV() );
-	  return
-	    Msvd.matrixV().leftCols(rank) *
-	    Msvd.singularValues().array().head(rank).inverse().matrix().asDiagonal() *
-	    Msvd.matrixU().leftCols(rank).transpose()*y;
-	}
+	// inline int svdRankDefEval( const Eigen::JacobiSVD<Eigen::MatrixXd >& Msvd,
+	// 			   const double threshold = 1e-5 )
+	// {
+	//   return (Msvd.singularValues().array() > threshold ).count();
+	// }
+  	// template<typename D2>
+	// Eigen::VectorXd svdRankDefSolve( const Eigen::JacobiSVD<Eigen::MatrixXd >& Msvd,
+	// 				 const Eigen::MatrixBase<D2>& y,
+	// 				 const int rank )
+	// {
+	//   assert( Msvd.computeU() && Msvd.computeV() );
+	//   return
+	//     Msvd.matrixV().leftCols(rank) *
+	//     Msvd.singularValues().array().head(rank).inverse().matrix().asDiagonal() *
+	//     Msvd.matrixU().leftCols(rank).transpose()*y;
+	// }
       }
 
       /* --- SIGNALS ---------------------------------------------------------- */
@@ -726,15 +730,25 @@ namespace dynamicgraph
 	const int & nq = sizeConfigurationSOUT(t);
 	assert( J.cols()==nq && B.rows() == nq );
 
-	MatrixXd G = (J*B.triangularView<Eigen::Upper>());
-	G_svd.compute(G,ComputeFullV|ComputeThinU);
-	G_rank = sotSolverDyn::svdRankDefEval(G_svd,1e-3);
+	MatrixXd Gt = (J*B.triangularView<Eigen::Upper>()).transpose();
+	sotDEBUG(40) << "Gt = " << (soth::MATLAB)Gt << std::endl;
+	Gt_qr.compute( Gt );
+	Gt_qr.setThreshold(1e-3);
+	G_rank = Gt_qr.rank();
 	const unsigned int freeRank = nq-G_rank;
+	sotDEBUG(40) << "Q = " << (soth::MATLAB)(MatrixXd)Gt_qr.householderQ()  << std::endl;
 
+	/*
+	  J = [ L 0 ] Q' = [L 0] [ V_perp' ; V' ]
+	  J' = Q [ R; 0 ] = [ V_perp V ] [ R; 0 ]
+	  V = Q [ 0 ; I ].
+	 */
 	EIGEN_MATRIX_FROM_MATRIX(V,mlV,nq,freeRank);
-	assert( G_svd.computeV() && G_svd.matrixV().cols()==nq
-		&& G_svd.matrixV().rows()==nq );
-	V = G_svd.matrixV().rightCols(freeRank);
+	assert( freeRank = J.rows() );
+	assert( Gt_qr.householderQ().cols()==nq && Gt_qr.householderQ().rows()==nq );
+	V.topRows(nq-freeRank).fill(0);
+	V.bottomRows(freeRank) = MatrixXd::Identity(freeRank,freeRank);
+	V.applyOnTheLeft( Gt_qr.householderQ() );
 
 	return mlV;
       }
@@ -846,7 +860,7 @@ namespace dynamicgraph
 	 * idea to go for it a second time. This suppose that the matrix has
 	 * not been modified in between. It should work, but start with that if
 	 * you are looking for a bug in ddq. */
-	/* Same for G_svd. */
+	/* Same for Gt_qr. */
 	using soth::MATLAB;
 	using namespace sotSolverDyn;
 	using namespace Eigen;
@@ -856,7 +870,10 @@ namespace dynamicgraph
 	freeMotionBaseSOUT(t); // To force the computation of G_svd.
 	EIGEN_VECTOR_FROM_VECTOR(res,mlres,nq);
 	sotDEBUG(40) << "fdrift = " << (MATLAB)forceDrift << std::endl;
-	res = svdRankDefSolve( G_svd,forceDrift,G_rank );
+
+	const int nphi = sizeForceSpatialSOUT(t);
+	res.head(nphi) = forceDrift; res.tail( nq-nphi ).fill(0);
+	Gt_qr.solveTransposeInPlace( res );
 	sotDEBUG(40) << "drift = " << (MATLAB)res << std::endl;
 
 	return mlres;
@@ -1063,7 +1080,6 @@ namespace dynamicgraph
 	 * idea to go for it a second time. This suppose that the matrix has
 	 * not been modified in between. It should work, but start with that if
 	 * you are looking for a bug in ddq. */
-	/* Same for G_svd. */
 
 	using soth::MATLAB;
 	using namespace sotSolverDyn;

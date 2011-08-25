@@ -42,7 +42,8 @@
 #include <sot-dyninv/task-dyn-pd.h>
 #include <soth/HCOD.hpp>
 #include <Eigen/QR>
-#include <Eigen/SVD>
+//#include <Eigen/SVD>
+#include <sot-dyninv/col-piv-qr-solve-in-place.h>
 
 namespace dynamicgraph {
   namespace sot {
@@ -166,10 +167,10 @@ namespace dynamicgraph {
 	  typedef boost::shared_ptr<soth::HCOD> hcod_ptr_t;
 	  hcod_ptr_t hsolver;
 
-	  //Eigen::FullPivHouseholderQR<Eigen::MatrixXd> Gt_qr;
-	  Eigen::JacobiSVD<Eigen::MatrixXd> G_svd;
 	  int G_rank;
 	  Eigen::FullPivHouseholderQR<Eigen::MatrixXd> X_qr;
+	  Eigen::ColPivQRSolveInPlace Gt_qr;
+
 
 	  Eigen::MatrixXd Cforce,Czero;
 	  soth::VectorBound bforce,bzero;
