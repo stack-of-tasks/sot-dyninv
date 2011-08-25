@@ -20,9 +20,6 @@
 
 std::ostream& p( const char * n ) { return std::cout << n << " = "; }
 
-
-
-
 int main (void)
 {
   using namespace Eigen;
