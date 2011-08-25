@@ -36,7 +36,8 @@ namespace Eigen
      * completed by the 0 tail to obtain the x size.  The solver only works for
      * full-col rank matrices, ie matrices G = Q [ R; 0 ], with R full-rank
      * (full diag) upper triangular. */
-    void solveInPlace( MatrixXd& Gp )
+    template< typename D >
+    void solveInPlace( MatrixBase<D>& Gp )
     {
       const int r = rank(), m=cols(), n=rows();
       assert( r==m );
@@ -72,7 +73,8 @@ namespace Eigen
      * completed by the 0 tail to obtain the x size.  The solver only works for
      * full-row rank matrices, ie matrices G' = [ L 0 ] Q, with L full-rank
      * (full diag) lower triangular. */
-    void solveTransposeInPlace( MatrixXd& Gtp )
+    template< typename D >
+    void solveTransposeInPlace( MatrixBase<D>& Gtp )
     {
       /* r is the rank, nxm the size of the original matrix (ie whose transpose
        * has been decomposed. n is the number of cols of the original matrix,
