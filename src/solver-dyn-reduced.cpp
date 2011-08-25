@@ -744,7 +744,7 @@ namespace dynamicgraph
 	  V = Q [ 0 ; I ].
 	 */
 	EIGEN_MATRIX_FROM_MATRIX(V,mlV,nq,freeRank);
-	assert( freeRank = J.rows() );
+	assert( freeRank == J.rows() );
 	assert( Gt_qr.householderQ().cols()==nq && Gt_qr.householderQ().rows()==nq );
 	V.topRows(nq-freeRank).fill(0);
 	V.bottomRows(freeRank) = MatrixXd::Identity(freeRank,freeRank);
