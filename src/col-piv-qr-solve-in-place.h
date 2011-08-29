@@ -18,6 +18,7 @@
 #define __sot_dyninv_ColPivQRSolveInPlace_H__
 
 #include <Eigen/QR>
+#include <iostream>
 
 namespace Eigen
 {
@@ -43,7 +44,7 @@ namespace Eigen
       assert( r==m );
       assert( Gp.rows() == m ); // TODO: if not proper size, resize.
 
-      VectorXd workspace( n );
+      VectorXd workspace( Gp.rows() ); // Size of Gtp number of rows.
       /* P2*P1*P0 ... */
       for (int k = r-1; k >= 0 ; --k)
 	{
@@ -96,11 +97,20 @@ namespace Eigen
 
       /* Compute Q R^+T E'*X. */
       /* Q = P1*P2* ... *Pn */
-      VectorXd workspace( n );
+      VectorXd workspace( Gtp.cols() ); // size of Gtp number of cols.
       for (int k = r-1; k >= 0 ; --k)
 	{
 	  int remainingSize = m-k;
-	  Gtp.bottomRows( Gtp.rows()-k )
+	  /* std::cout << " ---------------------------" << std::endl; */
+	  /* std::cout << remainingSize << std::endl; */
+	  /* std::cout << " ---------------------------" << std::endl; */
+	  /* std::cout << Gtp.bottomRows( Gtp.rows()-k ) << std::endl; */
+	  /* std::cout << " ---------------------------" << std::endl; */
+	  /* std::cout << matrixQR().col(k).transpose() << std::endl; */
+	  /* std::cout << " ---------------------------" << std::endl; */
+	  /* std::cout << matrixQR().col(k).tail(remainingSize-1).transpose() << std::endl; */
+	  /* std::cout << " ---------------------------" << std::endl; */
+	  Gtp.bottomRows( remainingSize )
 	    .applyHouseholderOnTheLeft(matrixQR().col(k).tail(remainingSize-1),
 				       hCoeffs().coeff(k), &workspace.coeffRef(0));
 	}

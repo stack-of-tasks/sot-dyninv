@@ -162,14 +162,13 @@ namespace dynamicgraph {
 	  void refreshTaskTime( int time );
 	  void resizeSolver( void );
 	  void computeSizesForce( int t );
- 
+
 	private:
 	  typedef boost::shared_ptr<soth::HCOD> hcod_ptr_t;
 	  hcod_ptr_t hsolver;
 
 	  int G_rank;
-	  Eigen::FullPivHouseholderQR<Eigen::MatrixXd> X_qr;
-	  Eigen::ColPivQRSolveInPlace Gt_qr;
+	  Eigen::ColPivQRSolveInPlace X_qr,Gt_qr;
 
 
 	  Eigen::MatrixXd Cforce,Czero;

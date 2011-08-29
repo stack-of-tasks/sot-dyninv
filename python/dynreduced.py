@@ -169,7 +169,7 @@ featureCom.sdes.value = 'featureComDes'
 taskCom = TaskDynPD('taskCom')
 taskCom.add('featureCom')
 plug(dyn.velocity,taskCom.qdot)
-taskCom.dt.value = 1e-3
+taskCom.dt.value = dt
 
 gCom = GainAdaptive('gCom')
 plug(taskCom.error,gCom.error)
@@ -185,11 +185,13 @@ gCom.set(1050,45,125e3)
 contactLF = MetaTaskDyn6d('contact_lleg',dyn,'lf','left-ankle')
 contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
 contactLF.feature.frame('desired')
+contactLF.task.dt.value=dt
 
 # Right foot contact
 contactRF = MetaTaskDyn6d('contact_rleg',dyn,'rf','right-ankle')
 contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
 contactRF.feature.frame('desired')
+contactLF.task.dt.value=dt
 
 # --- SOT Dyn OpSpaceH --------------------------------------
 
@@ -237,6 +239,7 @@ robot.after.addSignal('sot.acceleration')
 tr.add('taskCom.error','com')
 tr.add('taskCom.task','')
 tr.add(contactLF.task.name+'.error','lf')
+tr.add(contactRF.task.name+'.error','rf')
 
 if not rs: tr.add('sot.solution','')
 
@@ -287,10 +290,9 @@ attime(500,stop,'stop')
 
 
 
-go()
+#go()
 
 # --- DEBUG ----------------------------------------------
-'''
 for i in range(50):    inc()
 
 print sot.velocity.m
@@ -331,7 +333,6 @@ else:
     print "u=x(1:24); psi=x(25:end); "
 
     print "ddq2= ddq; phi2=phi; f2=f; fn2=f(3:3:end);"
-'''
 
 '''
 if 0: # double check

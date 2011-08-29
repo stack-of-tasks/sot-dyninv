@@ -744,7 +744,7 @@ namespace dynamicgraph
 	  V = Q [ 0 ; I ].
 	 */
 	EIGEN_MATRIX_FROM_MATRIX(V,mlV,nq,freeRank);
-	assert( freeRank == J.rows() );
+	assert( G_rank == J.rows() );
 	assert( Gt_qr.householderQ().cols()==nq && Gt_qr.householderQ().rows()==nq );
 	V.topRows(nq-freeRank).fill(0);
 	V.bottomRows(freeRank) = MatrixXd::Identity(freeRank,freeRank);
@@ -764,17 +764,21 @@ namespace dynamicgraph
 	const int & nf = sizeForcePointSOUT(t);
 	assert( X.rows()==nf );
 
-	X_qr.compute( (MatrixXd)((X*Jc).leftCols(6)));
+	/* J[:,1:6] = [ R_1  X_1 ; ... ; R_N X_N ]
+	 * with R_i the rotation of the frame where contact point i is expressed
+	 * and X_i the skew of the vector from waist to contact point. */
+	X_qr.compute( X*(Jc.leftCols(6)) );
 	X_qr.setThreshold(1e-3);
 	const unsigned int freeRank = nf-X_qr.rank();
 	assert( X_qr.rank()==6 );
-	//assert( X_qr.rank()==X.cols() );
 
 	sotDEBUG(5) << "JSb = " << (MATLAB)( (MatrixXd)((X*Jc).leftCols(6)) ) << endl;
-	sotDEBUG(5) << "Q = " << (MATLAB)X_qr.matrixQ()  << endl;
+	sotDEBUG(5) << "Q = " << (MATLAB)(MatrixXd)X_qr.householderQ()  << endl;
 
 	EIGEN_MATRIX_FROM_MATRIX(K,mlK,nf,freeRank);
-	K = X_qr.matrixQ().rightCols(freeRank);
+	K.topRows(X_qr.rank()).fill(0);
+	K.bottomRows(freeRank) = MatrixXd::Identity(freeRank,freeRank);
+	K.applyOnTheLeft( X_qr.householderQ() );
 
 	return mlK;
       }
@@ -945,27 +949,30 @@ namespace dynamicgraph
 
 	/* -1- */
 	{
-	  MatrixXd XJS = Xc*Jc.leftCols(6);
-	  sotDEBUG(15) << "XJS = "     << (MATLAB)XJS << std::endl;
-	  HouseholderQR<MatrixXd> qr(XJS);
+	  MatrixXd XJSptSBV2( nf,nu );
+	  XJSptSBV2.ROWS_FF
+	    = - (sBi.transpose().topLeftCorner(6,6).triangularView<Lower>() * V.ROWS_FF);
+	  XJSptSBV2.bottomRows( nf-6 ).setZero();
+	  sotDEBUG(15) << "SBitV = " << (MATLAB)XJSptSBV2 << std::endl;
+	  X_qr.solveTransposeInPlace( XJSptSBV2 );
+	  sotDEBUG(15) << "XJSptSBitV = " << (MATLAB)XJSptSBV2 << std::endl;
 
-	  MatrixXd XJSp = qr.solve( MatrixXd::Identity(nf,nf) );
-	  MatrixXd XJSptSBV = -XJSp.transpose()
-	    * sBi.transpose().topLeftCorner(6,6).triangularView<Lower>() * V.ROWS_FF;
-	  VectorXd ref = XJSp.transpose()
-	    * (b.ROWS_FF
-	       + sBi.transpose().topLeftCorner(6,6).triangularView<Lower>()*drift.ROWS_FF);
+	  VectorXd XJSptdelta( nf );
+	  XJSptdelta.ROWS_FF
+	    = b.ROWS_FF
+	    + sBi.transpose().topLeftCorner(6,6).triangularView<Lower>()*drift.ROWS_FF;
+	  XJSptdelta.bottomRows( nf-6 ).setZero();
+	  sotDEBUG(15) << "SBitdelta = " << (MATLAB)XJSptdelta << std::endl;
+	  X_qr.solveTransposeInPlace( XJSptdelta );
+	  sotDEBUG(15) << "XJSptSBitdelta = " << (MATLAB)XJSptdelta << std::endl;
 
-	  sotDEBUG(15) << "XJSp = "     << (MATLAB)XJSp << std::endl;
-	  sotDEBUG(15) << "XJSptSBV = "     << (MATLAB)XJSptSBV << std::endl;
-	  sotDEBUG(15) << "ref = "     << (MATLAB)ref << std::endl;
-
-	  assert( XJSptSBV.rows()==nbForce*3 && K.rows()==nbForce*3 && ref.size()==nbForce*3 );
+	  assert( XJSptSBV2.rows()==nbForce*3 && K.rows()==nbForce*3
+		  && XJSptdelta.size()==nbForce*3 );
 	  for( int i=0;i<nbForce;++i )
 	    {
-	      Cforce.COLS_U.row(i) = XJSptSBV.row(3*i+2);
+	      Cforce.COLS_U.row(i) = XJSptSBV2.row(3*i+2);
 	      Cforce.COLS_F.row(i) = K.row(3*i+2);
-	      bforce[i] = Bound( ref[3*i+2], Bound::BOUND_SUP );
+	      bforce[i] = Bound( XJSptdelta[3*i+2], Bound::BOUND_SUP );
 	    }
 	}
 	sotDEBUG(15) << "Cforce = "     << (MATLAB)Cforce << std::endl;
@@ -1093,6 +1100,16 @@ namespace dynamicgraph
 	sotDEBUG(40) << "B = " << (MATLAB)sB << std::endl;
 	sotDEBUG(40) << "u = " << (MATLAB)u << std::endl;
 	ddq = BV*u + B*drift;
+
+	/* --- verif --- */
+	{
+	  EIGEN_CONST_MATRIX_FROM_SIGNAL(Jc,JcSOUT(t));
+	  sotDEBUG(40) << "fdrift = " << (MATLAB)forceDrift << std::endl;
+	  sotDEBUG(40) << "Jqdd = " << (MATLAB)(MatrixXd)(Jc*ddq)  << std::endl;
+	  sotDEBUG(40) << "diff = " << (MATLAB)(MatrixXd)(Jc*ddq-forceDrift)  << std::endl;
+	  sotDEBUG(40) << "ndiff = " << (Jc*ddq-forceDrift).norm() << std::endl;
+	}
+
 	return mlddq;
       }
       ml::Vector& SolverDynReduced::
