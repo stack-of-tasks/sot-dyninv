@@ -191,7 +191,7 @@ contactLF.task.dt.value=dt
 contactRF = MetaTaskDyn6d('contact_rleg',dyn,'rf','right-ankle')
 contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
 contactRF.feature.frame('desired')
-contactLF.task.dt.value=dt
+contactRF.task.dt.value=dt
 
 # --- SOT Dyn OpSpaceH --------------------------------------
 
@@ -267,8 +267,11 @@ class Chrono:
         self.t0 = time.time()
     def tic(self):
         return time.time()-self.t0
+    def disptic(self):
+        print 'tic?'
+        print self.tic()
 chrono=Chrono()
-attime(499,chrono.tic)
+attime(99,chrono.disptic)
 
 # --- RUN ------------------------------------------------
 matlab.prec=9
@@ -293,6 +296,7 @@ attime(500,stop,'stop')
 #go()
 
 # --- DEBUG ----------------------------------------------
+'''
 for i in range(50):    inc()
 
 print sot.velocity.m
@@ -333,6 +337,7 @@ else:
     print "u=x(1:24); psi=x(25:end); "
 
     print "ddq2= ddq; phi2=phi; f2=f; fn2=f(3:3:end);"
+'''
 
 '''
 if 0: # double check
