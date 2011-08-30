@@ -83,6 +83,9 @@ namespace dynamicgraph {
 	  ml::Matrix previousJ;
 	  bool previousJset;
 
+	public: /* COMMANDS */
+	  void resetJacobianDerivative( void );
+
 	}; // class TaskDynPD
 
     } // namespace dyninv

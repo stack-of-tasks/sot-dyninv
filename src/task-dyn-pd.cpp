@@ -68,6 +68,10 @@ namespace dynamicgraph
 	signalRegistration( KvSIN << qdotSIN << dtSIN
 			    << errorDotSOUT << KvAutoSOUT
 			    << JdotSOUT  << taskVectorSOUT );
+
+	addCommand("resetJacobianDerivative",
+		   makeCommandVoid0(*this,&TaskDynPD::resetJacobianDerivative,
+				    docCommandVoid0("Reset the memory of the numeric jacobian derivative.")));
       }
 
 
@@ -148,6 +152,9 @@ namespace dynamicgraph
 	sotDEBUGOUT(15);
 	return Jdot;
       }
+
+      void TaskDynPD::resetJacobianDerivative( void ) { previousJset = false; }
+
 
       ml::Vector& TaskDynPD::
       taskVectorSOUT_function( ml::Vector& taskV,             int time )
