@@ -304,7 +304,9 @@ namespace dynamicgraph
 	  /* Ci = [ X_c^0_{z,Rx,Ry} -Psi_{z,Rx,Ry}];
 	   *   with X_c^0_{z,Rx,Ry} = [ 0 0 1 0 0 0; 0 -z 0 1 0 0; z 0 0 0 1 0 ]
 	   *   and Psi_{z,Rx,Ry} = [ 1 1 1 1; y_1 y_2 y_3 y_4; -x_1 -x_2 -x_3 -x_4 ]. */
-	  const double z = positions(2,0);
+	  //const double z = positions(2,0);
+	  /* position(3) is the position of the ground wrt the ankle. We need the opposite. */
+	  const double z = -positions(2,0); // DEBUG TRIAL
 	  Ci.setZero();
 	  Ci(0,2)=1;
 	  Ci(1,1)=-z; Ci(1,3)=1;
