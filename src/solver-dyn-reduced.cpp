@@ -980,7 +980,7 @@ namespace dynamicgraph
 
 	/* The matrix B*V has to be stored to avoid unecessary
 	 * recomputation. */
-	BV = B*V;
+	BV = B*V; // TODO: compute B*drift the same way.
 	sotDEBUG(15) << "BV = "     << (MATLAB)BV << std::endl;
 	sotDEBUG(15) << "B = "     << (MATLAB)(MatrixXd)B << std::endl;
 
@@ -1007,6 +1007,7 @@ namespace dynamicgraph
 	    VectorXd Jdqd = Jdot*qdot;
 	    vbAssign(btask1,ddx);
 	    vbSubstract(btask1,Jdqd);
+	    sotDEBUG(45) << "Jdqd"<<i<<" = " << (MATLAB)Jdqd << std::endl;
 	    sotDEBUG(45) << "JBdc"<<i<<" = " << (MATLAB)(MatrixXd)(J*B*drift) << std::endl;
 	    vbSubstract(btask1,(VectorXd)(J*B*drift));
 
@@ -1050,8 +1051,11 @@ namespace dynamicgraph
 	res=solution;
 
 	// Small verif:
-	sotDEBUG(1) << "ddx0 = " << (MATLAB)(VectorXd)(Ctasks[0]*solution) << std::endl;
-	sotDEBUG(1) << "ddx0 = " << btasks[0] << std::endl;
+	if( Ctasks.size()>0 )
+	  {
+	    sotDEBUG(1) << "ddx0 = " << (MATLAB)(VectorXd)(Ctasks[0]*solution) << std::endl;
+	    sotDEBUG(1) << "ddx0 = " << btasks[0] << std::endl;
+	  }
 
 	sotDEBUGOUT(15);
 	return mlres;
@@ -1134,21 +1138,32 @@ namespace dynamicgraph
 	  & nf = sizeForcePointSOUT(t);
 	EIGEN_VECTOR_FROM_VECTOR(f,res,nf);
 
-	// //f = x.tail(nf);
-	MatrixXd XJS = Xc*Jc.leftCols(6);
-	sotDEBUG(15) << "XJS = "     << (MATLAB)XJS << std::endl;
-	HouseholderQR<MatrixXd> qr(XJS);
-
-	MatrixXd XJSp = qr.solve( MatrixXd::Identity(nf,nf) );
-	VectorXd SBVu // = Sb( B^-T( -Vu-delta ) - b )
+	f.ROWS_FF	// = Sb( B^-T( -Vu-delta ) - b )
 	  = sBi.transpose().topLeftCorner(6,6).triangularView<Lower>()
 	  * ( -V.ROWS_FF*u - drift.ROWS_FF )
 	  - b.ROWS_FF;
-	sotDEBUG(15) << "XJSp = "     << (MATLAB)XJSp << std::endl;
-	sotDEBUG(15) << "SBVu = "     << (MATLAB)SBVu << std::endl;
+	f.tail( nf-6 ).setZero();
+	sotDEBUG(15) << "SBVu = "     << (MATLAB)f << std::endl;
 
-	f = XJSp.transpose() * SBVu + K*psi;
+	X_qr.solveTransposeInPlace(f);
+	sotDEBUG(15) << "SJptSBVu = "     << (MATLAB)f << std::endl;
+
+	f += K*psi;
 	sotDEBUG(15) << "f = "     << (MATLAB)f << std::endl;
+
+	/* phi = X' f */
+	VectorXd phi = Xc.transpose()*f;
+	BOOST_FOREACH(contacts_t::value_type& pContact, contactMap)
+	  {
+	    Contact& contact = pContact.second;
+	    const int r = 6*contact.position;
+	    ml::Vector mlphii;
+	    EIGEN_VECTOR_FROM_VECTOR( phii,mlphii,6 );
+	    assert( r+6<=phi.size() );
+
+	    phii = phi.segment(r,6);
+	    (*contact.forceSOUT) = mlphii;
+	  }
 
 	return res;
       }
@@ -1165,6 +1180,21 @@ namespace dynamicgraph
 	for( int i=0;i<nfn;++i )
 	  {
 	    fn[i] -= bforce[i].getBound( bforce[i].getType() );
+	  }
+
+	BOOST_FOREACH(contacts_t::value_type& pContact, contactMap)
+	  {
+	    Contact& contact = pContact.second;
+	    const int nf0 = contact.range.first / 3;
+	    const int nff = contact.range.second / 3;
+	    assert( (contact.range.first%3) == 0);
+	    assert( (contact.range.second%3) == 0);
+	    assert( nff<=fn.size() );
+
+	    ml::Vector mlfni;
+	    EIGEN_VECTOR_FROM_VECTOR( fni,mlfni,nff-nf0 );
+	    fni = fn.segment(nf0,nff-nf0);
+	    (*contact.fnSOUT) = mlfni;
 	  }
 
 
