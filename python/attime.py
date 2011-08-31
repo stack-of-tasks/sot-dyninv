@@ -1,8 +1,36 @@
 class Calendar:
     events=dict()
-    def registerEvent( self,iter,fun,doc ):
+    def __repr__(self):
+        res=''
+#        for iter in sort(self.events.keys()):
+        for iter,funpairs in sorted( self.events.iteritems() ):
+            res += str(iter)+": \n"
+#            funpairs=self.events[iter]
+            for funpair in funpairs:
+                if funpair[1]=='': res+=funpair[0]+'\n'
+                else: res += str(funpair[1])+'\n'
+        return res
+
+    def registerEvent( self,iter,pairfundoc ):
         if not iter in self.events.keys(): self.events[iter] = list()
-        self.events[iter] += [ (fun,doc) ]
+        self.events[iter].append(pairfundoc)
+
+    def registerEvents( self,iter,*funs ):
+        '''
+        3 entry types are possible: 1. only the functor. 2. a pair
+        (functor,doc). 3. a list of pairs (functor,doc).
+        '''
+        if len(funs)==2 and callable(funs[0]) and isinstance( funs[1],str ): self.registerEvent(iter, ( funs[0],funs[1] ) )
+        else:
+            for fun in funs:
+                if isinstance( fun,tuple ):
+                    self.registerEvent(iter,fun)
+                else: # assert iscallable(fun)
+                    if 'functor' in fun.__dict__:
+                        self.registerEvent(iter, (fun.functor,fun.functor.__doc__) )
+                    else:
+                        self.registerEvent(iter, (fun,fun.__doc__) )
+
     def run(self,iter,*args):
         if iter in self.events.keys():
             for fun,doc in self.events[iter]:
@@ -13,10 +41,9 @@ class Calendar:
                     else:                   print intro,"Runing ", fun
                 fun(*args)
 
-    def __call__(self,iterarg,functer=None,doc=None):
-        if functer==None: return self.generatorDecorator(iterarg)
-        else:
-            self.registerEvent(iterarg,functer,doc)
+    def __call__(self,iterarg,*funs):
+        if len(funs)==0: return self.generatorDecorator(iterarg)
+        else: self.registerEvents(iterarg,*funs)
 
     def generatorDecorator(self,iterarg):
         """
@@ -33,7 +60,7 @@ class Calendar:
                         selfdeco.__doc__  = functer.__doc__
                         selfdeco.__doc__ += " (will be run at time "+str(selfdeco.iterRef)+")"
                 selfdeco.fun=functer
-                selfdeco.calendarRef.registerEvent(selfdeco.iterRef,functer,functer.__doc__)
+                selfdeco.calendarRef.registerEvents(selfdeco.iterRef,functer,functer.__doc__)
             def __call__(selfdeco,*args):
                 selfdeco.fun(*args)
         return calendarDeco
