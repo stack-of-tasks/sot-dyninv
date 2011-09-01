@@ -20,7 +20,10 @@
 #ifdef VP_DEBUG
 class solver_op_space__INIT
 {
-public:solver_op_space__INIT( void ) { dynamicgraph::sot::DebugTrace::openFile("/tmp/dynred.txt"); }
+public:solver_op_space__INIT( void )
+  {
+    //    dynamicgraph::sot::DebugTrace::openFile("/tmp/dynred.txt");
+  }
 };
 solver_op_space__INIT solver_op_space_initiator;
 #endif //#ifdef VP_DEBUG
@@ -92,7 +95,7 @@ namespace dynamicgraph
 	,CONSTRUCT_SIGNAL_OUT(freeMotionBase,ml::Matrix,
 			      JcSOUT << inertiaSqrootInvSIN)
 	,CONSTRUCT_SIGNAL_OUT(freeForceBase,ml::Matrix,
-			      forceGeneratorSOUT)
+			      forceGeneratorSOUT << JcSOUT)
 	,CONSTRUCT_SIGNAL_OUT(driftContact,ml::Vector,
 			      freeMotionBaseSOUT<<JcSOUT )
 
@@ -569,6 +572,9 @@ namespace dynamicgraph
       int& SolverDynReduced::
       precomputeSOUT_function( int& dummy, int t )
       {
+	if( t==1000 )
+	  dynamicgraph::sot::DebugTrace::openFile("/tmp/dynred1000.txt");
+
 	/* Precompute the dynamic data. */
 	inertiaSqrootInvSIN.recompute(t);
 	inertiaSqrootSIN.recompute(t);
