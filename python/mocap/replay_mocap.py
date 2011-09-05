@@ -31,9 +31,8 @@
 
 from optparse import OptionParser
 from mocap_parser import MocapParser
-sys.path.append('/home/nmansard/src/hpp2/sot-dyninv/python')
+sys.path.append('..')
 from dynamic_graph.script_shortcuts import optionalparentheses
-from random import random
 
 
 # --- PARSER INIT ------------------------------------------------------------------
