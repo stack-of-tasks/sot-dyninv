@@ -6,8 +6,9 @@ Tiny matrix functions, taken from Oscar source code.
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
 #--------------------------------------------------------------------------
+from math import *
+from numpy import *
 from random import random
-from math import sqrt,atan2,pi
 
 # Convert matrix to tuple
 def matrixToTuple(M):
@@ -34,6 +35,7 @@ def distVector(M2,M1):
 #  first vector and 2 other 'random' vectors)
 
 def generateOrthonormalM(v1):
+
     v2 = matrix([random(),random(),random()])
     v3 = matrix([random(),random(),random()])
 
