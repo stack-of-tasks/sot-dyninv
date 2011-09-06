@@ -155,7 +155,8 @@ class MocapParser:
         if( method=='KM'): self.method = self.KM 
         if( method=='MK'): self.method = self.MK 
         if( method=='KMK'): self.method = self.KMK 
-    def jointPosition(self,j,t):
+    def jointPosition(self,j,t=None):
+        if t==None: t=self.iter
         if self.method == self.M:
             return self.jointPosition_M(j,t)
         elif self.method == self.KM:
@@ -176,6 +177,7 @@ class MocapParser:
     # --- iter update
     def forward( self ) : self.increment = +1
     def backward( self ) : self.increment = -1
+    def pause( self ) : self.increment = 0
     def incTime( self ):
         self.iter += self.increment
         if self.iter<0:
@@ -269,3 +271,24 @@ class MocapParser:
             print " --- Kw*wRm --- "
         elif self.method == self.M:
             print " --- wRm --- "
+
+
+
+
+class MocapParserTimed(MocapParser):
+    def __init__(self,*args):
+        MocapParser.__init__(self,*args)
+        self.timeScale = 1.0
+        self.timeDecimal = 0.0
+    def incTime(self):
+        if self.iter != floor(self.timeDecimal): self.timeDecimal = self.iter
+        self.timeDecimal += float(self.increment)/self.timeScale
+        self.iter = floor(self.timeDecimal)
+    def jointPosition(self,joint,t=None):
+        if t==None: t=self.timeDecimal
+        p1=matrix(MocapParser.jointPosition(self,joint,int(floor(t))))
+        p2=matrix(MocapParser.jointPosition(self,joint,int(ceil(t))))
+        dt=self.timeDecimal%1
+        p1[0:3,3]*=dt
+        p1[0:3,3]+=(1-dt)*p2[0:3,3]
+        return matrixToTuple(p1)
