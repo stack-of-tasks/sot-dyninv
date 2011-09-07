@@ -109,6 +109,26 @@ except:
 #----- MAIN LOOP ---------------------------------------------------------------
 #-------------------------------------------------------------------------------
 
+class History:
+    def __init__(self,robot,freq=100):
+        self.robot = robot
+        self.q = dict()
+        self.qdot = dict()
+        self.freq=freq
+    def record(self):
+        i=self.robot.state.time
+        if i%self.freq == 0:
+            self.q[i] = robot.state.value
+            self.qdot[i] = robot.state.value
+    def restore(self,t):
+        if not t in self.q.keys():
+            print "Time ",t," has not been stored (freq is ",self.freq,")."
+            return
+        print "robot.set(",self.q[t],")"
+        print "robot.setVelocity(",self.qdot[t],")"
+        print "robot.state.time = ",t
+history = History(robot)
+
 def inc():
     updateMocap()
     robot.increment(dt)
@@ -118,7 +138,7 @@ def inc():
     robot.viewer.updateElementConfig('zmp',[zmp.zmp.value[0],zmp.zmp.value[1],0,0,0,0])
     if dyn.com.time >0:
         robot.viewer.updateElementConfig('com',[dyn.com.value[0],dyn.com.value[1],0,0,0,0])
-        
+    history.record()
 
 from ThreadInterruptibleLoop import *
 @loopInThread
@@ -127,7 +147,7 @@ def loop():
         inc()
     except:
         tr.dump()
-        print ' -- Robot has stopped --'
+        print robot.state.time,': -- Robot has stopped --'
 runner=loop()
 
 @optionalparentheses
@@ -235,7 +255,7 @@ class MocapTracker(MocapParserScaled):
         for n,p in self.jointMap.iteritems():
             p.task.ref = self.jointPosition(p.mocap)
         if self.posture != None:
-            self.posture.value = self.qs[self.iter]
+            self.posture.value = self.jointAngles(self.iter)
 #-----------------------------------------------------------------------------
 mp = MocapTracker('yoga/','yoga/outputJointsYogaTR')
 mp.setLinksMap()
@@ -382,8 +402,9 @@ tr.add('dyn.velocity','')
 tr.add('robot.acceleration','robot_acceleration')
 tr.add('robot.control','')
 tr.add('gCom.gain','com_gain')
-tr.add(contactLF.task.name+'.error','lf')
-tr.add(contactRF.task.name+'.error','rf')
+
+tr.add('dyn.lf','lf')
+tr.add('dyn.rf','rf')
 
 tr.start()
 robot.after.addSignal('tr.triger')
@@ -476,19 +497,35 @@ gCom.setConstant(100)
 
 mp.forward()
 inc()
-#go()
+go()
+
+def goto6d(task,position,gain=None):
+    M=eye(4)
+    if( len(position)==3 ): M[0:3,3] = position
+    else: print "Position 6D with rotation ... todo"
+    task.feature.selec.value = "111111"
+    if gain!=None: task.gain.setConstant(gain)
+    task.featureDes.position.value = matrixToTuple(M)
+
 
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
-#attime(200, lambda: mp.forward())
-#attime(200, lambda: taskrh.gain.setConstant(2/dt))
-#attime(200, lambda: tasklh.gain.setConstant(2/dt))
-#attime(100, lambda: sigset( featureComDes.errorIN,(0.01,0.1,0.8)) )
 
-#attime(40*mp.timeScale, lambda: contactRF.feature.keep()  )
-attime(40*mp.timeScale, lambda: sot.rmContact("RF"),"Remove RF contact"  )
-attime(40*mp.timeScale, lambda: sot.push(taskrf.task.name), "Start to track RF mocap"   )
+attime(40*mp.timeScale,
+       (lambda: sot.rmContact("RF"),"Remove RF contact" ),
+       (lambda: sot.push(taskrf.task.name), "Start to track RF mocap")   )
 
-rfFinal = eye(4); rfFinal[0:3,3] = (0.02,-0.12,0.055)
 attime(1050*mp.timeScale, 
-       ((lambda: sigset(taskrf.featureDes.position,matrixToTuple(rfFinal)), "RF to final position"),
-       (lambda: mp.rmJointMap("Rfoot"),"Stop tracking RF mocap"))  )
+       (lambda: goto6d(taskrf,(0.02,-0.12,0.055)) , "RF to final position"),
+       (lambda: mp.rmJointMap("Rfoot"),"Stop tracking RF mocap")  )
+
+attime(1100*mp.timeScale, 
+       (lambda: gCom.setConstant(5), "Lower Com gains"),
+       (lambda: sigset(featureComDes.errorIN,(0.01,0,0.8077)), "Com back to the center")  )
+
+attime(1150*mp.timeScale, 
+       (lambda: sot.rm(taskrf.task.name), "Remove rf task"),
+       (lambda: sot.addContactFromTask(contactRF.task.name,'RF'), "Add the RF contact"),
+       (lambda: sigset(sot._RF_p,supportRF), "Setup RF support") )
+
+
+
