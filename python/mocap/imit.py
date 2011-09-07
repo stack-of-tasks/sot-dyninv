@@ -452,7 +452,7 @@ tasklh.opmodif = matrixToTuple(mrh)
 #taskHead.gain.setConstant(500)
 taskHead.feature.selec.value = '111000'
 
-taskrf.feature.selec.value = '111111'
+taskrf.feature.selec.value = '111'
 mrf=eye(4)
 mrf[0:3,3] = (0,0,-0.05)
 taskrf.opmodif = matrixToTuple(mrf)
@@ -476,7 +476,7 @@ gCom.setConstant(100)
 
 mp.forward()
 inc()
-go()
+#go()
 
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 #attime(200, lambda: mp.forward())
@@ -486,10 +486,9 @@ sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 
 #attime(40*mp.timeScale, lambda: contactRF.feature.keep()  )
 attime(40*mp.timeScale, lambda: sot.rmContact("RF"),"Remove RF contact"  )
-attime(40*mp.timeScale, lambda: sot.push(taskrf.task.name), "Start to track RF mocap"  )
+attime(40*mp.timeScale, lambda: sot.push(taskrf.task.name), "Start to track RF mocap"   )
 
-rfFinal = eye(4); rfFinal[0:3,3] = (0.02,-0.12,0.105-0.05)
+rfFinal = eye(4); rfFinal[0:3,3] = (0.02,-0.12,0.055)
 attime(1050*mp.timeScale, 
-       (lambda: sigset(taskrf.featureDes.position,matrixToTuple(rfFinal)), "RF to final position"),
-       (mp.rmJointMap("Rfoot"),"Stop tracking RF mocap"))
-
+       ((lambda: sigset(taskrf.featureDes.position,matrixToTuple(rfFinal)), "RF to final position"),
+       (lambda: mp.rmJointMap("Rfoot"),"Stop tracking RF mocap"))  )
