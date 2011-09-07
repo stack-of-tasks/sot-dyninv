@@ -461,13 +461,13 @@ featureCom.selec.value = "11"
 #gCom.setConstant( 500.0 )
 
 taskrh.feature.selec.value = '111'
-#taskrh.gain.setConstant(500)
+taskrh.gain.setConstant(100)
 mrh=eye(4)
 mrh[0:3,3] = (0,0,-0.08)
 taskrh.opmodif = matrixToTuple(mrh)
 
 tasklh.feature.selec.value = '111'
-#tasklh.gain.setConstant(500)
+tasklh.gain.setConstant(100)
 tasklh.opmodif = matrixToTuple(mrh)
 
 #taskHead.gain.setConstant(500)
@@ -479,18 +479,18 @@ mrf[0:3,3] = (0,0,-0.05)
 taskrf.opmodif = matrixToTuple(mrf)
 
 sot.push('taskCom')
-#sot.push(taskrh.task.name)
+sot.push(taskrh.task.name)
 #sot.push(tasklh.task.name)
 #sot.push(taskHead.task.name)
 #sot.push(taskWaist.task.name)
 
-#mp.addJointMap("Rhand",taskrh)
-#mp.addJointMap("Lhand",tasklh)
+mp.addJointMap("Rhand",taskrh)
+mp.addJointMap("Lhand",tasklh)
 mp.addJointMap("head",taskHead)
 mp.addJointMap("Rfoot",taskrf)
 mp.posture = sot.posture
 plug(robot.state,sot.position)
-sot.breakFactor.value = 20
+sot.breakFactor.value = 10
 
 featureComDes.errorIN.value = ( 0.01, 0.09,  0.8077 )
 gCom.setConstant(100)
