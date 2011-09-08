@@ -1,5 +1,7 @@
 class Calendar:
-    events=dict()
+    def __init__(self):
+        self.events=dict()
+        self.ping = list()
     def __repr__(self):
         res=''
 #        for iter in sort(self.events.keys()):
@@ -30,9 +32,12 @@ class Calendar:
                         self.registerEvent(iter, (fun.functor,fun.functor.__doc__) )
                     else:
                         self.registerEvent(iter, (fun,fun.__doc__) )
-
+    def addPing(self,f): self.ping.append(f)
+    def callPing(self):
+        for f in self.ping: f()
     def run(self,iter,*args):
         if iter in self.events.keys():
+            self.callPing()
             for fun,doc in self.events[iter]:
                 intro = "At time "+str(iter)+": "
                 if doc!=None:               print intro, doc
