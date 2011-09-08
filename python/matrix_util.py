@@ -18,6 +18,9 @@ def matrixToTuple(M):
         res.append(tuple(i))
     return tuple(res)
 
+def vectorToTuple(M):
+    return tuple(M.tolist()[0])
+
 # Convert from Roll, Pitch, Yaw to transformation Matrix
 def rpy2tr(r,p,y):
     mat = matrix(rotate('z',r))*matrix(rotate('y',p))*matrix(rotate('x',y))
@@ -75,3 +78,18 @@ def matrixToRPY( M ):
     '''
     rot = tr2rpy(M)
     return [ M[0][3], M[1][3], M[2][3], rot[2],rot[1],rot[0]]
+
+# Transformation Matrix corresponding to a rotation about x,y or z
+def rotate(axis,ang):
+    ''' eg. T=rot('x',pi/4): rotate pi/4 rad about x axis
+    '''
+    ca=cos(ang); sa=sin(ang)
+    if axis=='x':
+        mat = ((1,0,0,0),(0,ca,-sa,0),(0,sa,ca,0),(0,0,0,1))
+    elif axis=='y':
+        mat = ((ca,0,sa,0),(0,1,0,0),(-sa,0,ca,0),(0,0,0,1))
+    elif axis=='z':
+        mat = ((ca,-sa,0,0),(sa,ca,0,0),(0,0,1,0),(0,0,0,1))
+    else:
+        print 'Axis should be: x,y or z only'
+    return mat
