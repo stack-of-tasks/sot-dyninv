@@ -17,7 +17,7 @@ import sys
 import time
 from numpy import *
 sys.path.append('..')
-from matrix_util import matrixToTuple,rpy2tr,distVector,generateOrthonormalM,tr2rpy,matrixToRPY
+from matrix_util import matrixToTuple,vectorToTuple,rpy2tr,distVector,generateOrthonormalM,tr2rpy,matrixToRPY,rotate
 
 
 #--------------------------------------------------------------------------
@@ -89,17 +89,15 @@ class MocapParser:
         Try to open and read Ki and set the names for the joints (using Ki.dat).
         '''
         self.jointsNumber = len( open(KiFile,'r').readlines() )
-        self.joints = [ JointData() for i in range(self.jointsNumber) ]
-        try:
-            KiFile = open(KiFile,'r')
-            for val in range(self.jointsNumber):
-                KiLine = KiFile.readline()[5:].split(' ')
-                self.joints[val].Ki = matrix( eval(KiLine[1][5:]) )
-                self.joints[val].name = KiLine[0]
-        except:
-            print " -- There is no Ki --"
-            sys.exit(0)
-
+        self.joints = dict()
+        KiFile = open(KiFile,'r')
+        for val in range(self.jointsNumber):
+            KiLine = KiFile.readline()[5:].split(' ')
+            name = KiLine[0]
+            self.joints[name] = JointData()
+            self.joints[name].Ki = matrix( eval(KiLine[1][5:]) )
+            self.joints[name].Kw = self.Kw
+            self.joints[name].name = name
 
     def checkMaxTime( self,l,msg=None ):
         if self.maxTime<0: self.maxTime = l
@@ -113,42 +111,47 @@ class MocapParser:
     def openQFile(self,skeletumFileName):
         self.qs = []
         for l in open(skeletumFileName,'r').readlines():
-            self.qs.append( list( eval(l.split()[0][4:]) ) )  # + 10*[0.0]
+            self.qs.append( tuple( eval(l.split()[0][4:]) ) )  # + 10*[0.0]
         self.checkMaxTime( len(self.qs) )
 
     def openMocapPositionFile(self,dataFolder):
-        for i,j in enumerate(self.joints):
+        for n,j in self.joints.iteritems():
             for l in open(dataFolder+'WRM_'+j.name,'r').readlines():
                 j.positions.append( eval(l[5:]) )
-            self.checkMaxTime( len(j.positions),'joint '+str(i) )
+            self.checkMaxTime( len(j.positions),'joint '+n )
 
     # --- Other init ---
     def setLinksMap( self, linkDef = classicalLinkMap ):
         self.links = dict()
         for name,(b1,b2) in linkDef.iteritems():
             self.links[ name ] = LinkData()
-            for i,j in enumerate(self.joints):
-                if j.name==b1: self.links[name].body1 = i
-                if j.name==b2: self.links[name].body2 = i
+            for n,j in self.joints.items():
+                if j.name==b1: self.links[name].body1 = n
+                if j.name==b2: self.links[name].body2 = n
 
     def assignDisplayObjects(self):
-        for i,j in enumerate(self.joints):
+        for i,j in enumerate(self.joints.values()):
             j.displayObject = 'axis'+str(i+1)
         for n,l in self.links.iteritems():
             l.displayObject = n
 
     # --- data access
+    def jointAngles(self,iter=None):
+        if iter==None: iter=self.iter
+        if iter>=self.maxTime: iter=self.maxTime-1
+        return self.qs[iter]
     def jointPosition_M(self,joint,iter):
+        if iter>=self.maxTime: iter=self.maxTime-1
         return self.joints[joint].positions[iter]
-    def jointPosition_MK(self,joint,iter):
+    def jointPosition_MK(self,joint,iter,returntype = matrixToTuple):
         M = matrix(self.jointPosition_M(joint,iter))
-        return matrixToTuple( M*self.joints[joint].Ki )
-    def jointPosition_KMK(self,joint,iter):
+        return returntype( M*self.joints[joint].Ki )
+    def jointPosition_KMK(self,joint,iter,returntype = matrixToTuple):
         M = matrix(self.jointPosition_M(joint,iter))
-        return matrixToTuple( self.Kw*M*self.joints[joint].Ki )
-    def jointPosition_KM(self,joint,iter):
+        return returntype( self.joints[joint].Kw*M*self.joints[joint].Ki )
+    def jointPosition_KM(self,joint,iter,returntype = matrixToTuple):
         M = matrix(self.jointPosition_M(joint,iter))
-        return matrixToTuple( self.Kw*M )
+        return returntype( self.Kw*M )
    
     def setPositionMethod(self,method): # M KM KMK
         if( method=='M'): self.method = self.M 
@@ -199,7 +202,7 @@ class MocapParser:
 
     def dispJoints( self ):
         if self.with_dispJoints:
-            for j in range(self.jointsNumber):
+            for j in self.joints:
                 self.rview.updateElementConfig( self.joints[j].displayObject,self.jointRPY(j,self.iter) )
     def dispLinks( self ):
         if self.with_dispLinks:
@@ -209,7 +212,7 @@ class MocapParser:
         if self.with_dispRobot:
             self.rview.updateElementConfig( self.robotName, list(self.qs[self.iter])+10*[0,] )
     def hideJoints( self ):
-        for j in self.joints:
+        for j in self.joints.values():
             self.rview.updateElementConfig( j.displayObject,[ 0, 0, -1, 0, 0, 0 ])
     def hideLinks( self ):
         for j in self.links.values():
@@ -219,9 +222,9 @@ class MocapParser:
         namesT2 = ['Larm1','Rarm1']
         transf1 = matrix(rotate('x',-pi))*matrix(rotate('z',-pi/2))
         transf2 = matrix(rotate('y',pi/2))*matrix(rotate('z',pi/2))
-        for joint in self.joints:
-            if joint.name in namesT1: joint.Ki = joints.Ki*transf1
-            if joint.name in namesT2: joint.Ki = joints.Ki*transf2
+        for joint in self.joints.values():
+            if joint.name in namesT1: joint.Ki = joint.Ki*transf1
+            if joint.name in namesT2: joint.Ki = joint.Ki*transf2
             
     def update( self ):
         self.incTime()
@@ -275,20 +278,35 @@ class MocapParser:
 
 
 
-class MocapParserTimed(MocapParser):
+class MocapParserScaled(MocapParser):
     def __init__(self,*args):
         MocapParser.__init__(self,*args)
+        self.spaceScale = 1.0
         self.timeScale = 1.0
         self.timeDecimal = 0.0
     def incTime(self):
         if self.iter != floor(self.timeDecimal): self.timeDecimal = self.iter
         self.timeDecimal += float(self.increment)/self.timeScale
-        self.iter = floor(self.timeDecimal)
+        self.iter = int(floor(self.timeDecimal))
+
+    def jointPosition_M(self,joint,t):
+        res = matrix(MocapParser.jointPosition_M(self,joint,t))
+        res[0:3,3]*=self.spaceScale
+        return res
+
     def jointPosition(self,joint,t=None):
         if t==None: t=self.timeDecimal
         p1=matrix(MocapParser.jointPosition(self,joint,int(floor(t))))
         p2=matrix(MocapParser.jointPosition(self,joint,int(ceil(t))))
         dt=self.timeDecimal%1
-        p1[0:3,3]*=dt
-        p1[0:3,3]+=(1-dt)*p2[0:3,3]
+        p1[0:3,3]*=(1-dt)
+        p1[0:3,3]+=dt*p2[0:3,3]
         return matrixToTuple(p1)
+
+
+    def jointAngles(self,t=None):
+        if t==None: t=self.timeDecimal
+        q1=matrix(MocapParser.jointAngles(self,int(floor(t))))
+        q2=matrix(MocapParser.jointAngles(self,int(ceil(t))))
+        dt=self.timeDecimal%1
+        return vectorToTuple( (1-dt)*q1+dt*q2 ) 
