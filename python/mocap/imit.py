@@ -18,12 +18,13 @@ import dynamic_graph.script_shortcuts
 from dynamic_graph.script_shortcuts import optionalparentheses
 from dynamic_graph.matlab import matlab
 sys.path.append('..')
+from dynamic_graph.sot.core.meta_task_6d import toFlags
 from meta_task_dyn_6d import MetaTaskDyn6d
 from attime import attime
 from numpy import *
 from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 from mocap_parser import MocapParser,MocapParserScaled
-from matrix_util import matrixToTuple
+from matrix_util import matrixToTuple, vectorToTuple
 
 #-----------------------------------------------------------------------------
 # --- ROBOT SIMU -------------------------------------------------------------
@@ -62,6 +63,11 @@ taskWaist.ref = ((1,0,0,0.),(0,1,0,0),(0,0,1,0.63),(0,0,0,1))
 featureComDes.errorIN.value = ( 0.01, 0.,  0.8 )
 gCom.setConstant( 50.0 )
 '''
+
+
+#half sitting
+#qhs=matrix((0,0,0,0,0,0,  0,0,-26,50,-24,0,0,0,-26,50,-24,0,0,0,0,0,15,10,0,-30,0,0,10,15,-10,0,-30,0,0,10))
+#robot.set((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.4537856055185257, 0.87266462599716477, -0.41887902047863906, 0.0, 0.0, 0.0, -0.4537856055185257, 0.87266462599716477, -0.41887902047863906, 0.0, 0.0, 0.0, 0.0, 0.0, 0.26179938779914941, 0.17453292519943295, 0.0, -0.52359877559829882, 0.0, 0.0, 0.17453292519943295, 0.26179938779914941, -0.17453292519943295, 0.0, -0.52359877559829882, 0.0, 0.0, 0.17453292519943295))
 
 # ------------------------------------------------------------------------------
 # --- VIEWER -------------------------------------------------------------------
@@ -139,6 +145,7 @@ def inc():
     if dyn.com.time >0:
         robot.viewer.updateElementConfig('com',[dyn.com.value[0],dyn.com.value[1],0,0,0,0])
     history.record()
+    writeFilesRobot()
 
 from ThreadInterruptibleLoop import *
 @loopInThread
@@ -195,6 +202,20 @@ class Ping:
         self.refresh()
 ping=Ping()
 attime.addPing( ping )
+
+def goto6d(task,position,gain=None):
+    M=eye(4)
+    if( len(position)==3 ): M[0:3,3] = position
+    else: print "Position 6D with rotation ... todo"
+    task.feature.selec.value = "111111"
+    if gain!=None: task.gain.setConstant(gain)
+    task.featureDes.position.value = matrixToTuple(M)
+
+def contact(contact,task=None):
+    sot.addContactFromTask(contact.task.name,contact.name)
+    sot.signal("_"+contact.name+"_p").value = contact.support
+    if task!= None: sot.rm(task.task.name)
+    contact.task.resetJacobianDerivative()
 
 
 #-----------------------------------------------------------------------------
@@ -311,13 +332,52 @@ gCom = GainAdaptive('gCom')
 plug(taskCom.error,gCom.error)
 plug(gCom.gain,taskCom.controlGain)
 
+
+# --- TASK POSTURE --------------------------------------------------
+featurePosture    = FeatureGeneric('featurePosture')
+featurePostureDes = FeatureGeneric('featurePostureDes')
+plug(dyn.position,featurePosture.errorIN)
+featurePosture.sdes.value = featurePostureDes.name
+featurePosture.jacobianIN.value = matrixToTuple( identity(robotDim) )
+
+taskPosture = TaskDynPD('taskPosture')
+taskPosture.add('featurePosture')
+plug(dyn.velocity,taskPosture.qdot)
+taskPosture.dt.value = dt
+
+taskPosture.controlGain.value = 2
+
+def gotoq( qref,selec=None ):
+    featurePostureDes.errorIN.value = vectorToTuple( qref.transpose() )
+    if selec!=None: featurePosture.selec.value = toFlags( selec )
+
+qref = zeros((robotDim,1))
+qref[29] = -0.95
+gotoq(qref,[29])
+
+# --- Task lim ---------------------------------------------------
+taskLim = TaskDynLimits('taskLim')
+plug(dyn.position,taskLim.position)
+plug(dyn.velocity,taskLim.velocity)
+taskLim.dt.value = dt
+
+dyn.upperJl.recompute(0)
+dyn.lowerJl.recompute(0)
+taskLim.referencePosInf.value = dyn.lowerJl.value
+taskLim.referencePosSup.value = dyn.upperJl.value
+
+#dqup = (0, 0, 0, 0, 0, 0, 200, 220, 250, 230, 290, 520, 200, 220, 250, 230, 290, 520, 250, 140, 390, 390, 240, 140, 240, 130, 270, 180, 330, 240, 140, 240, 130, 270, 180, 330)
+dqup = (1000,)*robotDim
+taskLim.referenceVelInf.value = tuple([-val*pi/180 for val in dqup])
+taskLim.referenceVelSup.value = tuple([val*pi/180 for val in dqup])
+
 #-----------------------------------------------------------------------------
 # --- SOT Dyn OpSpaceH: SOT controller  --------------------------------------
 #-----------------------------------------------------------------------------
 
 sot = SolverDynReduced('sot')
 sot.setSize(robotDim-6)
-#sot.damping.value = 2e-2
+sot.damping.value = 8e-3
 sot.breakFactor.value = 10
 
 plug(dyn.inertiaReal,sot.matrixInertia)
@@ -333,10 +393,6 @@ plug(sot.acceleration,robot.acceleration)
 # ---- CONTACT: Contact definition -------------------------------------------
 #-----------------------------------------------------------------------------
 
-#supportLF = ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
-#supportRF = ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
-supportLF = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
-supportRF = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
 
 # Left foot contact
 contactLF = MetaTaskDyn6d('contact_lleg',dyn,'lf','left-ankle')
@@ -345,6 +401,15 @@ contactLF.feature.frame('desired')
 # Right foot contact
 contactRF = MetaTaskDyn6d('contact_rleg',dyn,'rf','right-ankle')
 contactRF.feature.frame('desired')
+
+# ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
+# ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
+contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
+contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
+#contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
+contactLF.support =  ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
+contactLF.name = "LF"
+contactRF.name = "RF"
 
 #-----------------------------------------------------------------------------
 #--- ZMP ---------------------------------------------------------------------
@@ -411,7 +476,33 @@ robot.after.addSignal('tr.triger')
 robot.after.addSignal(contactLF.task.name+'.error')
 robot.after.addSignal('dyn.rf')
 robot.after.addSignal('dyn.lf')
+robot.after.addSignal('dyn.com')
 robot.after.addSignal('sot.forcesNormal')
+
+robot.after.addSignal('taskLim.normalizedPosition')
+tr.add('taskLim.normalizedPosition','qn')
+
+
+readyToRobot=False
+if readyToRobot:
+    nT = 1
+    filePos = open('./yoganmsd.pos','w')
+    fileRPY = open('./yoganmsd.hip','w')
+    def writeFilesRobot():
+        global nT
+        sampleT = 0.005
+        time = sampleT*nT
+        fileRPY.write(str(sampleT*nT)+' '+str(dyn.position.value[3])+' '+str(dyn.position.value[4])+' '+str(dyn.position.value[5])+'\n')
+        filePos.write(str(sampleT*nT)+' ')
+        for j in range(6,36):
+            filePos.write(str(dyn.position.value[j])+' ')
+            filePos.write(10*'0 '+'\n')
+        nT += 1
+else:
+    def writeFilesRobot(): void
+
+
+
 
 #-----------------------------------------------------------------------------
 # --- FUNCTIONS TO PUSH/PULL/UP/DOWN TASKS -----------------------------------
@@ -451,10 +542,12 @@ def updateMocap():
 
 sot.clear()
 
-sot.addContactFromTask(contactLF.task.name,'LF')
-sot.addContactFromTask(contactRF.task.name,'RF')
-sot._RF_p.value = supportRF
-sot._LF_p.value = supportLF
+#sot.addContactFromTask(contactLF.task.name,'LF')
+#sot.addContactFromTask(contactRF.task.name,'RF')
+#sot._RF_p.value = supportRF
+#sot._LF_p.value = supportLF
+contact(contactLF)
+contact(contactRF)
 
 featureComDes.errorIN.value = ( 0.01, 0.,  0.8077 )
 featureCom.selec.value = "11"
@@ -478,7 +571,8 @@ mrf=eye(4)
 mrf[0:3,3] = (0,0,-0.05)
 taskrf.opmodif = matrixToTuple(mrf)
 
-sot.push('taskCom')
+sot.push(taskLim.name)
+sot.push(taskCom.name)
 sot.push(taskrh.task.name)
 #sot.push(tasklh.task.name)
 #sot.push(taskHead.task.name)
@@ -492,21 +586,16 @@ mp.posture = sot.posture
 plug(robot.state,sot.position)
 sot.breakFactor.value = 10
 
+
+contactLF.gain.setConstant(1000)
 featureComDes.errorIN.value = ( 0.01, 0.09,  0.8077 )
-gCom.setConstant(100)
+gCom.setConstant(30)
 
 mp.forward()
 inc()
-go()
+#go()
 
-def goto6d(task,position,gain=None):
-    M=eye(4)
-    if( len(position)==3 ): M[0:3,3] = position
-    else: print "Position 6D with rotation ... todo"
-    task.feature.selec.value = "111111"
-    if gain!=None: task.gain.setConstant(gain)
-    task.featureDes.position.value = matrixToTuple(M)
-
+#sot.push(taskPosture.name)
 
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 
@@ -514,18 +603,17 @@ attime(40*mp.timeScale,
        (lambda: sot.rmContact("RF"),"Remove RF contact" ),
        (lambda: sot.push(taskrf.task.name), "Start to track RF mocap")   )
 
+attime(1000*mp.timeScale, 
+       (lambda: gCom.setConstant(1), "Lower Com gains"),
+       (lambda: sigset(featureComDes.errorIN,(0.01,0,0.8077)), "Com back to the center")  )
+
 attime(1050*mp.timeScale, 
        (lambda: goto6d(taskrf,(0.02,-0.12,0.055)) , "RF to final position"),
        (lambda: mp.rmJointMap("Rfoot"),"Stop tracking RF mocap")  )
 
 attime(1100*mp.timeScale, 
-       (lambda: gCom.setConstant(5), "Lower Com gains"),
-       (lambda: sigset(featureComDes.errorIN,(0.01,0,0.8077)), "Com back to the center")  )
-
-attime(1150*mp.timeScale, 
-       (lambda: sot.rm(taskrf.task.name), "Remove rf task"),
-       (lambda: sot.addContactFromTask(contactRF.task.name,'RF'), "Add the RF contact"),
-       (lambda: sigset(sot._RF_p,supportRF), "Setup RF support") )
+       lambda: contact(contactRF,taskrf),"Add the RF contact")
 
 
 
+m()
