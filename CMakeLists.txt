@@ -54,6 +54,7 @@ SET(libs
 	controller-pd
 	task-dyn-pd
 	task-dyn-joint-limits
+	task-dyn-limits
 	solver-op-space
 	solver-dyn-reduced
 
@@ -82,6 +83,7 @@ SET(headers
 	controller-pd.h
 	task-dyn-pd.h
 	task-dyn-joint-limits.h
+	task-dyn-limits.h
 	solver-op-space.h
 	solver-dyn-reduced.h
 

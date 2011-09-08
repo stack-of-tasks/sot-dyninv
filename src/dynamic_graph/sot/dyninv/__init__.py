@@ -27,6 +27,9 @@ RobotDynSimu('')
 from task_dyn_joint_limits import TaskDynJointLimits
 TaskDynJointLimits('')
 
+from task_dyn_limits import TaskDynLimits
+TaskDynLimits('')
+
 from task_joint_limits import TaskJointLimits
 TaskJointLimits('')
 
