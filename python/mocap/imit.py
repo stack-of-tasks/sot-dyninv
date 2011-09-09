@@ -25,6 +25,7 @@ from numpy import *
 from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 from mocap_parser import MocapParser,MocapParserScaled
 from matrix_util import matrixToTuple, vectorToTuple
+from history import History
 
 #-----------------------------------------------------------------------------
 # --- ROBOT SIMU -------------------------------------------------------------
@@ -115,25 +116,9 @@ except:
 #----- MAIN LOOP ---------------------------------------------------------------
 #-------------------------------------------------------------------------------
 
-class History:
-    def __init__(self,robot,freq=100):
-        self.robot = robot
-        self.q = dict()
-        self.qdot = dict()
-        self.freq=freq
-    def record(self):
-        i=self.robot.state.time
-        if i%self.freq == 0:
-            self.q[i] = robot.state.value
-            self.qdot[i] = robot.state.value
-    def restore(self,t):
-        if not t in self.q.keys():
-            print "Time ",t," has not been stored (freq is ",self.freq,")."
-            return
-        print "robot.set(",self.q[t],")"
-        print "robot.setVelocity(",self.qdot[t],")"
-        print "robot.state.time = ",t
-history = History(robot)
+
+#dumpToOpenHRP(history,'yoganmsd')
+history = History(robot,1)
 
 def inc():
     updateMocap()
@@ -230,6 +215,18 @@ jointRankPath     = xmlDir + '/HRP2LinkJointRankSmall.xml'
 dyn = Dynamic("dyn")
 dyn.setFiles(modelDir, modelName[robotName],specificitiesPath,jointRankPath)
 dyn.parse()
+
+dyn.lowerJl.recompute(0)
+dyn.upperJl.recompute(0)
+llimit = matrix(dyn.lowerJl.value)
+ulimit = matrix(dyn.upperJl.value)
+dlimit = ulimit-llimit
+mlimit = (ulimit+llimit)/2
+#llimit[6:12] = mlimit[6:12] - dlimit[6:12]*0.4 
+#ulimit[0,6:9] = mlimit[0,6:9] + dlimit[0,6:9]*0.45
+#ulimit[0,6:12] = mlimit[0,6:12] + dlimit[0,6:12]*0.49
+ulimit[0,10] = mlimit[0,10] + dlimit[0,10]*0.4
+dyn.upperJl.value = vectorToTuple(ulimit)
 
 dyn.inertiaRotor.value = inertiaRotor[robotName]
 dyn.gearRatio.value    = gearRatio[robotName]
@@ -377,7 +374,7 @@ taskLim.referenceVelSup.value = tuple([val*pi/180 for val in dqup])
 
 sot = SolverDynReduced('sot')
 sot.setSize(robotDim-6)
-sot.damping.value = 8e-3
+sot.damping.value = 8e-2
 sot.breakFactor.value = 10
 
 plug(dyn.inertiaReal,sot.matrixInertia)
@@ -478,6 +475,7 @@ robot.after.addSignal('dyn.rf')
 robot.after.addSignal('dyn.lf')
 robot.after.addSignal('dyn.com')
 robot.after.addSignal('sot.forcesNormal')
+robot.after.addSignal('dyn.waist')
 
 robot.after.addSignal('taskLim.normalizedPosition')
 tr.add('taskLim.normalizedPosition','qn')
@@ -496,7 +494,7 @@ if readyToRobot:
         filePos.write(str(sampleT*nT)+' ')
         for j in range(6,36):
             filePos.write(str(dyn.position.value[j])+' ')
-            filePos.write(10*'0 '+'\n')
+        filePos.write(10*'0 '+'\n')
         nT += 1
 else:
     def writeFilesRobot(): void
@@ -510,6 +508,7 @@ else:
 #-----------------------------------------------------------------------------
 # --- RUN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
+
 
 mp.setPositionMethod("KMK")
 mp.refresh()
@@ -570,13 +569,17 @@ taskrf.feature.selec.value = '111'
 mrf=eye(4)
 mrf[0:3,3] = (0,0,-0.05)
 taskrf.opmodif = matrixToTuple(mrf)
+taskrf.feature.frame('desired')
 
 sot.push(taskLim.name)
 sot.push(taskCom.name)
 sot.push(taskrh.task.name)
-#sot.push(tasklh.task.name)
-#sot.push(taskHead.task.name)
-#sot.push(taskWaist.task.name)
+'''
+sot.push(tasklh.task.name)
+sot.push(taskHead.task.name)
+sot.push(taskWaist.task.name)
+sot.push(taskPosture.name)
+'''
 
 mp.addJointMap("Rhand",taskrh)
 mp.addJointMap("Lhand",tasklh)
@@ -586,22 +589,20 @@ mp.posture = sot.posture
 plug(robot.state,sot.position)
 sot.breakFactor.value = 10
 
-
 contactLF.gain.setConstant(1000)
 featureComDes.errorIN.value = ( 0.01, 0.09,  0.8077 )
 gCom.setConstant(30)
 
 mp.forward()
-inc()
-#go()
 
-#sot.push(taskPosture.name)
+taskrf.feature.selec.value = "101"
 
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 
-attime(40*mp.timeScale,
-       (lambda: sot.rmContact("RF"),"Remove RF contact" ),
-       (lambda: sot.push(taskrf.task.name), "Start to track RF mocap")   )
+attime(40*mp.timeScale
+       ,(lambda: sot.rmContact("RF"),"Remove RF contact" )
+       ,(lambda: sot.push(taskrf.task.name), "Start to track RF mocap")
+       )
 
 attime(1000*mp.timeScale, 
        (lambda: gCom.setConstant(1), "Lower Com gains"),
@@ -611,9 +612,13 @@ attime(1050*mp.timeScale,
        (lambda: goto6d(taskrf,(0.02,-0.12,0.055)) , "RF to final position"),
        (lambda: mp.rmJointMap("Rfoot"),"Stop tracking RF mocap")  )
 
-attime(1100*mp.timeScale, 
+attime(1100*mp.timeScale,
        lambda: contact(contactRF,taskrf),"Add the RF contact")
+
+attime(3000,stop)
 
 
 
 m()
+inc()
+go()
