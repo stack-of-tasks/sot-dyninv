@@ -216,11 +216,14 @@ taskHead = MetaTaskDyn6d('taskHead',dyn,'head','gaze')
 taskrh = MetaTaskDyn6d('rh',dyn,'rh','right-wrist')
 tasklh = MetaTaskDyn6d('lh',dyn,'lh','left-wrist')
 taskrf = MetaTaskDyn6d('rf',dyn,'rf','right-ankle')
+taskrfz = MetaTaskDyn6d('rfz',dyn,'rf','right-ankle')
 
-for task in [ taskWaist, taskChest, taskHead, taskrh, tasklh, taskrf ]:
-    taskWaist.feature.frame('current')
-    taskWaist.gain.setConstant(50)
-    taskWaist.task.dt.value = dt
+for task in [ taskWaist, taskChest, taskHead, taskrh, tasklh, taskrf, taskrfz ]:
+    task.feature.frame('current')
+    task.gain.setConstant(50)
+    task.task.dt.value = dt
+
+
 
 #-----------------------------------------------------------------------------
 # --- OTHER TASKS ------------------------------------------------------------
@@ -305,7 +308,7 @@ taskLim.referenceVelSup.value = tuple([val*pi/180 for val in dqup])
 
 sot = SolverDynReduced('sot')
 sot.setSize(robotDim-6)
-sot.damping.value = 1e-2
+#sot.damping.value = 1e-2
 sot.breakFactor.value = 20
 
 plug(dyn.inertiaReal,sot.matrixInertia)
@@ -427,6 +430,7 @@ history = History(dyn,1,zmp.zmp)
 # --- RUN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
+q0 = robot.state.value
 
 sot.clear()
 
@@ -449,11 +453,12 @@ mrf=eye(4)
 mrf[0:3,3] = (0,0,-0.105)
 taskrf.opmodif = matrixToTuple(mrf)
 taskrf.feature.frame('desired')
-taskrf.feature.selec.value = '111111'
+taskrf.feature.selec.value = '011111'
 drh=eye(4)
 drh[0,3]=0.1
 drh[0,3]=0.1
 taskrf.ref = matrixToTuple(drh)
+taskrf.gain.setByPoint(80,10,0.01,0.8)
 
 #taskHead.gain.setConstant(500)
 taskHead.feature.selec.value = '111000'
@@ -490,7 +495,8 @@ def slidefoot(x,y):
     print drh
     taskrf.ref = matrixToTuple(drh)
 '''
-rf0=matrix((0.0095,-0.095,0.02))
+rfz0=0.01
+rf0=matrix((0.0095,-0.095,rfz0))
 
 attime(2
        ,(lambda : sot.push(taskCom.task.name),"Add COM")
@@ -498,23 +504,35 @@ attime(2
        ,(lambda : refset(taskCom, ( 0.01, 0.09,  0.7 )), "Com to left foot")
        )
 
-attime(300
-       ,(lambda : sigset(taskCom.feature.selec, "11"),"COM XY")
+attime(140
        ,(lambda: sot.rmContact("RF"),"Remove RF contact" )
        ,(lambda: sot.push(taskrf.task.name), "Add RF")
        ,(lambda: goto6d(taskrf,vectorToTuple(rf0) ), "Up foot RF")
        )
 
-attime(400  ,(lambda: goto6d(taskrf, vectorToTuple(rf0+( 0.1, 0.0,0)))  , "RF to front")       )
-attime(500  ,(lambda: goto6d(taskrf, vectorToTuple(rf0+( 0.1,-0.1,0)))  , "RF to front-right")       )
-attime(600  ,(lambda: goto6d(taskrf, vectorToTuple(rf0+(-0.1,-0.1,0)))  , "RF to back-right")       )
-attime(700  ,(lambda: goto6d(taskrf, vectorToTuple(rf0+(-0.1, 0.0,0)))  , "RF to back")       )
-attime(800  ,(lambda: goto6d(taskrf, vectorToTuple(rf0+( 0.0, 0.0,0)))  , "RF to center")       )
+attime(150  ,lambda : sigset(taskCom.feature.selec, "11"),"COM XY")
+
+attime(200  ,lambda: goto6d(taskrf, vectorToTuple(rf0+( 0.35, 0.0,0)))  , "RF to front"       )
+attime(300  ,lambda: goto6d(taskrf, vectorToTuple(rf0+( 0.2,-0.2,0)))  , "RF to front-right"       )
+attime(400  ,lambda: goto6d(taskrf, vectorToTuple(rf0+(-0.2,-0.2,0)))  , "RF to back-right"       )
+attime(500  ,lambda: goto6d(taskrf, vectorToTuple(rf0+(-0.35, 0.0,0)))  , "RF to back"       )
+attime(600  ,lambda: goto6d(taskrf, vectorToTuple(rf0+( 0.0, 0.0,0)))  , "RF to center"       )
+
+attime(700  ,lambda: goto6d(taskrf, vectorToTuple(rf0-( 0.0, 0.0,rfz0)))  , "RF to ground"       )
+attime(750  
+       ,(lambda: refset(taskCom,(0.01,0,0.797))  , "COM to zero"       )
+       ,(lambda: sigset(taskCom.feature.selec,"11")  , "COM XY"       )
+       ,(lambda: taskCom.gain.setConstant(3)  , "lower com gain"       )
+)
+attime(850  ,(lambda: contact(contactRF)  , "RF to contact"       )
+       ,(lambda: sigset(taskCom.feature.selec,"111")  , "COM XYZ"       )
+       ,(lambda: taskCom.gain.setByPoint(100,10,0.005,0.8)  , "upper com gain"       )
+       )
 
 
+print dyn.com+1
 
-
-attime(3000,stop)
+attime(1200,stop)
 
 
 
