@@ -135,7 +135,7 @@ def status():       print runner.isPlay
 
 @optionalparentheses
 def dump():
-    history.dumpToOpenHRP('planche')
+    history.dumpToOpenHRP('slide-1')
 
 # Add a visual output when an event is called.
 class Ping:
@@ -156,6 +156,14 @@ def goto6d(task,position,gain=None):
     else: print "Position 6D with rotation ... todo"
     task.feature.selec.value = "111111"
     if gain!=None: task.gain.setConstant(gain)
+    task.featureDes.position.value = matrixToTuple(M)
+
+def gotoNd(task,position,selec):
+    M=eye(4)
+    if( len(position)==3 ): M[0:3,3] = position
+    else: print "Position 6D with rotation ... todo"
+    if isinstance(selec,str):   task.feature.selec.value = selec
+    else: task.feature.selec.value = toFlags(selec)
     task.featureDes.position.value = matrixToTuple(M)
 
 def contact(contact,task=None):
@@ -389,7 +397,7 @@ def pr():
 
 from dynamic_graph.tracer import *
 tr = Tracer('tr')
-tr.open('/tmp/','yoga_','.dat')
+tr.open('/tmp/','slide_','.dat')
 
 tr.add('dyn.com','com')
 tr.add(taskCom.feature.name+'.error','ecom')
@@ -441,62 +449,35 @@ contact(contactRF)
 taskCom.gain.setByPoint(100,10,0.005,0.8)
 #taskCom.gain.setConstant(2)
 
-#taskrh.feature.selec.value = '111'
-#taskrh.gain.setConstant(100)
 
-tasklh.feature.selec.value = '111'
-tasklh.gain.setConstant(100)
-#tasklh.opmodif = matrixToTuple(mrh)
-
+rfz0=0.01
+rf0=matrix((0.0095,-0.095,rfz0))
 
 mrf=eye(4)
 mrf[0:3,3] = (0,0,-0.105)
 taskrf.opmodif = matrixToTuple(mrf)
 taskrf.feature.frame('desired')
-taskrf.feature.selec.value = '011111'
+taskrf.feature.selec.value = '11'
 drh=eye(4)
-drh[0,3]=0.1
-drh[0,3]=0.1
+drh[0:2,3] = vectorToTuple(rf0[0,0:2])
 taskrf.ref = matrixToTuple(drh)
 taskrf.gain.setByPoint(80,10,0.01,0.8)
 
-#taskHead.gain.setConstant(500)
-taskHead.feature.selec.value = '111000'
+taskrfz.opmodif = matrixToTuple(mrf)
+taskrfz.feature.frame('desired')
+taskrfz.feature.selec.value = '011100'
+drh=eye(4)
+drh[2,3]=rfz0
+taskrfz.ref = matrixToTuple(drh)
+taskrfz.gain.setByPoint(500,30,0.001,0.9)
+taskrfz.feature.frame('desired')
 
-#sot.push(taskLim.name)
-#sot.push(taskCom.task.name)
-#sot.push(taskrh.task.name)
-#sot.push(tasklh.task.name)
-#sot.push(taskHead.task.name)
-#sot.push(taskWaist.task.name)
-#sot.push(taskPosture.name)
-
-
+sot.push(taskLim.name)
 
 # --- Events ---------------------------------------------
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 refset = ( lambda mt,v : mt.__class__.ref.__set__(mt,v) )
 
-'''
-def upfoot():
-    drh=matrix(eye(4))
-    taskrf.feature.position.recompute( robot.state.time )
-    crh = matrix(taskrf.feature.position.value)
-    drh[0:3,3]=crh[0:3,3]
-    drh[2,3] += 0.005
-    taskrf.ref = matrixToTuple(drh)
-
-def slidefoot(x,y):
-    taskrf.feature.position.recompute( robot.state.time )
-    drh = matrix(taskrf.feature.position.value)
-    drh[0:3,0:3] = eye(3)
-    drh[0:2,3] = (x,y)
-    drh[0:2,3] = 0.005
-    print drh
-    taskrf.ref = matrixToTuple(drh)
-'''
-rfz0=0.01
-rf0=matrix((0.0095,-0.095,rfz0))
 
 attime(2
        ,(lambda : sot.push(taskCom.task.name),"Add COM")
@@ -506,19 +487,20 @@ attime(2
 
 attime(140
        ,(lambda: sot.rmContact("RF"),"Remove RF contact" )
+       ,(lambda: sot.push(taskrfz.task.name), "Add RFZ")
        ,(lambda: sot.push(taskrf.task.name), "Add RF")
-       ,(lambda: goto6d(taskrf,vectorToTuple(rf0) ), "Up foot RF")
+       ,(lambda: gotoNd(taskrfz,vectorToTuple(rf0),"11100" ), "Up foot RF")
        )
 
 attime(150  ,lambda : sigset(taskCom.feature.selec, "11"),"COM XY")
 
-attime(200  ,lambda: goto6d(taskrf, vectorToTuple(rf0+( 0.35, 0.0,0)))  , "RF to front"       )
-attime(300  ,lambda: goto6d(taskrf, vectorToTuple(rf0+( 0.2,-0.2,0)))  , "RF to front-right"       )
-attime(400  ,lambda: goto6d(taskrf, vectorToTuple(rf0+(-0.2,-0.2,0)))  , "RF to back-right"       )
-attime(500  ,lambda: goto6d(taskrf, vectorToTuple(rf0+(-0.35, 0.0,0)))  , "RF to back"       )
-attime(600  ,lambda: goto6d(taskrf, vectorToTuple(rf0+( 0.0, 0.0,0)))  , "RF to center"       )
+attime(200  ,lambda: gotoNd(taskrf, vectorToTuple(rf0+( 0.35, 0.0,0)),"11")  , "RF to front"       )
+attime(300  ,lambda: gotoNd(taskrf, vectorToTuple(rf0+( 0.2,-0.2,0)),"11")  , "RF to front-right"       )
+attime(400  ,lambda: gotoNd(taskrf, vectorToTuple(rf0+(-0.2,-0.2,0)),"11")  , "RF to back-right"       )
+attime(500  ,lambda: gotoNd(taskrf, vectorToTuple(rf0+(-0.35, 0.0,0)),"11")  , "RF to back"       )
+attime(600  ,lambda: gotoNd(taskrf, vectorToTuple(rf0+( 0.0, 0.0,0)),"111011")  , "RF to center"       )
 
-attime(700  ,lambda: goto6d(taskrf, vectorToTuple(rf0-( 0.0, 0.0,rfz0)))  , "RF to ground"       )
+attime(700  ,lambda: gotoNd(taskrfz,(0,0,0),"11100")  , "RF to ground"       )
 attime(750  
        ,(lambda: refset(taskCom,(0.01,0,0.797))  , "COM to zero"       )
        ,(lambda: sigset(taskCom.feature.selec,"11")  , "COM XY"       )
@@ -529,12 +511,9 @@ attime(850  ,(lambda: contact(contactRF)  , "RF to contact"       )
        ,(lambda: taskCom.gain.setByPoint(100,10,0.005,0.8)  , "upper com gain"       )
        )
 
-
-print dyn.com+1
+attime(1000, lambda: sigset(sot.posture,q0), "Robot to initial pose")
 
 attime(1200,stop)
-
-
 
 #inc()
 go()
