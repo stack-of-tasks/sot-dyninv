@@ -332,6 +332,7 @@ class MetaTaskDynPosture(object):
             else: qdes[r,0] = v
         self.ref = vectorToTuple(qdes)
         self.feature.selec.value = toFlags(act)
+        setGain(self.gain,gain)
 
 taskPosture = MetaTaskDynPosture(dyn,dt)
 
@@ -358,7 +359,7 @@ taskLim.referenceVelSup.value = tuple([val*pi/180 for val in dqup])
 sot = SolverDynReduced('sot')
 sot.setSize(robotDim-6)
 #sot.damping.value = 1e-2
-sot.breakFactor.value = 20
+sot.breakFactor.value = 10
 
 plug(dyn.inertiaReal,sot.matrixInertia)
 plug(dyn.dynamicDrift,sot.dyndrift)
@@ -467,11 +468,7 @@ robot.after.addSignal('dyn.waist')
 robot.after.addSignal('taskLim.normalizedPosition')
 tr.add('taskLim.normalizedPosition','qn')
 
-
-
 history = History(dyn,1,zmp.zmp)
-
-
 
 #-----------------------------------------------------------------------------
 # --- FUNCTIONS TO PUSH/PULL/UP/DOWN TASKS -----------------------------------
@@ -497,6 +494,7 @@ taskrf.gain.setByPoint(40,2,0.002,0.8)
 
 taskChest.feature.selec.value='111000'
 taskChest.ref = rotate('y',80/DEG)
+#taskChest.ref = rotate('y',80/DEG)
 taskChest.gain.setByPoint(30,3,1/DEG,0.8)
 
 #taskPosture.gain.setByPoint(60,5,5/DEG,0.9)
@@ -538,42 +536,49 @@ attime(1000
        ,(lambda: taskPosture.gotoq(chest=(0,0),rleg=(0,0,0,0,0,0),head=(0,0)), "extend body")
        )
 
-'''
-attime(1300
-       ,lambda: taskPosture.gotoq(chest=(0,0),rleg=(0,0,0,0,0,0),head=(0,0),rarm=(0,-pi/2,0,0,0,0),larm=(0,pi/2,0,0,0,0)), "extend arm")
+with_full_extention=False
+if with_full_extention:
+    attime(1300
+           ,lambda: taskPosture.gotoq(chest=(0,0),rleg=(0,0,0,0,0,0),head=(0,0),rarm=(0,-pi/2,0,0,0,0),larm=(0,pi/2,0,0,0,0)), "extend arm")
 
-attime(2000
-       ,lambda: taskPosture.gotoq(chest=(0,0),rleg=(0,0,0,0,0.73,0),head=(0,0),rarm=(0,-pi/2,0,0,0,0),larm=(0,pi/2,0,0,0,0)), "extend foot")
-'''
+    attime(2000
+           ,lambda: taskPosture.gotoq(30,chest=(0,0),rleg=(0,0,0,0,0.73,0),head=(0,0),rarm=(0,-pi/2,0,0,0,0),larm=(0,pi/2,0,0,0,0)), "extend foot")
+    tex=1000
+else: tex=0
 
-attime(1500
+
+attime(1500 + tex
         ,(lambda: sot.rm(taskChest.task.name),"rm chest")
-        ,(lambda: taskPosture.gotoq(chest=(0,0),rleg=q0[6:12],head=(0,0),rarm=q0[22:28],larm=q0[29:35]),"fold arms&leg")
+        ,(lambda: taskPosture.gotoq((30,3,1/DEG,0.8),chest=(0,0),rleg=q0[6:12],head=(0,0),rarm=q0[22:28],larm=q0[29:35]),"fold arms&leg")
         )
 
-attime(1800
+attime(1800+tex
        ,(lambda: sot.rm(taskPosture.task.name),"Remove posture" )
        ,(lambda: sot.push(taskrf.task.name), "Add RF")
        ,(lambda: gotoNd(taskrf, (-0.1,-0.1,0.25),"111" ), "Back RF")
        )
 
-attime(2100  ,lambda: goto6d(taskrf,vectorToTuple(rf0+(0,0,0.15)),(100,15,0.005,0.8))  , "RF to upper ground"       )
-attime(2300  ,lambda: goto6d(taskrf,vectorToTuple(rf0),(100,15,0.005,0.8))  , "RF to ground"       )
-attime(2500  
+attime(2200+tex  ,lambda: goto6d(taskrf,vectorToTuple(rf0.T+(0,0,0.07)),(80,15,0.005,0.8))  , "RF to upper ground"       )
+attime(2400+tex  ,lambda: goto6d(taskrf,vectorToTuple(rf0),(100,15,0.005,0.8))  , "RF to ground"       )
+attime(2550+tex  
        ,(lambda: refset(taskCom,(0.01,0,0.797))  , "COM to zero"       )
        ,(lambda: taskCom.gain.setConstant(3)  , "lower com gain"       )
 )
-attime(2600  ,(lambda: contact(contactRF)  , "RF to contact"       )
+attime(2650+tex, lambda: sigset(sot.posture,q0), "Robot to initial pose")
+attime(2650+tex  ,(lambda: contact(contactRF)  , "RF to contact"       )
        ,(lambda: sigset(taskCom.feature.selec,"111")  , "COM XYZ"       )
        ,(lambda: taskCom.gain.setByPoint(100,10,0.005,0.8)  , "upper com gain"       )
        )
 
-attime(2500, lambda: sigset(sot.posture,q0), "Robot to initial pose")
 
 
-attime(4000,stop)
+attime(3200+tex,stop)
 
-inc()
+'''robot.set( (-0.22338017682364666, 0.094679696008257069, 0.6406354063194315, -0.046149502155439906, 1.3834043086232479, -0.045751564595492393, -0.00043528996402237706, 0.0028744648411845957, -0.47567845262453851, 0.7731765985092065, -0.32594537966076575, -0.0029603563556822449, -0.16456900265664706, -0.031430863650961184, -2.0148121310236262, 0.43929960908288562, 0.18928315181673525, 0.17611103058143049, -0.00037370245565424205, -0.00014143571164947397, 8.7559046906180755e-07, 7.1211147920686882e-05, 0.20950155287705138, -0.38261191572903752, -0.1409579892969334, -1.2006478349239718, 0.0055192144589002994, -0.67056461724265271, 0.17476330298560117, 0.20672021910771882, 0.39182703814168718, 0.14945548959841934, -1.1920338277316804, -0.003453520219234802, -0.66498751012318535, 0.17474628650307528) )
+robot.setVelocity( (-0.0034980508073499746, -7.8546901386487115e-05, -0.0016849885158409757, -0.00042323578018366197, -0.0080054937692844511, 0.00086344279117106829, -0.00015755559034456312, 0.0013060411790611658, -0.21786102712256575, 0.35440517206749117, -0.14941610627508575, -0.0013290768265727577, 0.00011113538937583873, -0.00054127148646175311, 8.5548931282521993e-05, 0.0024653080400074217, 0.0054855827172477344, 0.00041334449428695003, -0.00010747410962737952, -3.8505135328234213e-05, 2.3358739214336891e-07, 1.9098782957311844e-05, 0.010521707268533676, 0.0037563490996982444, 0.00030433568575777238, 0.0081039468043348356, 3.4077369449514742e-05, 0.0012601869472091919, 8.3190734016776364e-07, 0.0092086079693020056, -0.010246626556435254, -0.0041025198155700817, 0.0059363185419371552, -0.00053151985927071734, 0.00086774348235294993, 6.7138299807645551e-07) )
+robot.state.time =  1800-1
+attime.fastForward(1800)
+'''
 go()
 
 
