@@ -20,11 +20,13 @@ from dynamic_graph.matlab import matlab
 sys.path.append('..')
 from dynamic_graph.sot.core.meta_task_6d import toFlags
 from meta_task_dyn_6d import MetaTaskDyn6d
+from meta_tasks_dyn import *
 from attime import attime
 from numpy import *
 from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 from matrix_util import matrixToTuple, vectorToTuple,rotate
 from history import History
+from zmp_estimator import ZmpEstimator
 
 #-----------------------------------------------------------------------------
 # --- ROBOT SIMU -------------------------------------------------------------
@@ -95,7 +97,7 @@ except:
 def inc():
     robot.increment(dt)
     # Execute a function at time t, if specified with t.add(...)
-    zmpup()
+    if 'refresh' in ZmpEstimator.__dict__: zmp.refresh()
     attime.run(robot.control.time)
     robot.viewer.updateElementConfig('zmp',[zmp.zmp.value[0],zmp.zmp.value[1],0,0,0,0])
     if dyn.com.time >0:
@@ -130,12 +132,14 @@ def iter():         print 'iter = ',robot.state.time
 @optionalparentheses
 def status():       print runner.isPlay
 
+@optionalparentheses
+def pl():         print  matlab(  matrixToTuple(zmp.leftSupport()) ).resstr
+@optionalparentheses
+def pr():         print  matlab(  matrixToTuple(zmp.righttSupport()) ).resstr
 
 @optionalparentheses
 def dump():
-    history.dumpToOpenHRP('planche')
-
-
+    history.dumpToOpenHRP('openhrp/planche')
 
 
 # Add a visual output when an event is called.
@@ -150,36 +154,6 @@ class Ping:
         self.refresh()
 ping=Ping()
 attime.addPing( ping )
-
-def setGain(gain,val):
-    if val!=None:
-        if len(val)==1:  gain.setConstant(val)
-        elif len(val)==3: gain.set( val[0],val[1],val[2])
-        elif len(val)==4: gain.setByPoint( val[0],val[1],val[2],val[3])
-
-def goto6d(task,position,gain=None):
-    M=eye(4)
-    if( len(position)==3 ): M[0:3,3] = position
-    else: print "Position 6D with rotation ... todo"
-    task.feature.selec.value = "111111"
-    setGain(task.gain,gain)
-    task.featureDes.position.value = matrixToTuple(M)
-
-def gotoNd(task,position,selec,gain=None):
-    M=eye(4)
-    if isinstance(position,matrix): position = vectorToTuple(position)
-    if( len(position)==3 ): M[0:3,3] = position
-    else: print "Position 6D with rotation ... todo"
-    if isinstance(selec,str):   task.feature.selec.value = selec
-    else: task.feature.selec.value = toFlags(selec)
-    task.featureDes.position.value = matrixToTuple(M)
-    setGain(task.gain,gain)
-
-def contact(contact,task=None):
-    sot.addContactFromTask(contact.task.name,contact.name)
-    sot.signal("_"+contact.name+"_p").value = contact.support
-    if task!= None: sot.rm(task.task.name)
-    contact.task.resetJacobianDerivative()
 
 
 #-----------------------------------------------------------------------------
@@ -220,8 +194,6 @@ dyn.setProperty('ComputeAccelerationCoM','true')
 
 robot.control.unplug()
 
-
-
 #-----------------------------------------------------------------------------
 # --- OPERATIONAL TASKS (For HRP2-14)---------------------------------------------
 #-----------------------------------------------------------------------------
@@ -239,101 +211,10 @@ for task in [ taskWaist, taskChest, taskHead, taskrh, tasklh, taskrf ]:
     task.gain.setConstant(50)
     task.task.dt.value = dt
 
-
-
-#-----------------------------------------------------------------------------
-# --- OTHER TASKS ------------------------------------------------------------
-#-----------------------------------------------------------------------------
-
 # --- TASK COM ------------------------------------------------------
-
-class MetaTaskDynCom(object):
-    def __init__(self,dyn,dt,name="com"):
-        self.dyn=dyn
-        self.name=name
-        dyn.setProperty('ComputeCoM','true')
-
-        self.feature    = FeatureGeneric('feature'+name)
-        self.featureDes = FeatureGeneric('featureDes'+name)
-        self.task = TaskDynPD('task'+name)
-        self.gain = GainAdaptive('gain'+name)
-
-        plug(dyn.com,self.feature.errorIN)
-        plug(dyn.Jcom,self.feature.jacobianIN)
-        self.feature.sdes.value = self.featureDes.name
-
-        self.task.add(self.feature.name)
-        plug(dyn.velocity,self.task.qdot)
-        self.task.dt.value = dt
-
-        plug(self.task.error,self.gain.error)
-        plug(self.gain.gain,self.task.controlGain)
-
-    @property
-    def ref(self):
-        return self.featureDes.errorIN.value
-
-    @ref.setter
-    def ref(self,v):
-        self.featureDes.errorIN.value = v
-
 taskCom = MetaTaskDynCom(dyn,dt)
 
-
 # --- TASK POSTURE --------------------------------------------------
-
-class MetaTaskDynPosture(object):
-    postureRange = { \
-        "rleg": range(6,12), \
-        "lleg": range(12,18), \
-        "chest": range(18,20), \
-        "head": range(20,22), \
-        "rarm": range(22,28), \
-        "rhand": [28], \
-        "larm": range(29,35), \
-        "lhand": [35], \
-            }
-    def __init__(self,dyn,dt,name="posture"):
-        self.dyn=dyn
-        self.name=name
-
-        self.feature    = FeatureGeneric('feature'+name)
-        self.featureDes = FeatureGeneric('featureDes'+name)
-        self.task = TaskDynPD('task'+name)
-        self.gain = GainAdaptive('gain'+name)
-
-        plug(dyn.position,self.feature.errorIN)
-        self.feature.jacobianIN.value = matrixToTuple( identity(robotDim) )
-        self.feature.sdes.value = self.featureDes.name
-
-        self.task.add(self.feature.name)
-        plug(dyn.velocity,self.task.qdot)
-        self.task.dt.value = dt
-
-        plug(self.task.error,self.gain.error)
-        plug(self.gain.gain,self.task.controlGain)
-
-
-    @property
-    def ref(self):
-        return self.featureDes.errorIN.value
-
-    @ref.setter
-    def ref(self,v):
-        self.featureDes.errorIN.value = v
-
-    def gotoq(self,gain=None,**kwargs):
-        act=list()
-        qdes = zeros((36,1))
-        for n,v in kwargs.items():
-            r = self.postureRange[n]
-            act += r
-            if isinstance(v,matrix): qdes[r,0] = vectorToTuple(v)
-            else: qdes[r,0] = v
-        self.ref = vectorToTuple(qdes)
-        self.feature.selec.value = toFlags(act)
-        setGain(self.gain,gain)
-
 taskPosture = MetaTaskDynPosture(dyn,dt)
 
 # --- Task lim ---------------------------------------------------
@@ -357,6 +238,8 @@ taskLim.referenceVelSup.value = tuple([val*pi/180 for val in dqup])
 #-----------------------------------------------------------------------------
 
 sot = SolverDynReduced('sot')
+contact = AddContactHelper(sot)
+
 sot.setSize(robotDim-6)
 #sot.damping.value = 1e-2
 sot.breakFactor.value = 10
@@ -374,64 +257,24 @@ plug(sot.acceleration,robot.acceleration)
 # ---- CONTACT: Contact definition -------------------------------------------
 #-----------------------------------------------------------------------------
 
-
 # Left foot contact
 contactLF = MetaTaskDyn6d('contact_lleg',dyn,'lf','left-ankle')
 contactLF.feature.frame('desired')
 contactLF.gain.setConstant(1000)
+contactLF.name = "LF"
 
 # Right foot contact
 contactRF = MetaTaskDyn6d('contact_rleg',dyn,'rf','right-ankle')
 contactRF.feature.frame('desired')
-
-# ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
-# ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
-contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
-contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
-#contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
-contactLF.support =  ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
-contactLF.name = "LF"
 contactRF.name = "RF"
 
-#-----------------------------------------------------------------------------
+contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
+contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
+contactLF.support =  ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
+
 #--- ZMP ---------------------------------------------------------------------
-#-----------------------------------------------------------------------------
 zmp = ZmpEstimator('zmp')
-def computeZmp():
-    p=zeros((4,0))
-    f=zeros((0,1))
-    if '_RF_p' in [s.name for s in sot.signals()]:
-        Mr=matrix(dyn.rf.value)
-        fr=matrix(sot._RF_fn.value).transpose()
-        pr=matrix(sot._RF_p.value+((1,1,1,1),))
-        p=hstack((p,Mr*pr))
-        f=vstack((f,fr))
-    if '_LF_p' in [s.name for s in sot.signals()]:
-        Ml=matrix(dyn.lf.value)
-        fl=matrix(sot._LF_fn.value).transpose()
-        pl=matrix(sot._LF_p.value+((1,1,1,1),))
-        p=hstack((p,Ml*pl))
-        f=vstack((f,fl))
-    zmp=p*f/sum(f)
-    return zmp
-def zmpup():
-    zmp.zmp.value = tuple(computeZmp()[0:3].transpose().tolist()[0])
-    zmp.zmp.time = sot.solution.time
-
-@optionalparentheses
-def pl():
-    if '_LF_p' in [s.name for s in sot.signals()]:
-        print 'checkin'
-        Ml=matrix(dyn.lf.value)
-        pl=matrix(sot._LF_p.value+((1,1,1,1),))
-        return  matlab(  matrixToTuple((Ml*pl)[0:3,:]) ).resstr
-@optionalparentheses
-def pr():
-    if '_RF_p' in [s.name for s in sot.signals()]:
-        Mr=matrix(dyn.rf.value)
-        pr=matrix(sot._RF_p.value+((1,1,1,1),))
-        return matlab(  matrixToTuple(  (Mr*pr)[0:3,:] ))
-
+zmp.declare(sot,dyn)
 
 #-----------------------------------------------------------------------------
 # --- TRACE ------------------------------------------------------------------
@@ -471,38 +314,34 @@ tr.add('taskLim.normalizedPosition','qn')
 history = History(dyn,1,zmp.zmp)
 
 #-----------------------------------------------------------------------------
-# --- FUNCTIONS TO PUSH/PULL/UP/DOWN TASKS -----------------------------------
-
-#-----------------------------------------------------------------------------
 # --- RUN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
-DEG = 180.0/pi
-sot.clear()
 
+DEG = 180.0/pi
+
+# Angles for both knee, plus angle for the chest wrt the world.
+MAX_EXT = 35/DEG
+MAX_SUPPORT_EXT = 45/DEG
+CHEST = 60/DEG # 80 ... 90?
+
+sot.clear()
 contact(contactLF)
 contact(contactRF)
 
 taskCom.feature.selec.value = "11"
 taskCom.gain.setByPoint(100,10,0.005,0.8)
 
-mrf=eye(4)
-mrf[0:3,3] = (0,0,-0.105)
-#taskrf.opmodif = matrixToTuple(mrf)
 taskrf.feature.frame('desired')
-#taskrf.gain.setByPoint(60,5,0.01,0.8)
 taskrf.gain.setByPoint(40,2,0.002,0.8)
 
 taskChest.feature.selec.value='111000'
-taskChest.ref = rotate('y',80/DEG)
-#taskChest.ref = rotate('y',80/DEG)
+taskChest.ref = rotate('y',CHEST)
 taskChest.gain.setByPoint(30,3,1/DEG,0.8)
 
-#taskPosture.gain.setByPoint(60,5,5/DEG,0.9)
 taskPosture.gain.setByPoint(30,3,1/DEG,0.8)
 
 ql = matrix(dyn.lowerJl.value)
-ql[0,15] = 25/DEG
-dyn.lowerJl.value
+ql[0,15] = MAX_SUPPORT_EXT
 taskLim.referencePosInf.value = vectorToTuple(ql)
 
 sot.push(taskLim.name)
@@ -526,23 +365,24 @@ attime(140
        ,(lambda: gotoNd(taskrf, (0,0,0.65),"000110" ), "Up foot RF")
        )
 
-attime(500,lambda: gotoNd(taskrf, (-0.8,0,0.8),"000101" ), "Extend RF")
+# Was -.8,0,.8 with full extension
+attime(500,lambda: gotoNd(taskrf, (-0.75,0,0.7),"000101" ), "Extend RF")
 
 attime(800,lambda: sot.push(taskChest.task.name), "add chest")
 
 attime(1000
        ,(lambda: sot.rm(taskrf.task.name), "rm RF")
        ,(lambda: sot.push(taskPosture.task.name), "add posture")
-       ,(lambda: taskPosture.gotoq(chest=(0,0),rleg=(0,0,0,0,0,0),head=(0,0)), "extend body")
+       ,(lambda: taskPosture.gotoq(chest=(0,0),rleg=(0,0,0,MAX_EXT,0,0),head=(0,0)), "extend body")
        )
 
 with_full_extention=False
 if with_full_extention:
     attime(1300
-           ,lambda: taskPosture.gotoq(chest=(0,0),rleg=(0,0,0,0,0,0),head=(0,0),rarm=(0,-pi/2,0,0,0,0),larm=(0,pi/2,0,0,0,0)), "extend arm")
+           ,lambda: taskPosture.gotoq(chest=(0,0),rleg=(0,0,0,MAX_EXT,0,0),head=(0,0),rarm=(0,-pi/2,0,0,0,0),larm=(0,pi/2,0,0,0,0)), "extend arm")
 
     attime(2000
-           ,lambda: taskPosture.gotoq(30,chest=(0,0),rleg=(0,0,0,0,0.73,0),head=(0,0),rarm=(0,-pi/2,0,0,0,0),larm=(0,pi/2,0,0,0,0)), "extend foot")
+           ,lambda: taskPosture.gotoq(30,chest=(0,0),rleg=(0,0,0,MAX_EXT,0.73,0),head=(0,0),rarm=(0,-pi/2,0,0,0,0),larm=(0,pi/2,0,0,0,0)), "extend foot")
     tex=1000
 else: tex=0
 
@@ -570,15 +410,8 @@ attime(2650+tex  ,(lambda: contact(contactRF)  , "RF to contact"       )
        ,(lambda: taskCom.gain.setByPoint(100,10,0.005,0.8)  , "upper com gain"       )
        )
 
-
-
 attime(3200+tex,stop)
 
-'''robot.set( (-0.22338017682364666, 0.094679696008257069, 0.6406354063194315, -0.046149502155439906, 1.3834043086232479, -0.045751564595492393, -0.00043528996402237706, 0.0028744648411845957, -0.47567845262453851, 0.7731765985092065, -0.32594537966076575, -0.0029603563556822449, -0.16456900265664706, -0.031430863650961184, -2.0148121310236262, 0.43929960908288562, 0.18928315181673525, 0.17611103058143049, -0.00037370245565424205, -0.00014143571164947397, 8.7559046906180755e-07, 7.1211147920686882e-05, 0.20950155287705138, -0.38261191572903752, -0.1409579892969334, -1.2006478349239718, 0.0055192144589002994, -0.67056461724265271, 0.17476330298560117, 0.20672021910771882, 0.39182703814168718, 0.14945548959841934, -1.1920338277316804, -0.003453520219234802, -0.66498751012318535, 0.17474628650307528) )
-robot.setVelocity( (-0.0034980508073499746, -7.8546901386487115e-05, -0.0016849885158409757, -0.00042323578018366197, -0.0080054937692844511, 0.00086344279117106829, -0.00015755559034456312, 0.0013060411790611658, -0.21786102712256575, 0.35440517206749117, -0.14941610627508575, -0.0013290768265727577, 0.00011113538937583873, -0.00054127148646175311, 8.5548931282521993e-05, 0.0024653080400074217, 0.0054855827172477344, 0.00041334449428695003, -0.00010747410962737952, -3.8505135328234213e-05, 2.3358739214336891e-07, 1.9098782957311844e-05, 0.010521707268533676, 0.0037563490996982444, 0.00030433568575777238, 0.0081039468043348356, 3.4077369449514742e-05, 0.0012601869472091919, 8.3190734016776364e-07, 0.0092086079693020056, -0.010246626556435254, -0.0041025198155700817, 0.0059363185419371552, -0.00053151985927071734, 0.00086774348235294993, 6.7138299807645551e-07) )
-robot.state.time =  1800-1
-attime.fastForward(1800)
-'''
 go()
 
 
