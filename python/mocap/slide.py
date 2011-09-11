@@ -19,12 +19,15 @@ from dynamic_graph.script_shortcuts import optionalparentheses
 from dynamic_graph.matlab import matlab
 sys.path.append('..')
 from dynamic_graph.sot.core.meta_task_6d import toFlags
+from meta_tasks_dyn import *
 from meta_task_dyn_6d import MetaTaskDyn6d
 from attime import attime
 from numpy import *
 from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 from matrix_util import matrixToTuple, vectorToTuple
 from history import History
+from zmp_estimator import ZmpEstimator
+from viewer_helper import addRobotViewer,VisualPinger
 
 #-----------------------------------------------------------------------------
 # --- ROBOT SIMU -------------------------------------------------------------
@@ -35,62 +38,17 @@ robotDim  = robotDimension[robotName]
 RobotClass = RobotDynSimu
 robot      = RobotClass("robot")
 robot.resize(robotDim)
+addRobotViewer(robot,small=True,verbose=False)
 dt = 5e-3
-
-
-
-#half sitting
-#qhs=matrix((0,0,0,0,0,0,  0,0,-26,50,-24,0,0,0,-26,50,-24,0,0,0,0,0,15,10,0,-30,0,0,10,15,-10,0,-30,0,0,10))
-#robot.set((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.4537856055185257, 0.87266462599716477, -0.41887902047863906, 0.0, 0.0, 0.0, -0.4537856055185257, 0.87266462599716477, -0.41887902047863906, 0.0, 0.0, 0.0, 0.0, 0.0, 0.26179938779914941, 0.17453292519943295, 0.0, -0.52359877559829882, 0.0, 0.0, 0.17453292519943295, 0.26179938779914941, -0.17453292519943295, 0.0, -0.52359877559829882, 0.0, 0.0, 0.17453292519943295))
 
 # Similar initial position with hand forward
 robot.set((-0.033328803958899381, -0.0019839923040723341, 0.62176527349722499, 2.379901541270165e-05, 0.037719492175904465, 0.00043085147714449579, -0.00028574496353126724, 0.0038294370786961648, -0.64798319906979551, 1.0552418879542016, -0.44497846451873851, -0.0038397195926379991, -0.00028578259876671871, 0.0038284398205732629, -0.64712828871069394, 1.0534202525984278, -0.4440117393779604, -0.0038387216246160054, 0.00014352031102944824, 0.013151503268540811, -0.00057411504064861592, -0.050871000025766742, 0.21782780288481224, -0.37965640592672439, -0.14072647716213352, -1.1942332339530364, 0.0055454863752273523, -0.66956710808008013, 0.1747981826611808, 0.21400703176352612, 0.38370527720078107, 0.14620204468509851, -1.1873407322935838, -0.0038746980026940735, -0.66430172366423146, 0.17500428384087438))
-
-# ------------------------------------------------------------------------------
-# --- VIEWER -------------------------------------------------------------------
-# ------------------------------------------------------------------------------
-
-try:
-    import robotviewer
-
-    def stateFullSize(robot):
-        return [float(val) for val in robot.state.value]+10*[0.0]
-    RobotClass.stateFullSize = stateFullSize
-    robot.viewer = robotviewer.client('XML-RPC')
-    #robot.viewer = robotviewer.client('CORBA')
-    # Check the connection
-    robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
-
-    def refreshView( robot ):
-       robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
-    RobotClass.refresh = refreshView
-
-    def incrementView(robot,dt):
-        robot.incrementNoView(dt)
-        robot.refresh()
-        #if zmp.zmp.time > 0:
-        #    robot.viewer.updateElementConfig('zmp',[zmp.zmp.value[0],zmp.zmp.value[1],0,0,0,0])
-    RobotClass.incrementNoView = RobotClass.increment
-    RobotClass.increment = incrementView
-
-    def setView( robot,*args ):
-        robot.setNoView(*args)
-        robot.refresh()
-    RobotClass.setNoView = RobotClass.set
-    RobotClass.set = setView
-    robot.refresh()
-
-except:
-    print "No robot viewer, sorry."
-    class RobotViewerFaked:
-        def update(*args): void
-        def updateElementConfig(*args): void
-    robot.viewer = RobotViewerFaked()
 
 
 #-------------------------------------------------------------------------------
 #----- MAIN LOOP ---------------------------------------------------------------
 #-------------------------------------------------------------------------------
+
 class EllipseTemporal:
     def __init__(self,tempo):
         self.t0 = None
@@ -117,11 +75,10 @@ class EllipseTemporal:
 
 traj = EllipseTemporal(robot.state)
 
-
 def inc():
     robot.increment(dt)
     # Execute a function at time t, if specified with t.add(...)
-    zmpup()
+    if 'refresh' in ZmpEstimator.__dict__: zmp.refresh()
     attime.run(robot.control.time)
     robot.viewer.updateElementConfig('zmp',[zmp.zmp.value[0],zmp.zmp.value[1],0,0,0,0])
     if dyn.com.time >0:
@@ -148,7 +105,6 @@ def next(): inc()
 # --- shortcuts -------------------------------------------------
 @optionalparentheses
 def q():
-    if 'dyn' in globals(): print dyn.ffposition.__repr__()
     print robot.state.__repr__()
 @optionalparentheses
 def qdot(): print robot.control.__repr__()
@@ -157,53 +113,11 @@ def iter():         print 'iter = ',robot.state.time
 @optionalparentheses
 def status():       print runner.isPlay
 
-
 @optionalparentheses
 def dump():
     history.dumpToOpenHRP('openhrp/slide')
 
-
-
-
-# Add a visual output when an event is called.
-class Ping:
-    def __init__(self):
-        self.pos = 1
-        self.refresh()
-    def refresh(self):
-        robot.viewer.updateElementConfig('pong',  [ 0, 0.9, self.pos*0.1, 0, 0, 0 ])  
-    def __call__(self):
-        self.pos += 1
-        self.refresh()
-ping=Ping()
-attime.addPing( ping )
-
-def goto6d(task,position,gain=None):
-    M=eye(4)
-    if( len(position)==3 ): M[0:3,3] = position
-    else: print "Position 6D with rotation ... todo"
-    task.feature.selec.value = "111111"
-    if gain!=None: task.gain.setConstant(gain)
-    task.featureDes.position.value = matrixToTuple(M)
-
-def gotoNd(task,position,selec,gain=None):
-    M=eye(4)
-    if isinstance(position,matrix): position = vectorToTuple(position)
-    if( len(position)==3 ): M[0:3,3] = position
-    else: print "Position 6D with rotation ... todo"
-    if isinstance(selec,str):   task.feature.selec.value = selec
-    else: task.feature.selec.value = toFlags(selec)
-    task.featureDes.position.value = matrixToTuple(M)
-    if gain!=None:
-        if len(gain)==1:  task.gain.setConstant(gain)
-        elif len(gain)==3: task.gain.set( gain[0],gain[1],gain[2])
-        elif len(gain)==4: task.gain.setByPoint( gain[0],gain[1],gain[2],gain[3])
-
-def contact(contact,task=None):
-    sot.addContactFromTask(contact.task.name,contact.name)
-    sot.signal("_"+contact.name+"_p").value = contact.support
-    if task!= None: sot.rm(task.task.name)
-    contact.task.resetJacobianDerivative()
+attime.addPing( VisualPinger(robot.viewer) )
 
 
 #-----------------------------------------------------------------------------
@@ -264,44 +178,7 @@ for task in [ taskWaist, taskChest, taskHead, taskrh, tasklh, taskrf, taskrfz ]:
     task.gain.setConstant(50)
     task.task.dt.value = dt
 
-
-
-#-----------------------------------------------------------------------------
-# --- OTHER TASKS ------------------------------------------------------------
-#-----------------------------------------------------------------------------
-
 # --- TASK COM ------------------------------------------------------
-
-class MetaTaskDynCom(object):
-    def __init__(self,dyn,dt,name="com"):
-        self.dyn=dyn
-        self.name=name
-        dyn.setProperty('ComputeCoM','true')
-
-        self.feature    = FeatureGeneric('feature'+name)
-        self.featureDes = FeatureGeneric('featureDes'+name)
-        self.task = TaskDynPD('task'+name)
-        self.gain = GainAdaptive('gain'+name)
-
-        plug(dyn.com,self.feature.errorIN)
-        plug(dyn.Jcom,self.feature.jacobianIN)
-        self.feature.sdes.value = self.featureDes.name
-
-        self.task.add(self.feature.name)
-        plug(dyn.velocity,self.task.qdot)
-        self.task.dt.value = dt
-
-        plug(self.task.error,self.gain.error)
-        plug(self.gain.gain,self.task.controlGain)
-
-    @property
-    def ref(self):
-        return self.featureDes.errorIN.value
-
-    @ref.setter
-    def ref(self,v):
-        self.featureDes.errorIN.value = v
-
 taskCom = MetaTaskDynCom(dyn,dt)
 
 
@@ -348,6 +225,7 @@ taskLim.referenceVelSup.value = tuple([val*pi/180 for val in dqup])
 #-----------------------------------------------------------------------------
 
 sot = SolverDynReduced('sot')
+contact = AddContactHelper(sot)
 sot.setSize(robotDim-6)
 #sot.damping.value = 1e-2
 sot.breakFactor.value = 20
@@ -370,59 +248,20 @@ plug(sot.acceleration,robot.acceleration)
 contactLF = MetaTaskDyn6d('contact_lleg',dyn,'lf','left-ankle')
 contactLF.feature.frame('desired')
 contactLF.gain.setConstant(1000)
+contactLF.name = "LF"
 
 # Right foot contact
 contactRF = MetaTaskDyn6d('contact_rleg',dyn,'rf','right-ankle')
 contactRF.feature.frame('desired')
-
-# ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
-# ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
-contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
-contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
-#contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
-contactLF.support =  ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
-contactLF.name = "LF"
 contactRF.name = "RF"
 
-#-----------------------------------------------------------------------------
+contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
+contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
+contactLF.support =  ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
+
 #--- ZMP ---------------------------------------------------------------------
-#-----------------------------------------------------------------------------
 zmp = ZmpEstimator('zmp')
-def computeZmp():
-    p=zeros((4,0))
-    f=zeros((0,1))
-    if '_RF_p' in [s.name for s in sot.signals()]:
-        Mr=matrix(dyn.rf.value)
-        fr=matrix(sot._RF_fn.value).transpose()
-        pr=matrix(sot._RF_p.value+((1,1,1,1),))
-        p=hstack((p,Mr*pr))
-        f=vstack((f,fr))
-    if '_LF_p' in [s.name for s in sot.signals()]:
-        Ml=matrix(dyn.lf.value)
-        fl=matrix(sot._LF_fn.value).transpose()
-        pl=matrix(sot._LF_p.value+((1,1,1,1),))
-        p=hstack((p,Ml*pl))
-        f=vstack((f,fl))
-    zmp=p*f/sum(f)
-    return zmp
-def zmpup():
-    zmp.zmp.value = tuple(computeZmp()[0:3].transpose().tolist()[0])
-    zmp.zmp.time = sot.solution.time
-
-@optionalparentheses
-def pl():
-    if '_LF_p' in [s.name for s in sot.signals()]:
-        print 'checkin'
-        Ml=matrix(dyn.lf.value)
-        pl=matrix(sot._LF_p.value+((1,1,1,1),))
-        return  matlab(  matrixToTuple((Ml*pl)[0:3,:]) ).resstr
-@optionalparentheses
-def pr():
-    if '_RF_p' in [s.name for s in sot.signals()]:
-        Mr=matrix(dyn.rf.value)
-        pr=matrix(sot._RF_p.value+((1,1,1,1),))
-        return matlab(  matrixToTuple(  (Mr*pr)[0:3,:] ))
-
+zmp.declare(sot,dyn)
 
 #-----------------------------------------------------------------------------
 # --- TRACE ------------------------------------------------------------------
@@ -458,14 +297,7 @@ robot.after.addSignal('dyn.waist')
 robot.after.addSignal('taskLim.normalizedPosition')
 tr.add('taskLim.normalizedPosition','qn')
 
-
-
 history = History(dyn,1,zmp.zmp)
-
-
-
-#-----------------------------------------------------------------------------
-# --- FUNCTIONS TO PUSH/PULL/UP/DOWN TASKS -----------------------------------
 
 #-----------------------------------------------------------------------------
 # --- RUN --------------------------------------------------------------------
@@ -480,15 +312,12 @@ contact(contactRF)
 
 #taskCom.feature.selec.value = "111"
 taskCom.gain.setByPoint(100,10,0.005,0.8)
-#taskCom.gain.setConstant(2)
-
 
 rfz0=0.020
 rf0=matrix((0.0095,-0.095,rfz0))
 
 #traj.set( vectorToTuple(rf0[0,0:2]),(0.35,-0.2),1200 )
 traj.set( vectorToTuple(rf0[0,0:2]),(0.4,-0.42),1200 )
-
 
 mrf=eye(4)
 mrf[0:3,3] = (0,0,-0.105)
@@ -513,7 +342,6 @@ taskrfz.feature.frame('desired')
 taskHead.feature.selec.value='011000'
 taskHead.featureDes.position.value = matrixToTuple(eye(4))
 
-
 sot.push(taskLim.name)
 sot.push(taskHead.task.name)
 plug(robot.state,sot.position)
@@ -521,7 +349,6 @@ plug(robot.state,sot.position)
 # --- Events ---------------------------------------------
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 refset = ( lambda mt,v : mt.__class__.ref.__set__(mt,v) )
-
 
 attime(2
        ,(lambda : sot.push(taskCom.task.name),"Add COM")
