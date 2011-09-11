@@ -70,4 +70,7 @@ class Calendar:
                 selfdeco.fun(*args)
         return calendarDeco
 
+    def fastForward(self,t):
+        for i in range(t): self.run(i)
+
 attime=Calendar()
