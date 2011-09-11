@@ -117,9 +117,6 @@ except:
 #-------------------------------------------------------------------------------
 
 
-#dumpToOpenHRP(history,'yoganmsd')
-history = History(robot,1)
-
 def inc():
     updateMocap()
     robot.increment(dt)
@@ -130,7 +127,6 @@ def inc():
     if dyn.com.time >0:
         robot.viewer.updateElementConfig('com',[dyn.com.value[0],dyn.com.value[1],0,0,0,0])
     history.record()
-    writeFilesRobot()
 
 from ThreadInterruptibleLoop import *
 @loopInThread
@@ -174,6 +170,10 @@ def n(): mp.hlp_showNumber()
 def t():
     mp.hlp_toggle()
     mp.refresh()
+
+@optionalparentheses
+def dump():
+    history.dumpToOpenHRP('yoganmsd')
 
 # Add a visual output when an event is called.
 class Ping:
@@ -222,10 +222,8 @@ llimit = matrix(dyn.lowerJl.value)
 ulimit = matrix(dyn.upperJl.value)
 dlimit = ulimit-llimit
 mlimit = (ulimit+llimit)/2
-#llimit[6:12] = mlimit[6:12] - dlimit[6:12]*0.4 
-#ulimit[0,6:9] = mlimit[0,6:9] + dlimit[0,6:9]*0.45
-#ulimit[0,6:12] = mlimit[0,6:12] + dlimit[0,6:12]*0.49
-ulimit[0,10] = mlimit[0,10] + dlimit[0,10]*0.4
+llimit[6:12] = mlimit[6:12] - dlimit[6:12]*0.49
+ulimit[0,10] = mlimit[0,10] + dlimit[0,10]*0.49
 dyn.upperJl.value = vectorToTuple(ulimit)
 
 dyn.inertiaRotor.value = inertiaRotor[robotName]
@@ -394,6 +392,7 @@ plug(sot.acceleration,robot.acceleration)
 # Left foot contact
 contactLF = MetaTaskDyn6d('contact_lleg',dyn,'lf','left-ankle')
 contactLF.feature.frame('desired')
+contactLF.gain.setConstant(1000)
 
 # Right foot contact
 contactRF = MetaTaskDyn6d('contact_rleg',dyn,'rf','right-ankle')
@@ -456,6 +455,7 @@ tr = Tracer('tr')
 tr.open('/tmp/','yoga_','.dat')
 
 tr.add('dyn.com','com')
+tr.add('featureCom.error','ecom')
 tr.add('dyn.waist','waist')
 tr.add('dyn.rh','rh')
 tr.add('zmp.zmp','')
@@ -481,24 +481,9 @@ robot.after.addSignal('taskLim.normalizedPosition')
 tr.add('taskLim.normalizedPosition','qn')
 
 
-readyToRobot=False
-if readyToRobot:
-    nT = 1
-    filePos = open('./yoganmsd.pos','w')
-    fileRPY = open('./yoganmsd.hip','w')
-    def writeFilesRobot():
-        global nT
-        sampleT = 0.005
-        time = sampleT*nT
-        fileRPY.write(str(sampleT*nT)+' '+str(dyn.position.value[3])+' '+str(dyn.position.value[4])+' '+str(dyn.position.value[5])+'\n')
-        filePos.write(str(sampleT*nT)+' ')
-        for j in range(6,36):
-            filePos.write(str(dyn.position.value[j])+' ')
-        filePos.write(10*'0 '+'\n')
-        nT += 1
-else:
-    def writeFilesRobot(): void
 
+#dumpToOpenHRP(history,'yoganmsd')
+history = History(dyn,1,zmp.zmp)
 
 
 
@@ -548,7 +533,6 @@ sot.clear()
 contact(contactLF)
 contact(contactRF)
 
-featureComDes.errorIN.value = ( 0.01, 0.,  0.8077 )
 featureCom.selec.value = "11"
 #gCom.setConstant( 500.0 )
 
@@ -589,17 +573,18 @@ mp.posture = sot.posture
 plug(robot.state,sot.position)
 sot.breakFactor.value = 10
 
-contactLF.gain.setConstant(1000)
+
 featureComDes.errorIN.value = ( 0.01, 0.09,  0.8077 )
 gCom.setConstant(30)
+gCom.setByPoint(200,10,0.005,0.8)
 
 mp.forward()
 
-taskrf.feature.selec.value = "101"
+#taskrf.feature.selec.value = "101"
 
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 
-attime(40*mp.timeScale
+attime(80*mp.timeScale
        ,(lambda: sot.rmContact("RF"),"Remove RF contact" )
        ,(lambda: sot.push(taskrf.task.name), "Start to track RF mocap")
        )
@@ -622,3 +607,14 @@ attime(3000,stop)
 m()
 inc()
 go()
+
+
+
+maxQ10=0.4
+for i,q in enumerate(mp.qs):
+    if q[10]>=maxQ10:
+        qrep=matrix(q)
+        qrep[0,10] = maxQ10
+        mp.qs[i] = vectorToTuple(qrep)
+
+
