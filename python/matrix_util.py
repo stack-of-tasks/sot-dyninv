@@ -19,7 +19,8 @@ def matrixToTuple(M):
     return tuple(res)
 
 def vectorToTuple(M):
-    return tuple(M.tolist()[0])
+    if M.shape[0]==1:        return tuple(M.tolist()[0])
+    else:                    return tuple(M.transpose().tolist()[0])
 
 # Convert from Roll, Pitch, Yaw to transformation Matrix
 def rpy2tr(r,p,y):
