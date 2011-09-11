@@ -27,6 +27,7 @@ from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,
 from matrix_util import matrixToTuple, vectorToTuple,rotate
 from history import History
 from zmp_estimator import ZmpEstimator
+from viewer_helper import addRobotViewer,VisualPinger
 
 #-----------------------------------------------------------------------------
 # --- ROBOT SIMU -------------------------------------------------------------
@@ -37,58 +38,11 @@ robotDim  = robotDimension[robotName]
 RobotClass = RobotDynSimu
 robot      = RobotClass("robot")
 robot.resize(robotDim)
+addRobotViewer(robot,small=True,verbose=False)
 dt = 5e-3
-
-
-
-#half sitting
-#qhs=matrix((0,0,0,0,0,0,  0,0,-26,50,-24,0,0,0,-26,50,-24,0,0,0,0,0,15,10,0,-30,0,0,10,15,-10,0,-30,0,0,10))
-#robot.set((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.4537856055185257, 0.87266462599716477, -0.41887902047863906, 0.0, 0.0, 0.0, -0.4537856055185257, 0.87266462599716477, -0.41887902047863906, 0.0, 0.0, 0.0, 0.0, 0.0, 0.26179938779914941, 0.17453292519943295, 0.0, -0.52359877559829882, 0.0, 0.0, 0.17453292519943295, 0.26179938779914941, -0.17453292519943295, 0.0, -0.52359877559829882, 0.0, 0.0, 0.17453292519943295))
 
 # Similar initial position with hand forward
 robot.set((-0.033328803958899381, -0.0019839923040723341, 0.62176527349722499, 2.379901541270165e-05, 0.037719492175904465, 0.00043085147714449579, -0.00028574496353126724, 0.0038294370786961648, -0.64798319906979551, 1.0552418879542016, -0.44497846451873851, -0.0038397195926379991, -0.00028578259876671871, 0.0038284398205732629, -0.64712828871069394, 1.0534202525984278, -0.4440117393779604, -0.0038387216246160054, 0.00014352031102944824, 0.013151503268540811, -0.00057411504064861592, -0.050871000025766742, 0.21782780288481224, -0.37965640592672439, -0.14072647716213352, -1.1942332339530364, 0.0055454863752273523, -0.66956710808008013, 0.1747981826611808, 0.21400703176352612, 0.38370527720078107, 0.14620204468509851, -1.1873407322935838, -0.0038746980026940735, -0.66430172366423146, 0.17500428384087438))
-
-# ------------------------------------------------------------------------------
-# --- VIEWER -------------------------------------------------------------------
-# ------------------------------------------------------------------------------
-
-try:
-    import robotviewer
-
-    def stateFullSize(robot):
-        return [float(val) for val in robot.state.value]+10*[0.0]
-    RobotClass.stateFullSize = stateFullSize
-    robot.viewer = robotviewer.client('XML-RPC')
-    #robot.viewer = robotviewer.client('CORBA')
-    # Check the connection
-    robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
-
-    def refreshView( robot ):
-       robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
-    RobotClass.refresh = refreshView
-
-    def incrementView(robot,dt):
-        robot.incrementNoView(dt)
-        robot.refresh()
-        #if zmp.zmp.time > 0:
-        #    robot.viewer.updateElementConfig('zmp',[zmp.zmp.value[0],zmp.zmp.value[1],0,0,0,0])
-    RobotClass.incrementNoView = RobotClass.increment
-    RobotClass.increment = incrementView
-
-    def setView( robot,*args ):
-        robot.setNoView(*args)
-        robot.refresh()
-    RobotClass.setNoView = RobotClass.set
-    RobotClass.set = setView
-    robot.refresh()
-
-except:
-    print "No robot viewer, sorry."
-    class RobotViewerFaked:
-        def update(*args): void
-        def updateElementConfig(*args): void
-    robot.viewer = RobotViewerFaked()
-
 
 #-------------------------------------------------------------------------------
 #----- MAIN LOOP ---------------------------------------------------------------
@@ -123,7 +77,6 @@ def next(): inc()
 # --- shortcuts -------------------------------------------------
 @optionalparentheses
 def q():
-    if 'dyn' in globals(): print dyn.ffposition.__repr__()
     print robot.state.__repr__()
 @optionalparentheses
 def qdot(): print robot.control.__repr__()
@@ -141,20 +94,7 @@ def pr():         print  matlab(  matrixToTuple(zmp.righttSupport()) ).resstr
 def dump():
     history.dumpToOpenHRP('openhrp/planche')
 
-
-# Add a visual output when an event is called.
-class Ping:
-    def __init__(self):
-        self.pos = 1
-        self.refresh()
-    def refresh(self):
-        robot.viewer.updateElementConfig('pong',  [ 0, 0.9, self.pos*0.1, 0, 0, 0 ])  
-    def __call__(self):
-        self.pos += 1
-        self.refresh()
-ping=Ping()
-attime.addPing( ping )
-
+attime.addPing( VisualPinger(robot.viewer) )
 
 #-----------------------------------------------------------------------------
 #---- DYN --------------------------------------------------------------------
