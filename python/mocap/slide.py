@@ -91,26 +91,51 @@ except:
 #-------------------------------------------------------------------------------
 #----- MAIN LOOP ---------------------------------------------------------------
 #-------------------------------------------------------------------------------
+class EllipseTemporal:
+    def __init__(self,tempo):
+        self.t0 = None
+        self.tempo = tempo
+        self.started=False
+    def set(self,center,radius,T):
+        self.center=center
+        self.radius=radius
+        self.T = T
+    def point(self):
+        t=self.tempo.time
+        if self.t0 == None: self.t0 = t
+        w= 2*pi*(t-self.t0)/self.T
+        return (self.center[0]+self.radius[0]*cos(w), self.center[1]+self.radius[1]*sin(w))
+    def refresh(self):
+        if self.started:
+            M = array(self.sig.value)
+            M[0:2,3] = self.point()
+            self.sig.value = matrixToTuple(M)
+    def start(self,sig):
+        self.started=True
+        self.sig = sig
+    def stop(self): self.started = False 
+
+traj = EllipseTemporal(robot.state)
 
 
 def inc():
     robot.increment(dt)
     # Execute a function at time t, if specified with t.add(...)
-    attime.run(robot.control.time)
     zmpup()
+    attime.run(robot.control.time)
     robot.viewer.updateElementConfig('zmp',[zmp.zmp.value[0],zmp.zmp.value[1],0,0,0,0])
     if dyn.com.time >0:
         robot.viewer.updateElementConfig('com',[dyn.com.value[0],dyn.com.value[1],0,0,0,0])
     history.record()
+    traj.refresh()
 
 from ThreadInterruptibleLoop import *
 @loopInThread
 def loop():
-    try:
+#    try:
         inc()
-    except:
-        tr.dump()
-        print robot.state.time,': -- Robot has stopped --'
+#    except:
+#        print robot.state.time,': -- Robot has stopped --'
 runner=loop()
 
 @optionalparentheses
@@ -135,7 +160,10 @@ def status():       print runner.isPlay
 
 @optionalparentheses
 def dump():
-    history.dumpToOpenHRP('slide-1')
+    history.dumpToOpenHRP('openhrp/slide')
+
+
+
 
 # Add a visual output when an event is called.
 class Ping:
@@ -158,13 +186,18 @@ def goto6d(task,position,gain=None):
     if gain!=None: task.gain.setConstant(gain)
     task.featureDes.position.value = matrixToTuple(M)
 
-def gotoNd(task,position,selec):
+def gotoNd(task,position,selec,gain=None):
     M=eye(4)
+    if isinstance(position,matrix): position = vectorToTuple(position)
     if( len(position)==3 ): M[0:3,3] = position
     else: print "Position 6D with rotation ... todo"
     if isinstance(selec,str):   task.feature.selec.value = selec
     else: task.feature.selec.value = toFlags(selec)
     task.featureDes.position.value = matrixToTuple(M)
+    if gain!=None:
+        if len(gain)==1:  task.gain.setConstant(gain)
+        elif len(gain)==3: task.gain.set( gain[0],gain[1],gain[2])
+        elif len(gain)==4: task.gain.setByPoint( gain[0],gain[1],gain[2],gain[3])
 
 def contact(contact,task=None):
     sot.addContactFromTask(contact.task.name,contact.name)
@@ -450,8 +483,12 @@ taskCom.gain.setByPoint(100,10,0.005,0.8)
 #taskCom.gain.setConstant(2)
 
 
-rfz0=0.01
+rfz0=0.020
 rf0=matrix((0.0095,-0.095,rfz0))
+
+#traj.set( vectorToTuple(rf0[0,0:2]),(0.35,-0.2),1200 )
+traj.set( vectorToTuple(rf0[0,0:2]),(0.4,-0.42),1200 )
+
 
 mrf=eye(4)
 mrf[0:3,3] = (0,0,-0.105)
@@ -461,7 +498,8 @@ taskrf.feature.selec.value = '11'
 drh=eye(4)
 drh[0:2,3] = vectorToTuple(rf0[0,0:2])
 taskrf.ref = matrixToTuple(drh)
-taskrf.gain.setByPoint(80,10,0.01,0.8)
+taskrf.gain.setByPoint(60,5,0.01,0.8)
+#taskrf.gain.setByPoint(120,10,0.03,0.8)
 
 taskrfz.opmodif = matrixToTuple(mrf)
 taskrfz.feature.frame('desired')
@@ -469,10 +507,16 @@ taskrfz.feature.selec.value = '011100'
 drh=eye(4)
 drh[2,3]=rfz0
 taskrfz.ref = matrixToTuple(drh)
-taskrfz.gain.setByPoint(500,30,0.001,0.9)
+taskrfz.gain.setByPoint(100,20,0.001,0.9)
 taskrfz.feature.frame('desired')
 
+taskHead.feature.selec.value='011000'
+taskHead.featureDes.position.value = matrixToTuple(eye(4))
+
+
 sot.push(taskLim.name)
+sot.push(taskHead.task.name)
+plug(robot.state,sot.position)
 
 # --- Events ---------------------------------------------
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
@@ -481,7 +525,7 @@ refset = ( lambda mt,v : mt.__class__.ref.__set__(mt,v) )
 
 attime(2
        ,(lambda : sot.push(taskCom.task.name),"Add COM")
-       ,(lambda : sigset(taskCom.feature.selec, "111"),"COM XYZ")
+       ,(lambda : sigset(taskCom.feature.selec, "11"),"COM XY")
        ,(lambda : refset(taskCom, ( 0.01, 0.09,  0.7 )), "Com to left foot")
        )
 
@@ -489,33 +533,36 @@ attime(140
        ,(lambda: sot.rmContact("RF"),"Remove RF contact" )
        ,(lambda: sot.push(taskrfz.task.name), "Add RFZ")
        ,(lambda: sot.push(taskrf.task.name), "Add RF")
-       ,(lambda: gotoNd(taskrfz,vectorToTuple(rf0),"11100" ), "Up foot RF")
+       ,(lambda: gotoNd(taskrfz,rf0,"11100" ), "Up foot RF")
        )
 
 attime(150  ,lambda : sigset(taskCom.feature.selec, "11"),"COM XY")
 
-attime(200  ,lambda: gotoNd(taskrf, vectorToTuple(rf0+( 0.35, 0.0,0)),"11")  , "RF to front"       )
-attime(300  ,lambda: gotoNd(taskrf, vectorToTuple(rf0+( 0.2,-0.2,0)),"11")  , "RF to front-right"       )
-attime(400  ,lambda: gotoNd(taskrf, vectorToTuple(rf0+(-0.2,-0.2,0)),"11")  , "RF to back-right"       )
-attime(500  ,lambda: gotoNd(taskrf, vectorToTuple(rf0+(-0.35, 0.0,0)),"11")  , "RF to back"       )
-attime(600  ,lambda: gotoNd(taskrf, vectorToTuple(rf0+( 0.0, 0.0,0)),"111011")  , "RF to center"       )
+attime(200  ,
+       lambda: gotoNd(taskrf, rf0+(0.35,0.0,0),"11")  , "RF to front"       )
 
-attime(700  ,lambda: gotoNd(taskrfz,(0,0,0),"11100")  , "RF to ground"       )
-attime(750  
+attime(450  ,lambda: traj.start(taskrf.featureDes.position), "RF start traj"       )
+attime(1200  ,lambda: traj.stop(), "RF stop traj"       )
+
+attime(1200 ,lambda: gotoNd(taskrf,rf0,"111011",(80,10,0.03,0.8) )  , "RF to center"       )
+
+attime(1500  ,lambda: gotoNd(taskrfz,(0,0,0),"11100")  , "RF to ground"       )
+attime(1550  
        ,(lambda: refset(taskCom,(0.01,0,0.797))  , "COM to zero"       )
        ,(lambda: sigset(taskCom.feature.selec,"11")  , "COM XY"       )
        ,(lambda: taskCom.gain.setConstant(3)  , "lower com gain"       )
 )
-attime(850  ,(lambda: contact(contactRF)  , "RF to contact"       )
+attime(1600  ,(lambda: contact(contactRF)  , "RF to contact"       )
        ,(lambda: sigset(taskCom.feature.selec,"111")  , "COM XYZ"       )
        ,(lambda: taskCom.gain.setByPoint(100,10,0.005,0.8)  , "upper com gain"       )
        )
 
-attime(1000, lambda: sigset(sot.posture,q0), "Robot to initial pose")
+attime(1800, lambda: sigset(sot.posture,q0), "Robot to initial pose")
 
-attime(1200,stop)
+attime(2000,stop)
 
-#inc()
+inc()
 go()
+
 
 
