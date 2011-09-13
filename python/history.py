@@ -23,7 +23,10 @@ class History:
         t= int(t/self.freq)
         print "robot.set(",self.q[t],")"
         print "robot.setVelocity(",self.qdot[t],")"
-        print "robot.state.time = ",t
+        print "T0 = ",t
+        print "robot.state.time = T0"
+        print "[ t.feature.position.recompute(T0) for t in taskrh,tasklh]"
+        print "attime.fastForward(T0)"
     def dumpToOpenHRP(self,baseName = "dyninv",sample = 1):
         filePos = open(baseName+'.pos','w')
         fileRPY = open(baseName+'.hip','w')
