@@ -14,6 +14,7 @@ def setGain(gain,val):
 
 def goto6d(task,position,gain=None):
     M=eye(4)
+    if isinstance(position,matrix): position = vectorToTuple(position)
     if( len(position)==3 ): M[0:3,3] = position
     else: print "Position 6D with rotation ... todo"
     task.feature.selec.value = "111111"
