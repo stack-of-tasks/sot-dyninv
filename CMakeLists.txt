@@ -55,6 +55,7 @@ SET(libs
 	task-dyn-pd
 	task-dyn-joint-limits
 	task-dyn-limits
+	task-dyn-inequality
 	solver-op-space
 	solver-dyn-reduced
 
@@ -84,6 +85,7 @@ SET(headers
 	task-dyn-pd.h
 	task-dyn-joint-limits.h
 	task-dyn-limits.h
+	task-dyn-inequality.h
 	solver-op-space.h
 	solver-dyn-reduced.h
 

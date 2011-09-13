@@ -4,6 +4,9 @@ ControllerPD('')
 from task_dyn_pd import TaskDynPD
 TaskDynPD('')
 
+from task_dyn_inequality import TaskDynInequality
+TaskDynInequality('')
+
 from dynamic_integrator import DynamicIntegrator
 DynamicIntegrator('')
 
