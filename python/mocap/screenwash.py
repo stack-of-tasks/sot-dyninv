@@ -228,7 +228,8 @@ contactRF.name = "RF"
 
 contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
 contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
-contactLF.support =  ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
+contactLF.support = ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
+contactRF.support = ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
 
 #--- ZMP ---------------------------------------------------------------------
 zmp = ZmpEstimator('zmp')
@@ -279,17 +280,22 @@ history = History(dyn,1,zmp.zmp)
 #-----------------------------------------------------------------------------
 
 DEG = 180.0/pi
+SQ = matrix( ( (0.05,-0.05),(0.62,0.42) ) )
+SQ = matrix( ( (0.08,-0.08),(0.62,0.42) ) )
+#SQ = matrix( ( (0.12,-0.12),(0.62,0.32) ) )
+SQ = matrix( ( (0.09,-0.09),(0.62,0.40) ) )
 
 sot.clear()
 contact(contactLF)
 contact(contactRF)
 
-taskCom.feature.selec.value = "11"
+taskCom.feature.selec.value = "01"
 taskCom.gain.setByPoint(100,10,0.005,0.8)
 
+taskSupport.selec.value = "10"
 taskSupport.referenceInf.value = (-0.015,-0.09,0)    # Xmin, Ymin
 taskSupport.referenceSup.value = (0.035,0.09,0)  # Xmax, Ymax
-taskSupport.controlGain.value = 10
+taskSupport.controlGain.value = 15
 
 mrh=eye(4)
 mrh[0:3,3] = (0,0,-0.18)
@@ -308,23 +314,24 @@ tasklh.feature.selec.value = '111000'
 taskWaist.gain.setByPoint(60,5,0.01,0.8)
 taskWaist.feature.frame('desired')
 
-#sot.push(taskLim.name)
-plug(robot.state,sot.position)
-
 [s.recompute(0) for s in robot.state, dyn.com, dyn.rh, dyn.lh ]
 
 q0 = robot.state.value
 com0 = dyn.com.value
 rh0 = dyn.rh.value
 
+sot.push(taskLim.name)
+plug(robot.state,sot.position)
+sot.breakFactor.value = 2
+
 # --- Events ---------------------------------------------
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 refset = ( lambda mt,v : mt.__class__.ref.__set__(mt,v) )
 
 attime(2
-       ,(lambda : sot.push(taskSupport.name),"Add Support")
-#       ,(lambda : sot.push(taskCom.task.name),"Add COM")
-#       ,(lambda : refset(taskCom, com0), "Com to rest")
+       ,(lambda : sot.push(taskCom.task.name),"Add COM-X")
+       ,(lambda : sot.push(taskSupport.name),"Add COM-Y")
+       ,(lambda : refset(taskCom, com0), "Com to rest")
        ,(lambda: sot.push(taskrh.task.name), "Add RH")
        ,(lambda: sot.push(tasklh.task.name), "Add LH")
        )
@@ -335,65 +342,34 @@ attime(400
        ,(lambda: gotoNd(tasklh,(),'110111'),'LH to 6D')
        ,(lambda: tasklh.feature.keep(),'keep LH ')
        ,(lambda: sot.push(taskWaist.task.name),'Add waist')
-       ,(lambda: gotoNd(taskWaist,(0,0.0,0.65),'110'),'Waist to up')
+       ,(lambda: gotoNd(taskWaist,(0,0.0,SQ[1,0]),'110'),'Waist to up')
+       ,(lambda: sigset(sot.posture,dyn.position.value), "Robot to keep pose")
 )
 
-attime(500,lambda: gotoNd(taskWaist,(0,0.05,0.62),'110'),'Waist to left')
-attime(600,lambda: gotoNd(taskWaist,(0,0.05,0.42),'110'),'Waist to bottom left')
-attime(800,lambda: gotoNd(taskWaist,(0,-0.05,0.42),'110'),'Waist to bottom right')
-attime(1000,lambda: gotoNd(taskWaist,(0,-0.05,0.6),'110'),'Waist to up right')
+attime(500,lambda: gotoNd(taskWaist,(0,SQ[0,0],SQ[1,0]),'110'),'Waist to left')
+attime(600,lambda: gotoNd(taskWaist,(0,SQ[0,0],SQ[1,1]),'110'),'Waist to bottom left')
+attime(900,lambda: gotoNd(taskWaist,(0,SQ[0,1],SQ[1,1]),'110'),'Waist to bottom right')
+attime(1100,lambda: gotoNd(taskWaist,(0,SQ[0,1],SQ[1,0]),'110'),'Waist to up right')
 
-attime(1200,lambda: gotoNd(taskWaist,(0,0.05,0.62),'110'),'Waist to left')
-attime(1300,lambda: gotoNd(taskWaist,(0,0.05,0.42),'110'),'Waist to bottom left')
-attime(1500,lambda: gotoNd(taskWaist,(0,-0.05,0.42),'110'),'Waist to bottom right')
-attime(1700,lambda: gotoNd(taskWaist,(0,-0.05,0.6),'110'),'Waist to up right')
+attime(1400,lambda: gotoNd(taskWaist,(0,SQ[0,0],SQ[1,0]),'110'),'Waist to left')
+attime(1600,lambda: gotoNd(taskWaist,(0,SQ[0,0],SQ[1,1]),'110'),'Waist to bottom left')
+attime(1900,lambda: gotoNd(taskWaist,(0,SQ[0,1],SQ[1,1]),'110'),'Waist to bottom right')
+attime(2100,lambda: gotoNd(taskWaist,(0,SQ[0,1],SQ[1,0]),'110'),'Waist to up right')
 
-attime(1900,lambda: gotoNd(taskWaist,(0,0.05,0.62),'110'),'Waist to left')
-attime(2000,lambda: gotoNd(taskWaist,(0,0.05,0.42),'110'),'Waist to bottom left')
-attime(2200,lambda: gotoNd(taskWaist,(0,-0.05,0.42),'110'),'Waist to bottom right')
-attime(2400,lambda: gotoNd(taskWaist,(0,-0.05,0.6),'110'),'Waist to up right')
-attime(2500,lambda: gotoNd(taskWaist,(0,0,0.6),'110'),'Waist to up center')
+attime(2400,lambda: gotoNd(taskWaist,(0,SQ[0,0],SQ[1,0]),'110'),'Waist to left')
+attime(2600,lambda: gotoNd(taskWaist,(0,SQ[0,0],SQ[1,1]),'110'),'Waist to bottom left')
+attime(2900,lambda: gotoNd(taskWaist,(0,SQ[0,1],SQ[1,1]),'110'),'Waist to bottom right')
+attime(3100,lambda: gotoNd(taskWaist,(0,SQ[0,1],SQ[1,0]),'110'),'Waist to up right')
 
-attime(2650
+attime(3400,lambda: gotoNd(taskWaist,(0,0,SQ[1,0]),'110'),'Waist to up center')
+
+attime(3550
        ,(lambda: sigset(sot.posture,q0), "Robot to initial pose")
-       ,(lambda: sot.rm(taskrh.task.name), 'rm rh')
+       ,(lambda: sigset(sot.breakFactor,10), "Increase posture gains")
+      ,(lambda: sot.rm(taskrh.task.name), 'rm rh')
        ,(lambda: sot.rm(tasklh.task.name), 'rm lh')
        ,(lambda: sot.rm(taskWaist.task.name), 'rm waist')
 )
-attime(3200,stop)
+attime(4000,stop)
 
-'''
-robot.set( (-0.0013393589475475609, -0.0018793714660677973, 0.61652696640204518, 4.077168349517344e-06, -0.079368382946045368, -0.0014814482541992021, 0.0011854695519697305, 0.003776172460719502, -0.49196116106248722, 1.0999658010722786, -0.52863577122262018, -0.0036743472676854902, 0.0011855230223719129, 0.0037755056968030633, -0.49079316286050761, 1.0983457361725071, -0.52818370472537191, -0.0036736775362441851, -0.0029092387929590996, -0.087265999992735224, -0.00060561022632208046, -0.04935484475912507, -0.095740823457753019, -0.52701828684129937, 0.22402988804334981, -1.6948942299007437, 0.2352332739763284, -1.2009080463253117, 0.17478139949422683, -0.09942591769293331, 0.530365237032702, -0.21874120188824195, -1.690756503538019, -0.23210164421705265, -1.197643906783777, 0.17497037278714084) )
-robot.setVelocity( (0.0023459312192029794, 1.9324966075519278e-05, -0.00037965857165365497, 3.1087772088106599e-05, -0.0073616238519256267, -0.00020406983753833795, 0.00018165236673074378, -5.204782726283328e-05, 0.010528166504417158, 0.0027557570165100344, -0.0059222856601468107, 3.5072230322404451e-05, 0.00018165007897321355, -5.2003973276289372e-05, 0.01058113012464732, 0.002741687094005327, -0.0059611793537690284, 3.5020815320320569e-05, -0.0003792468157678192, 3.4842735753219725e-10, -2.0781622603772377e-06, 0.00010493125566758389, -0.021172740376247282, -0.006921516001430616, 0.018677271130027481, -0.031784214644352986, 0.012085900823845322, -0.035707836241261129, -1.2513673688466769e-07, -0.021638776823933382, 0.007167064224579126, -0.018628508289441001, -0.032435947772568627, -0.012368040323395753, -0.036291042542633656, -3.0717889727652116e-07) )
-T0 =  400
-robot.state.time = T0
-[ t.feature.position.recompute(T0) for t in taskrh,tasklh]
-attime.fastForward(T0)
-'''
-
-#attime(70, sot.debugOnce)
-attime(75,stop)
-
-def check():
-    J = matrix(taskSupport.jacobian.value)
-    Jdot = matrix(taskSupport.Jdot.value)
-    dq = matrix(dyn.velocity.value).T
-    ddq = matrix(sot.acceleration.value).T
-    print J*ddq+Jdot*dq
-    print taskSupport.task.value
-
-
-#sot.rm(taskSupport.name)
-#sot.rm(taskrh.task.name)
-#sot.rm(tasklh.task.name)
-
-#print sot
-#inc()
-
-#check()
-#sot.debugOnce()
-#inc()
-#go()
-
-
-
+go()
