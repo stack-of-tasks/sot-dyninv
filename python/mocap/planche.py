@@ -260,9 +260,13 @@ history = History(dyn,1,zmp.zmp)
 DEG = 180.0/pi
 
 # Angles for both knee, plus angle for the chest wrt the world.
-MAX_EXT = 35/DEG
+#MAX_EXT = 35/DEG
+#MAX_SUPPORT_EXT = 45/DEG
+#CHEST = 60/DEG # 80 ... 90?
+
+MAX_EXT = 45/DEG
 MAX_SUPPORT_EXT = 45/DEG
-CHEST = 60/DEG # 80 ... 90?
+CHEST = 50/DEG # 80 ... 90?
 
 sot.clear()
 contact(contactLF)
