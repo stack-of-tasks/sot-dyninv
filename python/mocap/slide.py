@@ -115,7 +115,7 @@ def status():       print runner.isPlay
 
 @optionalparentheses
 def dump():
-    history.dumpToOpenHRP('openhrp/slide')
+    history.dumpToOpenHRP('openhrp/slide-2')
 
 attime.addPing( VisualPinger(robot.viewer) )
 
@@ -269,7 +269,7 @@ zmp.declare(sot,dyn)
 
 from dynamic_graph.tracer import *
 tr = Tracer('tr')
-tr.open('/tmp/','slide_','.dat')
+tr.open('/tmp/','slide-2_','.dat')
 
 tr.add('dyn.com','com')
 tr.add(taskCom.feature.name+'.error','ecom')
@@ -303,6 +303,10 @@ history = History(dyn,1,zmp.zmp)
 # --- RUN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
+RADIUS = (0.35,-0.2)
+#RADIUS = (0.4,-0.42) # WARNING: this version induce a collision of the hips.
+
+
 q0 = robot.state.value
 
 sot.clear()
@@ -317,7 +321,7 @@ rfz0=0.020
 rf0=matrix((0.0095,-0.095,rfz0))
 
 #traj.set( vectorToTuple(rf0[0,0:2]),(0.35,-0.2),1200 )
-traj.set( vectorToTuple(rf0[0,0:2]),(0.4,-0.42),1200 )
+traj.set( vectorToTuple(rf0[0,0:2]),RADIUS,1200 )
 
 mrf=eye(4)
 mrf[0:3,3] = (0,0,-0.105)
@@ -381,12 +385,26 @@ attime(1550
 )
 attime(1600  ,(lambda: contact(contactRF)  , "RF to contact"       )
        ,(lambda: sigset(taskCom.feature.selec,"111")  , "COM XYZ"       )
-       ,(lambda: taskCom.gain.setByPoint(100,10,0.005,0.8)  , "upper com gain"       )
+       ,(lambda: taskCom.gain.setByPoint(20,5,0.005,0.8)  , "upper com gain"       )
+       , lambda: sot.rm( taskrf.task.name)
+       , lambda: sot.rm( taskrfz.task.name)
        )
 
-attime(1800, lambda: sigset(sot.posture,q0), "Robot to initial pose")
+attime(2500
+       ,(lambda: sigset(sot.posture,q0), "Robot to initial pose")
+       ,(lambda: sigset(sot.breakFactor,3), "Lower posture gain")
+       , lambda: sot.rm( taskHead.task.name)
+       )
 
-attime(2000,stop)
+attime(3000,stop)
+'''
+robot.set( (0.0020606154246394122, 0.10134042021667664, 0.61936165668568544, -0.0069259319186176036, -0.088137660944143853, 0.030236257457065652, -0.023750073776956582, -0.1957733198575172, -0.46599463380389894, 1.0973898715109023, -0.54132289909300224, 0.19981647227445462, -0.012633700355146953, -0.19087680943253901, -0.45975963797457531, 1.0637916492234973, -0.51408979115153641, 0.19590665168251745, -0.075500171543301034, 0.079772437229333554, -0.028852479345143907, 0.0086379205967497454, 0.24033491666650419, -0.36260993615301357, -0.13416418244023331, -1.1916854959672925, 0.0064805605150930791, -0.67051517004062, 0.1749447362673188, 0.2361617052377866, 0.39587454978519498, 0.1548077334633976, -1.1789536523601791, -0.002872468654339478, -0.66375196866756503, 0.17491113084058069) )
+robot.setVelocity( (0.0012245359646462779, -0.00032846450320344624, -0.00093107652772514925, -0.0007955865184161037, -0.011820643723145284, 0.040775490423764035, 0.035389733758687876, -0.0014469585725611232, -0.0047820151310369683, 0.0007092489354239243, 0.016061287694630787, 0.0051663205983227952, -0.038343004278138207, -0.0021817700955914393, 0.0065270913884630192, 0.0067049582970967834, -0.00096588953172016101, -0.00036702270414771848, -0.00030275572644021824, 0.0053179853289967161, -4.2997566323087006e-05, 0.0065349436167033929, 0.00054950871518563607, 0.00043593391876344098, 0.00016810635101048734, 6.2907669506110598e-05, 2.3928791393290976e-05, -2.3184107987587771e-05, 3.7224090914736729e-06, 0.00054402320867447302, 0.00031356537946185351, 0.00021647307753845703, 0.0002087522875211192, 2.5324863895013726e-05, 1.4465869940528473e-05, -2.4050288069934116e-06) )
+T0 =  1500
+robot.state.time = T0
+[ t.feature.position.recompute(T0) for t in taskrh,tasklh]
+attime.fastForward(T0)
+'''
 
 inc()
 go()
