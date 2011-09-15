@@ -153,8 +153,8 @@ ulimit = matrix(dyn.upperJl.value)
 dlimit = ulimit-llimit
 mlimit = (ulimit+llimit)/2
 llimit[6:12] = mlimit[6:12] - dlimit[6:12]*0.49
-ulimit[0,10] = mlimit[0,10] + dlimit[0,10]*0.49
-ulimit[0,7] = mlimit[0,7] + dlimit[0,7]*0.49
+ulimit[0,10] = mlimit[0,10] + dlimit[0,10]*0.45
+ulimit[0,7] = mlimit[0,7] + dlimit[0,7]*0.45
 dyn.upperJl.value = vectorToTuple(ulimit)
 
 dyn.inertiaRotor.value = inertiaRotor[robotName]
@@ -292,6 +292,7 @@ contactRF.name = "RF"
 contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-0.105,-0.105,-0.105))
 #contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
 contactLF.support =  ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
+contactLF.support =  ((0.04,-0.02,-0.02,0.04),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
 
 #--- ZMP ---------------------------------------------------------------------
 zmp = ZmpEstimator('zmp')
@@ -318,6 +319,8 @@ tr.add(taskCom.gain.name+'.gain','com_gain')
 
 tr.add('dyn.lf','lf')
 tr.add('dyn.rf','rf')
+tr.add(tasklh.gain.name+'.gain','gainlh')
+tr.add(taskrf.gain.name+'.gain','gainrf')
 
 tr.start()
 robot.after.addSignal('tr.triger')
@@ -373,7 +376,7 @@ contact(contactLF)
 contact(contactRF)
 
 taskCom.feature.selec.value = "11"
-taskCom.ref = ( 0.01, 0.09,  0.8077 )
+taskCom.ref = ( 0.02, 0.09,  0.8077 )
 taskCom.gain.setByPoint(200,10,0.005,0.8)
 
 taskrh.feature.selec.value = '111'
@@ -383,7 +386,7 @@ mrh[0:3,3] = (0,0,-0.08)
 taskrh.opmodif = matrixToTuple(mrh)
 
 tasklh.feature.selec.value = '111'
-tasklh.gain.setConstant(100)
+tasklh.gain.setByPoint(80,5,0.01,.9)
 tasklh.opmodif = matrixToTuple(mrh)
 
 #taskHead.gain.setConstant(500)
@@ -391,23 +394,26 @@ taskHead.feature.selec.value = '111000'
 
 taskrf.feature.selec.value = '111'
 mrf=eye(4)
-mrf[0:3,3] = (0,0,-0.05)
+mrf[0:3,3] = (0,0,-0.08)
 taskrf.opmodif = matrixToTuple(mrf)
 taskrf.feature.frame('desired')
 
 sot.push(taskLim.name)
 sot.push(taskCom.task.name)
 sot.push(taskrh.task.name)
+#sot.push(tasklh.task.name)
+plug(robot.state,sot.position)
+sot.breakFactor.value = 10
 
 mp.addJointMap("Rhand",taskrh)
 mp.addJointMap("Lhand",tasklh)
 mp.addJointMap("head",taskHead)
 mp.addJointMap("Rfoot",taskrf)
 mp.posture = sot.posture
-plug(robot.state,sot.position)
-sot.breakFactor.value = 10
-
 mp.forward()
+
+taskrf.feature.position.recompute(0)
+rf0 = matrix(taskrf.feature.position.value)[0:3,3]
 
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 refset = ( lambda mt,v : mt.__class__.ref.__set__(mt,v) )
@@ -417,27 +423,72 @@ attime(80*mp.timeScale
        ,(lambda: sot.push(taskrf.task.name), "Start to track RF mocap")
        )
 
-attime(1000*mp.timeScale, 
-       (lambda: taskCom.gain.setConstant(1), "Lower Com gains"),
-       (lambda: refset(taskCom,(0.01,0,0.8077)), "Com back to the center")  )
+attime(250*mp.timeScale
+       ,lambda: sot.push(tasklh.task.name),"Add lf" )
 
-attime(1050*mp.timeScale, 
-       (lambda: goto6d(taskrf,(0.02,-0.12,0.055)) , "RF to final position"),
+attime(780*mp.timeScale
+       ,(lambda: mp.rmJointMap('Lhand'),"keep lh" )
+       ,(lambda: mp.rmJointMap('Rhand'),"keep rh" ) )
+
+attime(830*mp.timeScale
+       ,(lambda: sot.rm(tasklh.task.name),"Rm lh" )
+       ,(lambda: sot.rm(taskrh.task.name),"Rm rh" ) )
+
+attime(1000*mp.timeScale, 
+       (lambda: goto6d(taskrf,rf0,(80,6,0.02,0.8)) , "RF to final position"),
        (lambda: mp.rmJointMap("Rfoot"),"Stop tracking RF mocap")  )
 
-attime(1100*mp.timeScale,
-       lambda: contact(contactRF,taskrf),"Add the RF contact")
+attime(1030*mp.timeScale, 
+       (lambda: taskCom.gain.setConstant(2), "Lower Com gains"),
+       (lambda: refset(taskCom,(0.01,0,0.8077)), "Com back to the center")  )
 
-attime(3000,stop)
+
+attime(1080*mp.timeScale,
+       (lambda: taskCom.gain.setByPoint(12,3,0.005,0.8), "Increase Com gains"),
+       (lambda: contact(contactRF,taskrf),"Add the RF contact") )
+
+attime(1500*mp.timeScale,stop)
 
 m()
 inc()
-go()
 
-maxQ10=0.4
-maxQ10=0.65
+maxQ10=-0.1
+#maxQ10=0.65
 for i,q in enumerate(mp.qs):
     if q[10]>=maxQ10:
         qrep=matrix(q)
         qrep[0,10] = maxQ10
         mp.qs[i] = vectorToTuple(qrep)
+
+'''
+maxQ11=100
+#maxQ11=0.65
+for i,q in enumerate(mp.qs):
+    if q[11]>=maxQ11:
+        qrep=matrix(q)
+        qrep[0,11] = maxQ11
+        mp.qs[i] = vectorToTuple(qrep)
+'''
+
+nbj=6
+K=diag([+1,-1,-1,+1,-1,+1])
+#K=diag([-1,1,1])
+for i,q in enumerate(mp.qs):
+    qrep=matrix(q)
+    qrep[0,29:29+nbj] = qrep[0,22:22+nbj]*K
+    mp.qs[i] = vectorToTuple(qrep)
+
+mp.joints['Rfoot'].Kw[2,3]+=-0.01
+mp.joints['Lhand'].Kw[0,3]+=-0.04
+
+
+robot.set( (-0.042232421207407479, 0.080849702006759561, 0.67093049213946043, -0.10491717926512172, -0.0074641834282261794, -0.22220691867504799, 0.11905612843456077, -0.12895677211823944, -1.0582473496195164, 1.3526137043682491, -0.077491030937556632, 0.19983567073621403, 0.22116373867705083, -0.036958969460584745, -0.44408442557282696, 0.71920743105733742, -0.29095418828903485, 0.14091109454606765, -0.014085442436090116, 0.023137453540068985, 0.15569979053946065, -0.20619096215506785, 0.013873157286254352, -0.57590278607390222, -0.019349370764644564, -1.5478302981869854, 0.194067158038222, -0.71733030075768112, 0.17450702600011181, 0.013870022335197406, 0.56860608307589589, 0.014913289848092422, -1.5508298900378772, -0.19456154179996865, -0.71781680051015551, 0.17456208063261727) )
+robot.setVelocity( (0.041596744456965352, -0.019785259059819142, -0.00067284020150403456, -0.040634510800556495, -0.0477583021932763, 0.1520376682141758, 0.15616193830579275, 0.025203192613812642, 0.84806218097425967, -0.51277574607125498, -0.16747213542276809, -0.069247148258663224, -0.14277211525720812, 0.074222149529260692, 0.092723670606419589, 0.057880327689418858, -0.087163624068793341, -0.031276579175051993, 0.0052054433106279944, -0.050080318922492137, -0.071020683721244496, 0.02665618214420078, 0.42460073923370628, 0.13127754764813235, -0.226796123874899, 0.59738828598141114, -0.072267492899982314, 0.055561838526752567, -3.1949447187482252e-06, 0.42460448707657594, -0.12852993853428776, 0.22728464657181965, 0.5979509112357394, 0.07227151259866757, 0.055480938944815081, -7.6306742191324821e-06) )
+T0 =  2000
+robot.state.time = T0
+[ t.feature.position.recompute(T0) for t in taskrh,tasklh]
+attime.fastForward(T0)
+mp.iter = T0
+
+
+go()
