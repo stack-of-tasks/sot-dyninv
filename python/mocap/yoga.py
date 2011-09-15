@@ -27,7 +27,7 @@ from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,
 from mocap_parser import MocapParser,MocapParserScaled
 from matrix_util import matrixToTuple, vectorToTuple
 from history import History
-from zmp_estimator import ZmpEstimator
+from zmp_estimator import ZmpEstimator, leftSupport, rightSupport
 from viewer_helper import addRobotViewer,VisualPinger
 
 #-----------------------------------------------------------------------------
@@ -229,11 +229,12 @@ taskHead = MetaTaskDyn6d('taskHead',dyn,'head','gaze')
 taskrh = MetaTaskDyn6d('rh',dyn,'rh','right-wrist')
 tasklh = MetaTaskDyn6d('lh',dyn,'lh','left-wrist')
 taskrf = MetaTaskDyn6d('rf',dyn,'rf','right-ankle')
+taskrfr = MetaTaskDyn6d('rfr',dyn,'rf','right-ankle')
 
-for task in [ taskWaist, taskChest, taskHead, taskrh, tasklh, taskrf ]:
-    taskWaist.feature.frame('current')
-    taskWaist.gain.setConstant(50)
-    taskWaist.task.dt.value = dt
+for task in [ taskWaist, taskChest, taskHead, taskrh, tasklh, taskrf, taskrfr]:
+    task.feature.frame('current')
+    task.gain.setConstant(50)
+    task.task.dt.value = dt
 
 # --- TASK COM ------------------------------------------------------
 taskCom = MetaTaskDynCom(dyn,dt)
@@ -321,6 +322,8 @@ tr.add('dyn.lf','lf')
 tr.add('dyn.rf','rf')
 tr.add(tasklh.gain.name+'.gain','gainlh')
 tr.add(taskrf.gain.name+'.gain','gainrf')
+tr.add(taskrf.task.name+'.error','erf')
+tr.add(taskrfr.task.name+'.error','erfr')
 
 tr.start()
 robot.after.addSignal('tr.triger')
@@ -340,6 +343,8 @@ history = History(dyn,1,zmp.zmp)
 #-----------------------------------------------------------------------------
 # --- RUN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
+
+DEG = 180.0/pi
 
 mp.setPositionMethod("KMK")
 mp.refresh()
@@ -398,10 +403,21 @@ mrf[0:3,3] = (0,0,-0.08)
 taskrf.opmodif = matrixToTuple(mrf)
 taskrf.feature.frame('desired')
 
+taskrfr.ref = matrixToTuple(eye(4))
+taskrfr.feature.frame('desired')
+taskrfr.feature.selec.value = '011000'
+taskrfr.gain.setByPoint(200,20,1/DEG,0.8)
+
+taskChest.feature.selec.value = '011000'
+taskChest.gain.setByPoint(10,0.3,5/DEG,0.8)
+taskChest.feature.frame('desired')
+taskChest.ref = matrixToTuple( eye(4))
+
 sot.push(taskLim.name)
 sot.push(taskCom.task.name)
 sot.push(taskrh.task.name)
 #sot.push(tasklh.task.name)
+sot.push(taskChest.task.name)
 plug(robot.state,sot.position)
 sot.breakFactor.value = 10
 
@@ -413,7 +429,7 @@ mp.posture = sot.posture
 mp.forward()
 
 taskrf.feature.position.recompute(0)
-rf0 = matrix(taskrf.feature.position.value)[0:3,3]
+rf0 = array(taskrf.feature.position.value)[0:3,3]
 
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 refset = ( lambda mt,v : mt.__class__.ref.__set__(mt,v) )
@@ -426,6 +442,9 @@ attime(80*mp.timeScale
 attime(250*mp.timeScale
        ,lambda: sot.push(tasklh.task.name),"Add lf" )
 
+attime(700*mp.timeScale,
+       lambda: sot.rm(taskChest.task.name), 'Remove chest')
+
 attime(780*mp.timeScale
        ,(lambda: mp.rmJointMap('Lhand'),"keep lh" )
        ,(lambda: mp.rmJointMap('Rhand'),"keep rh" ) )
@@ -434,18 +453,28 @@ attime(830*mp.timeScale
        ,(lambda: sot.rm(tasklh.task.name),"Rm lh" )
        ,(lambda: sot.rm(taskrh.task.name),"Rm rh" ) )
 
-attime(1000*mp.timeScale, 
-       (lambda: goto6d(taskrf,rf0,(80,6,0.02,0.8)) , "RF to final position"),
+attime(900*mp.timeScale, 
+       lambda: sot.push(taskrfr.task.name),'RF rotation to 0')
+
+attime(960*mp.timeScale, 
+       (lambda: gotoNd(taskrf,rf0+(0,0,0.0),'111',(80,8,0.01,0.85)) , "RF to upper final position"),
        (lambda: mp.rmJointMap("Rfoot"),"Stop tracking RF mocap")  )
 
-attime(1030*mp.timeScale, 
-       (lambda: taskCom.gain.setConstant(2), "Lower Com gains"),
-       (lambda: refset(taskCom,(0.01,0,0.8077)), "Com back to the center")  )
+'''attime(1020*mp.timeScale, 
+       lambda: gotoNd(taskrf,rf0,'111',(100,20,0.05,0.9)) , "RF to final position")
+'''
+
+attime(960*mp.timeScale, 
+       (lambda: taskCom.gain.setConstant(0.12), "Lower Com gains"),
+#       (lambda: taskCom.gain.setByPoint(20,1,0.09,0.2), "Lower Com gains"),
+       (lambda: taskCom.gain.setByPoint(200,0.15,0.001,0.95), "Lower Com gains"),
+       (lambda: refset(taskCom,(0.01,-0.1,0.8077)), "Com back to the center")  )
 
 
 attime(1080*mp.timeScale,
-       (lambda: taskCom.gain.setByPoint(12,3,0.005,0.8), "Increase Com gains"),
-       (lambda: contact(contactRF,taskrf),"Add the RF contact") )
+#       (lambda: taskCom.gain.setByPoint(30,5,0.005,0.8), "Increase Com gains"),
+       (lambda: contact(contactRF,taskrf),"Add the RF contact")
+       ,(lambda: refset(taskCom,(0.01,0,0.8077)), "Com back to the center")  )
 
 attime(1500*mp.timeScale,stop)
 
@@ -481,14 +510,18 @@ for i,q in enumerate(mp.qs):
 mp.joints['Rfoot'].Kw[2,3]+=-0.01
 mp.joints['Lhand'].Kw[0,3]+=-0.04
 
-
-robot.set( (-0.042232421207407479, 0.080849702006759561, 0.67093049213946043, -0.10491717926512172, -0.0074641834282261794, -0.22220691867504799, 0.11905612843456077, -0.12895677211823944, -1.0582473496195164, 1.3526137043682491, -0.077491030937556632, 0.19983567073621403, 0.22116373867705083, -0.036958969460584745, -0.44408442557282696, 0.71920743105733742, -0.29095418828903485, 0.14091109454606765, -0.014085442436090116, 0.023137453540068985, 0.15569979053946065, -0.20619096215506785, 0.013873157286254352, -0.57590278607390222, -0.019349370764644564, -1.5478302981869854, 0.194067158038222, -0.71733030075768112, 0.17450702600011181, 0.013870022335197406, 0.56860608307589589, 0.014913289848092422, -1.5508298900378772, -0.19456154179996865, -0.71781680051015551, 0.17456208063261727) )
-robot.setVelocity( (0.041596744456965352, -0.019785259059819142, -0.00067284020150403456, -0.040634510800556495, -0.0477583021932763, 0.1520376682141758, 0.15616193830579275, 0.025203192613812642, 0.84806218097425967, -0.51277574607125498, -0.16747213542276809, -0.069247148258663224, -0.14277211525720812, 0.074222149529260692, 0.092723670606419589, 0.057880327689418858, -0.087163624068793341, -0.031276579175051993, 0.0052054433106279944, -0.050080318922492137, -0.071020683721244496, 0.02665618214420078, 0.42460073923370628, 0.13127754764813235, -0.226796123874899, 0.59738828598141114, -0.072267492899982314, 0.055561838526752567, -3.1949447187482252e-06, 0.42460448707657594, -0.12852993853428776, 0.22728464657181965, 0.5979509112357394, 0.07227151259866757, 0.055480938944815081, -7.6306742191324821e-06) )
-T0 =  2000
+'''
+robot.set( (-0.066367459381412558, 0.086541181151980673, 0.66287595792133847, -0.10768542783512138, 0.048289782550527204, -0.24087124243017541, -0.14717765917496858, 0.12009851082900375, -1.7603500458060406, 1.5283659252412947, -0.069831186989162228, 0.29552668849043173, 0.23058021605737294, -0.059402426807657581, -0.56930451384511582, 0.77051031361015287, -0.27363326210319333, 0.15285272998173791, 0.01214672910236252, 0.044709751832835459, 0.20658905373250327, -0.2713503666996836, -0.63168217550691597, -0.66297139986828069, 0.54057702215898995, -1.9966784159060145, 0.28451543269750029, -0.67826134459288767, 0.17452641913680675, -0.63992004453568696, 0.65960740886343439, -0.53106084609464332, -2.0116690899863356, -0.28222704091849532, -0.68253659812907086, 0.17453540551223606) )
+robot.setVelocity( (0.0037792349675558044, 0.0096593749653873795, 0.017903607460271222, -0.011272963983895077, 0.008845781795272914, -0.13848127282369663, 0.18754151527338117, -0.42413969442485672, 0.29605486461277808, -0.25241025151772301, 0.034911929939644787, -0.28063316167071883, 0.13559215361341601, -0.0075813970075249452, 0.075271726624151214, -0.14524556352347809, 0.04806203187681047, 0.0090220040814147986, -0.09160143439748189, -0.055420710169427442, -0.056203096560018526, 0.094267723355491009, 0.50673037838783253, 0.038132138619034563, -0.87163550877330542, 0.038232071304213792, -0.1466091131149084, -0.037541868339953655, -2.5621608859626837e-05, 0.54388013672205548, -0.0472153906002424, 0.82365325729034999, 0.10108007910018225, 0.13655123217147055, -0.020296885728617729, 5.4606800380980688e-05) )
+T0 =  1800
 robot.state.time = T0
 [ t.feature.position.recompute(T0) for t in taskrh,tasklh]
 attime.fastForward(T0)
 mp.iter = T0
-
+'''
 
 go()
+#attime.addPing( stop )
+
+
+
