@@ -259,8 +259,9 @@ history = History(dyn,1,zmp.zmp)
 
 DEG = 180.0/pi
 
-STEP = array([ 0.4, 0.1, 0 ])
+STEP = array([ 0.7, -0.2, 0 ])
 HALFSTEP = STEP/2; HALFSTEP[2]=0.2
+HANDSTEP = array([ 0.25, -0.05, 0])
 
 sot.clear()
 contact(contactLF)
@@ -273,10 +274,15 @@ taskrf.feature.frame('desired')
 taskrf.gain.setByPoint(100,40,0.01,0.9)
 
 taskrh.feature.frame('desired')
-taskrh.gain.setByPoint(100,40,0.01,0.9)
+taskrh.gain.setByPoint(50,10,0.01,0.9)
+taskrh.support =  ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.05,-0.05,-0.05,-0.05))
+taskrh.oppoint = ((0,0,1,0) , (0,1,0,0),  (-1,0,0,0), (0,0,0,1))
 
-#sot.push(taskLim.name)
+sot.push(taskLim.name)
 #plug(robot.state,sot.position)
+
+for s in (dyn.rf, dyn.rh, dyn.com, dyn.lf):
+    s.recompute(0)
 
 rf0 = array(taskrf.feature.position.value)[0:3,3]
 
@@ -286,6 +292,9 @@ step = rf0[0:3]+STEP
 lf0 = array(dyn.lf.value)[0:3,3]
 comref = (lf0+step)/2
 
+rh0 = array(dyn.rh.value)[0:3,3]
+handref = tuple(rh0+HANDSTEP.tolist())
+
 # --- Events ---------------------------------------------
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 refset = ( lambda mt,v : mt.__class__.ref.__set__(mt,v) )
@@ -293,6 +302,8 @@ refset = ( lambda mt,v : mt.__class__.ref.__set__(mt,v) )
 attime(2
        ,(lambda : sot.push(taskCom.task.name),"Add COM")
        ,(lambda : refset(taskCom, (lf0[0], lf0[1], 0.7)), "Com to left foot")
+       ,(lambda : sot.push(taskrh.task.name),"Add rh")
+       ,(lambda : gotoNd(taskrh,handref,'111')   ,"goto rh")
        )
 
 attime(125
@@ -300,6 +311,8 @@ attime(125
        ,(lambda : sot.push(taskrf.task.name),'Push RF')
        ,(lambda : gotoNd(taskrf,halfstep,'111'),'goto halfstep')
        )
+
+attime(175, lambda: contact(taskrh,taskrh),'contact rh')
 
 attime(200, lambda: gotoNd(taskrf,step,'111'),'goto step')
 
@@ -313,6 +326,5 @@ attime(80
        )
 
 attime(2000,stop)
-
 
 go()
