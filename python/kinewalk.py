@@ -9,17 +9,16 @@ import dynamic_graph.script_shortcuts
 from dynamic_graph.script_shortcuts import optionalparentheses
 from dynamic_graph.matlab import matlab
 from dynamic_graph.sot.core.meta_task_6d import MetaTask6d,toFlags
+from dynamic_graph.sot.core.meta_task_6d import toFlags
+from attime import attime
+from numpy import *
+from matrix_util import matrixToTuple, vectorToTuple,rotate
+from history import History
+from zmp_estimator import ZmpEstimator
+from viewer_helper import addRobotViewer,VisualPinger
 
 from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 robotName = 'hrp14small'
-
-from numpy import *
-def totuple( a ):
-    al=a.tolist()
-    res=[]
-    for i in range(a.shape[0]):
-        res.append( tuple(al[i]) )
-    return tuple(res)
 
 initialConfig.clear()
 initialConfig['hrp10small'] = (0,0,0.648697398115,0,0,0)+(0, 0, -0.4538, 0.8727, -0.4189, 0, 0, 0, -0.4538, 0.8727, -0.4189, 0, 0, 0, 0, 0, 0.2618, -0.1745, 0, -0.5236, 0, 0, 0, 0, 0.2618, 0.1745, 0, -0.5236, 0, 0, 0, 0 )
@@ -32,43 +31,10 @@ initialConfig['hrp14small'] = (0,0,0.648697398115,0,0,0)+(0, 0, -0.4538, 0.8727,
 robotDim=robotDimension[robotName]
 robot = RobotSimu("robot")
 robot.resize(robotDim)
+addRobotViewer(robot,small=True,verbose=False)
 
 robot.set( initialConfig[robotName] )
 dt=5e-3
-
-# --- VIEWER -------------------------------------------------------------------
-# --- VIEWER -------------------------------------------------------------------
-# --- VIEWER -------------------------------------------------------------------
-try:
-   import robotviewer
-
-   def stateFullSize(robot):
-       return [float(val) for val in robot.state.value]+10*[0.0]
-   RobotSimu.stateFullSize = stateFullSize
-   robot.viewer = robotviewer.client('XML-RPC')
-   # Check the connection
-   robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
-
-   def refreshView( robot ):
-       robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
-   RobotSimu.refresh = refreshView
-   def incrementView( robot,dt ):
-       robot.incrementNoView(dt)
-       robot.refresh()
-   RobotSimu.incrementNoView = RobotSimu.increment
-   RobotSimu.increment = incrementView
-   def setView( robot,*args ):
-       robot.setNoView(*args)
-       robot.refresh()
-   RobotSimu.setNoView = RobotSimu.set
-   RobotSimu.set = setView
-
-   robot.refresh()
-
-except:
-    print "No robot viewer, sorry."
-    robot.viewer = None
-
 
 # --- MAIN LOOP ------------------------------------------
 
