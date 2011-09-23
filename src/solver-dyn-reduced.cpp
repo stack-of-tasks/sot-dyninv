@@ -211,8 +211,8 @@ namespace dynamicgraph
       void SolverDynReduced::
       debugOnce( void )
       {
-	dg::sot::DebugTrace::openFile("/tmp/sot.txt");
-	hsolver->debugOnce();
+	dg::sot::DebugTrace::openFile("/tmp/dynred.txt");
+	//hsolver->debugOnce();
       }
 
       /* --- STACK ----------------------------------------------------------- */
@@ -572,8 +572,8 @@ namespace dynamicgraph
       int& SolverDynReduced::
       precomputeSOUT_function( int& dummy, int t )
       {
-	if( t==1000 )
-	  dynamicgraph::sot::DebugTrace::openFile("/tmp/dynred1000.txt");
+	//if( t==1000 )
+	//dynamicgraph::sot::DebugTrace::openFile("/tmp/dynred1000.txt");
 
 	/* Precompute the dynamic data. */
 	inertiaSqrootInvSIN.recompute(t);
