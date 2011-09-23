@@ -279,31 +279,6 @@ for i in range(2):
 
 
 
-aMm0 = eye(4); aMm0[0:2,3] = (rf[0][0:2,3]+lf[0][0:2,3])/2
-bMm1 = eye(4); bMm1[0:2,3] = (rf[1][0:2,3]+lf[1][0:2,3])/2
-wMa = inv(aMm0)
-wMm1 = eye(4); wMm1[0,3]=0.2
-wMb = dot(wMm1,inv(bMm1))
-
-wMr0 = dot( wMa, rf[0] )
-wMl0 = dot( wMa, lf[0] )
-wMr1 = dot( wMb, rf[1] )
-wMl1 = dot( wMb, lf[1] )
-
-if abs(wMr0[2,2]-1)>1e-3 or abs(wMl0[2,2]-1)>1e-3 or abs(wMr1[2,2]-1)>1e-3 or abs(wMl1[2,2]-1)>1e-3 :
-    print 'Error: the feet '
-
-step1 = (   dot(wMa,lf[0])   )[0:2,3]
-step2 = (  dot( inv(   dot(wMa,lf[0])   ),  (dot( wMb,rf[1]))   ) )   [0:2,3]
-step3 = ( dot( inv(rf[1]), lf[1] ))[0:2,3]
-
-'''
-seqpart = ''
-for s in [step1,step2, step3]:
-    seqpart+= str(s[0])+' '+str(s[1])+' '+str(0)+' '
-pg.parseCmd(":stepseq " + seqpart)
-'''
-
 rMl0 = dot(   inv(rf[0]),  lf[0] )  
 rMl1 = dot(   inv(rf[1]),  lf[1] )  
 if abs(rMl1[2,2]-1)>1e-3 or abs(rMl1[2,3])>1e-3:
@@ -333,7 +308,8 @@ step3 = ( dot( inv(rf[1]), lf[1] ))
 
 seqpart = ''
 for s in [step1,step2, step3]:
-    seqpart+= str(s[0,3])+' '+str(s[1,3])+' '+str(arctan2(s[1,0],s[0,0])*180/pi)+' '
+    si = inv(s)
+    seqpart+= str(-si[0,3])+' '+str(-si[1,3])+' '+str(-arctan2(si[1,0],si[0,0])*180/pi)+' '
 pg.parseCmd(":stepseq " + seqpart)
 
 
