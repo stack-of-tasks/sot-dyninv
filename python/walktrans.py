@@ -12,28 +12,123 @@ from history import History
 from zmp_estimator import ZmpEstimator
 from viewer_helper import addRobotViewer,VisualPinger
 from attime import attime
+from optparse import OptionParser
 
-from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
+from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor,halfSittingConfig
 robotName = 'hrp14small'
 
-initialConfig.clear()
-initialConfig['hrp14small'] = (0,0,0.648697398115,0,0,0)+(0, 0, -0.4538, 0.8727, -0.4189, 0, 0, 0, -0.4538, 0.8727, -0.4189, 0, 0, 0, 0, 0, 0.2618, -0.1745, 0, -0.5236, 0, 0, 0.17453, 0.2618, 0.1745, 0, -0.5236, 0, 0, 0.17453 )
-
-finalConfig = (0,0,0.648697398115,0,0,0)+(-0.00028574496353194379, 0.003829437078692717, -0.64798319907006197, 1.0552418879543297, -0.44497846451811773, -0.0038397195926406333, -0.00028578259876648154, 0.00382843982057902, -0.64712828870988759, 1.053420252598515, -0.44401173937761496, -0.0038387216246142633, 0.00014352031102940873, 0.013151503268542629, -0.00057411504064778878, -0.050871000025830684, 0.21782780288468376, -0.37965640592660427, -0.14072647716205641, -1.1942332339535875, 0.0055454863752303456, -0.66956710808063102, 0.17479818266043898, 0.21400703176401134, 0.38370527720074465, 0.14620204468511225, -1.1873407322936731, -0.0038746980026916284, -0.6643017236637716, 0.17500428384102076)
-
-qf=array(finalConfig)
-qf[6]-=1
-finalConfig = tuple(qf.tolist())
 
 # --- ROBOT SIMU ---------------------------------------------------------------
-
 robotDim=robotDimension[robotName]
 robot = RobotSimu("robot")
 robot.resize(robotDim)
 addRobotViewer(robot,small=True,verbose=False)
-
-robot.set( initialConfig[robotName] )
 dt=5e-3
+
+modelDir = pkgDataRootDir[robotName]
+xmlDir = pkgDataRootDir[robotName]
+specificitiesPath = xmlDir + '/HRP2SpecificitiesSmall.xml'
+jointRankPath = xmlDir + '/HRP2LinkJointRankSmall.xml'
+
+# --- OPTIONS ------------------------------------------------------------------
+
+usage = "usage: py walktrans.py [options] args"
+parser = OptionParser(usage=usage)
+
+parser.add_option("-i", dest="init", help="Initial position, being a list of joint angles, or a filename whose last line is a list of angles, or halfsitting.", default="halfsitting")
+parser.add_option("-f", dest="final", help="Final position, being a list of joint angles, or a filename whose first line is a list of angles, or halfsitting.", default="halfsitting")
+parser.add_option("-d", dest="direction", help="Direction, forward or backward", default="forward")
+parser.add_option("-o", dest="output", help="Prefix of the output", default="/tmp/walktrans")
+(options, args) = parser.parse_args()
+parser.print_help()
+print '\n -------------------------------------------------------------------------'
+
+q={}
+if options.init == "halfsitting":
+    q[0] = halfSittingConfig[robotName]
+else:
+    try:
+        finit = open(options.init,'r')
+        q[0] = tuple([float(s) for s in finit.readlines()[-1].split() ])
+        finit.close()
+    except:
+        q[0] = tuple(options.init)
+if len(q[0])==robotDim-6: q[0] = 6*(0,)+q[0]
+if len(q[0])==robotDim-6+10+1: q[0] = 6*(0,)+q[0][1:-10]
+
+if options.final == "halfsitting":
+    q[1] = halfSittingConfig[robotName]
+else:
+    try:
+        ffinal = open(options.final,'r')
+        q[1] = tuple([float(s) for s in ffinal.readlines()[0].split() ])
+        ffinal.close()
+    except:
+        q[1] = tuple(options.init)
+if len(q[1])==robotDim-6: q[1] = 6*(0,)+q[1]
+if len(q[1])==robotDim-6+10+1: q[1] = 6*(0,)+q[1][1:-10]
+
+
+# --- STEP CONSTRUCTION --------------------------------------------------------
+inv=linalg.inv
+
+geom={}; rf={}; lf={};
+
+for i in range(2):
+    geom[i] = Dynamic("geom"+str(i))
+    geom[i].setFiles(modelDir, modelName[robotName],specificitiesPath,jointRankPath)
+    geom[i].parse()
+    geom[i].position.value = q[i]
+    geom[i].velocity.value = robotDim*(0.,)
+    geom[i].acceleration.value = robotDim*(0.,)
+    geom[i].createPosition('rf','right-ankle')
+    geom[i].createPosition('lf','left-ankle')
+    geom[i].rf.recompute(0)
+    geom[i].lf.recompute(0)
+    rf[i]= array(geom[i].rf.value)
+    lf[i]= array(geom[i].lf.value)
+
+rMl0 = dot(   inv(rf[0]),  lf[0] )  
+rMl1 = dot(   inv(rf[1]),  lf[1] )  
+if abs(rMl1[2,2]-1)>1e-3 or abs(rMl1[2,3])>1e-3:
+    print 'Error: the feet should be parallele on a same Z plane (final pose)'
+if abs(rMl0[2,2]-1)>1e-3 or abs(rMl0[2,3])>1e-3:
+    print 'Error: the feet should be parallele on a same Z plane (initial pose)'
+
+a0 = arctan2(rMl0[1,0],rMl0[0,0])/2
+a1 = arctan2(rMl1[1,0],rMl1[0,0])/2
+t0 = rMl0[0:3,3]
+t1 = rMl1[0:3,3]; 
+
+if isinstance(options.direction,int) and options.direction == 1: options.direction = "forward"
+if isinstance(options.direction,int) and options.direction == -1: options.direction = "backward"
+if options.direction[0:3] == "for":  t1[0]-=0.2
+if options.direction[0:3] == "bac":  t1[0]+=0.2
+
+Ma0 = array(rotate('z',a0))
+Ma0[0:3,3] = t0/2
+Ma1 = array(rotate('z',a1))
+Ma1[0:3,3] = t1/2
+
+wMa = inv(dot(Ma0,rf[0]))
+wMb = inv(dot(Ma1,rf[1]))
+
+
+Mview = dot(wMa,RPYToMatrix(q[0][0:6]))
+Mup = eye(4); Mup[2,3] = 0.105
+Mview  = dot( Mup,Mview )
+
+robot.set( tuple(matrixToRPY( Mview ))+q[0][6:] )
+
+step1 = (   dot(wMa,lf[0])   )
+step2 = (  dot( inv(   dot(wMa,lf[0])   ),  (dot( wMb,rf[1]))   ) )
+step3 = ( dot( inv(rf[1]), lf[1] ))
+
+seqpart = ''
+for s in [step1,step2, step3]:
+    si = inv(s)
+    seqpart+= str(-si[0,3])+' '+str(-si[1,3])+' '+str(-arctan2(si[1,0],si[0,0])*180/pi)+' '
+
 
 # --- MAIN LOOP ------------------------------------------
 def inc():
@@ -42,6 +137,7 @@ def inc():
     #robot.viewer.updateElementConfig('zmp',[zmp.zmp.value[0],zmp.zmp.value[1],0,0,0,0])
     if dyn.com.time >0:
         robot.viewer.updateElementConfig('com',[dyn.com.value[0],dyn.com.value[1],0,0,0,0])
+    history.record()
 
 from ThreadInterruptibleLoop import *
 @loopInThread
@@ -58,34 +154,14 @@ def next(): inc() #runner.once()
 
 # --- shortcuts -------------------------------------------------
 @optionalparentheses
-def n():
-    inc()
-    qdot()
-@optionalparentheses
-def n5():
-    for loopIdx in range(5): inc()
-@optionalparentheses
-def n10():
-    for loopIdx in range(10): inc()
-@optionalparentheses
-def q():
-    if 'dyn' in globals(): print dyn.ffposition.__repr__()
-    print robot.state.__repr__()
-@optionalparentheses
-def qdot(): print robot.control.__repr__()
-@optionalparentheses
-def t(): print robot.state.time-1
-@optionalparentheses
 def iter():         print 'iter = ',robot.state.time
 @optionalparentheses
 def status():       print runner.isPlay
+@optionalparentheses
+def dump():
+    history.dumpToOpenHRP(options.output)
 
 # --- DYN ----------------------------------------------------------------------
-modelDir = pkgDataRootDir[robotName]
-xmlDir = pkgDataRootDir[robotName]
-specificitiesPath = xmlDir + '/HRP2SpecificitiesSmall.xml'
-jointRankPath = xmlDir + '/HRP2LinkJointRankSmall.xml'
-
 dyn = Dynamic("dyn")
 dyn.setFiles(modelDir, modelName[robotName],specificitiesPath,jointRankPath)
 dyn.parse()
@@ -101,6 +177,12 @@ dyn.ffposition.unplug()
 dyn.ffvelocity.unplug()
 dyn.ffacceleration.unplug()
 robot.control.unplug()
+
+# --- META TASKS AND OP POINT ------------------------------------------------
+
+taskRF=MetaTask6d('rf',dyn,'rf','right-ankle')
+taskLF=MetaTask6d('lf',dyn,'lf','left-ankle')
+
 
 # --- PG ---------------------------------------------------------
 from dynamic_graph.sot.pattern_generator import PatternGenerator,Selector
@@ -133,7 +215,15 @@ plug(dyn.com,pg.com)
 pg.motorcontrol.value = robotDim*(0,)
 pg.zmppreviouscontroller.value = (0,0,0)
 
+# DEBUG
+plug(dyn.lf,pg.leftfootcurrentpos)
+plug(dyn.rf,pg.rightfootcurrentpos)
+
+print "Pose before init state: " ,dyn.position.value
 pg.initState()
+pg.initrightfootref.recompute(0)
+pg.initleftfootref.recompute(0)
+pg.initcomref.recompute(0)
 
 # --- PG INIT FRAMES ---
 geom = Dynamic("geom")
@@ -172,6 +262,7 @@ plug(pg.zmpref,wa_zmp.sin2)
 pg.parseCmd(':SetZMPFrame world')
 plug(wa_zmp.sout,robot.zmp)
 
+
 # ---- TASKS -------------------------------------------------------------------
 
 # ---- WAIST TASK ---
@@ -208,7 +299,7 @@ plug(dyn.position,featurePosture.errorIN)
 featurePosture.jacobianIN.value = matrixToTuple(eye(robotDim))
 featurePostureDes = FeatureGeneric('featurePostureDes')
 featurePosture.sdes.value = 'featurePostureDes'
-featurePostureDes.errorIN.value = finalConfig
+featurePostureDes.errorIN.value = q[1]
 
 gainPosture = GainAdaptive('gainPosture')
 gainPosture.setByPoint(10,0.1,0.1,0.8)
@@ -220,8 +311,6 @@ plug(gainPosture.gain,taskPosture.controlGain)
 
 # --- TASK RIGHT FOOT
 # Task right hand
-taskRF=MetaTask6d('rf',dyn,'rf','right-ankle')
-taskLF=MetaTask6d('lf',dyn,'lf','left-ankle')
 
 plug(pg.rightfootref,taskRF.featureDes.position)
 taskRF.task.controlGain.value = 5
@@ -240,9 +329,6 @@ sot.push(taskCom.name)
 
 plug(sot.control,robot.control)
 
-
-
-
 # --- TRACER -----------------------------------------------------------------
 from dynamic_graph.tracer import *
 from dynamic_graph.tracer_real_time import *
@@ -254,70 +340,50 @@ robot.after.addSignal('tr.triger')
 #tr.add(dyn.name+'.ffposition','ff')
 tr.add(taskRF.featureDes.name+'.position','refr')
 tr.add(taskLF.featureDes.name+'.position','refl')
+tr.add('dyn.rf','r')
+tr.add('dyn.lf','l')
 
+tr.add('featureComDes.errorIN','comref')
+tr.add('dyn.com','com')
 
-# --- DYN ----------------------------------------------------------------------
-inv=linalg.inv
-
-q={}; geom={}; rf={}; lf={};
-
-q[0] = initialConfig[robotName]
-q[1] = finalConfig
-for i in range(2):
-    geom[i] = Dynamic("geom"+str(i))
-    geom[i].setFiles(modelDir, modelName[robotName],specificitiesPath,jointRankPath)
-    geom[i].parse()
-    geom[i].position.value = q[i]
-    geom[i].velocity.value = robotDim*(0.,)
-    geom[i].acceleration.value = robotDim*(0.,)
-    geom[i].createPosition('rf','right-ankle')
-    geom[i].createPosition('lf','left-ankle')
-    geom[i].rf.recompute(0)
-    geom[i].lf.recompute(0)
-    rf[i]= array(geom[i].rf.value)
-    lf[i]= array(geom[i].lf.value)
-
-
-
-rMl0 = dot(   inv(rf[0]),  lf[0] )  
-rMl1 = dot(   inv(rf[1]),  lf[1] )  
-if abs(rMl1[2,2]-1)>1e-3 or abs(rMl1[2,3])>1e-3:
-    print 'Error: the feet should be parallele on a same Z plane (final pose)'
-if abs(rMl0[2,2]-1)>1e-3 or abs(rMl0[2,3])>1e-3:
-    print 'Error: the feet should be parallele on a same Z plane (initial pose)'
-
-a0 = arctan2(rMl0[1,0],rMl0[0,0])/2
-a1 = arctan2(rMl1[1,0],rMl1[0,0])/2
-t0 = rMl0[0:3,3]
-t1 = rMl1[0:3,3]
-
-Ma0 = array(rotate('z',a0))
-Ma0[0:3,3] = t0/2
-Ma1 = array(rotate('z',a1))
-Ma1[0:3,3] = t1/2
-
-wMa = inv(dot(Ma0,rf[0]))
-wMb = inv(dot(Ma1,rf[1]))
-
-#robot.set( tuple(matrixToRPY(   dot(wMa,RPYToMatrix(q[0][0:6])) ))+q[0][6:] )
-#robot.set( tuple(matrixToRPY(   dot(wMb,RPYToMatrix(q[1][0:6])) ))+q[1][6:] )
-
-step1 = (   dot(wMa,lf[0])   )
-step2 = (  dot( inv(   dot(wMa,lf[0])   ),  (dot( wMb,rf[1]))   ) )
-step3 = ( dot( inv(rf[1]), lf[1] ))
-
-seqpart = ''
-for s in [step1,step2, step3]:
-    si = inv(s)
-    seqpart+= str(-si[0,3])+' '+str(-si[1,3])+' '+str(-arctan2(si[1,0],si[0,0])*180/pi)+' '
-pg.parseCmd(":stepseq " + seqpart)
-
+history = History(dyn,1)
 
 # --- RUN -----------------------------------------------------------------
 
-go()
-
-
+pg.parseCmd(":stepseq " + seqpart)
 featurePosture.selec.value = toFlags( range(6,36) )
+
 attime(300,lambda: sot.push(taskPosture.name),'Add Posture')
 attime(500,lambda: sot.rm(taskCom.name),'rm com')
+attime(1000,lambda: dump(),'dump!')
+attime(1000,lambda: sys.exit(),'Bye bye')
+
+#go()
+next()
+'''
+
+sot.clear()
+
+for task in [taskWaist, taskRF, taskLF]:
+    M = eye(4)
+    task.feature.position.recompute(0)
+    M[0:2,3]  = array(task.feature.position.value)[0:2,3]
+    M[2,3]  = 0.105
+    task.ref = matrixToTuple(M)
+    task.feature.selec.value = '111111'
+    sot.push(task.task.name)
+
+if 0:
+    Mwref = eye(4)
+    Mwref[0:2,3] = dyn.com.value[0:2]
+    taskWaist.ref = matrixToTuple(Mwref)
+    taskWaist.feature.selec.value = '111011'
+    
+    featureComDes.errorIN.value = featureCom.errorIN.value
+    sot.push(taskCom.name)
+
+if 1:
+    taskWaist.ref = matrixToTuple(eye(4))
+    taskWaist.feature.selec.value = '111011'
+   
+'''
