@@ -80,6 +80,14 @@ def matrixToRPY( M ):
     rot = tr2rpy(M)
     return [ M[0][3], M[1][3], M[2][3], rot[2],rot[1],rot[0]]
 
+def RPYToMatrix( pr ):
+    '''
+    Convert a 4x4 homogeneous matrix to a 6x1 rpy pose vector.
+    '''
+    M=array(rpy2tr(pr[3],pr[4],pr[5]))
+    M[0:3,3] = pr[0:3]
+    return M
+
 # Transformation Matrix corresponding to a rotation about x,y or z
 def rotate(axis,ang):
     ''' eg. T=rot('x',pi/4): rotate pi/4 rad about x axis
