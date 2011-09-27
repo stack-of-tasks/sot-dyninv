@@ -8,7 +8,7 @@ from numpy import matrix, identity, zeros, eye
 
 def setGain(gain,val):
     if val!=None:
-        if len(val)==1:  gain.setConstant(val)
+        if isinstance(val,int) or len(val)==1:  gain.setConstant(val)
         elif len(val)==3: gain.set( val[0],val[1],val[2])
         elif len(val)==4: gain.setByPoint( val[0],val[1],val[2],val[3])
 
@@ -20,6 +20,7 @@ def goto6d(task,position,gain=None):
     task.feature.selec.value = "111111"
     setGain(task.gain,gain)
     task.featureDes.position.value = matrixToTuple(M)
+    task.task.resetJacobianDerivative()
 
 def gotoNd(task,position,selec,gain=None):
     M=eye(4)
@@ -29,6 +30,7 @@ def gotoNd(task,position,selec,gain=None):
     if isinstance(selec,str):   task.feature.selec.value = selec
     else: task.feature.selec.value = toFlags(selec)
     task.featureDes.position.value = matrixToTuple(M)
+    task.task.resetJacobianDerivative()
     setGain(task.gain,gain)
 
 def addContactFromMetaTask(sot,contact,task=None):
