@@ -8,7 +8,17 @@ from numpy import *
 
 # --- FOOT PRINT PARSER ------------------------------------------------------------
 class FootPrintParser:
-    def __init__(self,filename,dt,robotviewer,offset=None):
+    def __init__(self,robotviewer=None,filename=None,dt=None,offset=None):
+        if filename==None:
+            self.clt=robotviewer
+            self.clt.updateElementConfig('RF',[0,0,-1000,0,0,0])
+            self.clt.updateElementConfig('LF',[0,0,-1000,0,0,0])
+            self.events ={}
+            return
+        elif dt==None:
+            print 'Error, if filename is specified, dt should be too.'
+            return
+
         self.file  = open(filename,'r')
         self.dt=dt
         self.events ={}
@@ -32,8 +42,10 @@ class FootPrintParser:
                 R[0,1]=s; R[1,0]=-s
         R=matrix(R)
 
-        for l in self.file.readlines():
-            (t,foot,x,y,theta)=[ float(x) for x in l.split()]
+        for il,l in enumerate(self.file.readlines()):
+            if len(l.split())==0:continue
+            try:(t,foot,x,y,theta)=[ float(x) for x in l.split()]
+            except: print 'Error on line ',il,': ',l
             if foot==1: foot='LF'
             else: foot='RF'
 
