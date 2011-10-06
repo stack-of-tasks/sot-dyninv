@@ -19,12 +19,13 @@ def matrixToTuple(M):
     return tuple(res)
 
 def vectorToTuple(M):
-    if M.shape[0]==1:        return tuple(M.tolist()[0])
+    if len(M.shape)==1:      return tuple(M.tolist())
+    elif M.shape[0]==1:      return tuple(M.tolist()[0])
     else:                    return tuple(M.transpose().tolist()[0])
 
 # Convert from Roll, Pitch, Yaw to transformation Matrix
 def rpy2tr(r,p,y):
-    mat = matrix(rotate('z',r))*matrix(rotate('y',p))*matrix(rotate('x',y))
+    mat = matrix(rotate('z',y))*matrix(rotate('y',p))*matrix(rotate('x',r))
     return matrixToTuple(mat)
 
 # Get the distance btw the position components of 2 transf matrices
