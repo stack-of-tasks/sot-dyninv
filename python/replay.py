@@ -105,6 +105,15 @@ def hlp_showNumber():
 showNumber=False
 
 #-----------------------------------------------------
+@optionalparentheses
+def n():
+    inc()
+def incIter(dummy,nb):
+    for i in range(nb): n()
+setattr(n.__class__,'__add__',incIter)
+
+
+
 
 t0=time.time()
 iterNum=0
