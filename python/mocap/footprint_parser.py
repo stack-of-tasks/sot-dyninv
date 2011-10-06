@@ -11,8 +11,7 @@ class FootPrintParser:
     def __init__(self,robotviewer=None,filename=None,dt=None,offset=None):
         if filename==None:
             self.clt=robotviewer
-            self.clt.updateElementConfig('RF',[0,0,-1000,0,0,0])
-            self.clt.updateElementConfig('LF',[0,0,-1000,0,0,0])
+            self.hide()
             self.events ={}
             return
         elif dt==None:
@@ -44,14 +43,15 @@ class FootPrintParser:
 
         for il,l in enumerate(self.file.readlines()):
             if len(l.split())==0:continue
-            try:(t,foot,x,y,theta)=[ float(x) for x in l.split()]
+            try:(t,foot,x,y,theta)=[ x if i==1 else float(x) for (i,x) in enumerate(l.split()) ]
             except: print 'Error on line ',il,': ',l
-            if foot==1: foot='LF'
+            if foot=='1' or foot=='LF': foot='LF'
             else: foot='RF'
 
-            if (x,y,theta) == (0,0,0): (x,y,theta)= (-100,-100,0)
-            p=R*matrix((x,y,1)).T; theta-=a
-            x=float(p[0,0]); y=float(p[1,0])
+            if (x,y,theta) == (0.0,0.0,0.0): (x,y,theta)= (-100.0,-100.0,0.0)
+            else:
+                p=R*matrix((x,y,1)).T; theta-=a
+                x=float(p[0,0]); y=float(p[1,0])
 
             t=int(round(t*dt))
             if not t in self.events.keys(): self.events[t] = []
@@ -61,5 +61,16 @@ class FootPrintParser:
     def update(self,iterTime):
         if not iterTime in self.events.keys(): return
         for (foot, pos) in self.events[iterTime]:
-            self.clt.updateElementConfig(foot,pos)
+            try:
+                self.clt.updateElementConfig(foot,pos)
+            except: None
 
+    def hide(self):
+        try:
+            self.clt.updateElementConfig('RF',[0,0,-1000,0,0,0])
+            self.clt.updateElementConfig('LF',[0,0,-1000,0,0,0])
+        except:                None
+
+    def close(self):
+        self.hide()
+        self.clt = None
