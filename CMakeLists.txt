@@ -102,13 +102,13 @@ SET(headers
 
 )
 
+
+list(APPEND task-dyn-limits_plugins_dependencies task-dyn-pd)
+list(APPEND task-dyn-inequality_plugins_dependencies task-dyn-pd)
 list(APPEND task-dyn-joint-limits_plugins_dependencies task-dyn-pd)
 list(APPEND pseudo-robot-dynamic_plugins_dependencies dynamic-integrator)
-list(APPEND solver-op-space_plugins_dependencies task-dyn-pd)
-list(APPEND solver-dyn-reduced_plugins_dependencies task-dyn-pd)
-list(APPEND solver-dyn-red2_plugins_dependencies task-dyn-pd)
 
-foreach(lib task-inequality task-dyn-pd task-joint-limits task-dyn-joint-limits)
+foreach(lib task-inequality task-dyn-pd task-joint-limits)
 	IF(WIN32)
 		list(APPEND ${lib}_ext_plugins_dependencies
 			${DYNAMIC_GRAPH_PLUGINDIR}/task${CMAKE_LINK_LIBRARY_SUFFIX})
@@ -118,21 +118,17 @@ foreach(lib task-inequality task-dyn-pd task-joint-limits task-dyn-joint-limits)
 	ENDIF(WIN32)
 endforeach(lib)
 
-IF(WIN32)
-	list(APPEND solver-op-space_ext_plugins_dependencies
-		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_LINK_LIBRARY_SUFFIX})
-	list(APPEND solver-dyn-reduced_ext_plugins_dependencies
-		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_LINK_LIBRARY_SUFFIX})
-	list(APPEND solver-dyn-red2_ext_plugins_dependencies
-		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_LINK_LIBRARY_SUFFIX})
-ELSE(WIN32)
-	list(APPEND solver-op-space_ext_plugins_dependencies
-		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_SHARED_LIBRARY_SUFFIX})
-	list(APPEND solver-dyn-reduced_ext_plugins_dependencies
-		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_SHARED_LIBRARY_SUFFIX})
-	list(APPEND solver-dyn-red2_ext_plugins_dependencies
-		${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_SHARED_LIBRARY_SUFFIX})
-ENDIF(WIN32)
+foreach(lib solver-op-space solver-dyn-reduced solver-dyn-red2)
+	list(APPEND ${lib}_plugins_dependencies task-dyn-pd)
+
+	IF(WIN32)
+		list(APPEND ${lib}_ext_plugins_dependencies
+			${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_LINK_LIBRARY_SUFFIX})
+	ELSE(WIN32)
+		list(APPEND ${lib}_ext_plugins_dependencies
+			${DYNAMIC_GRAPH_PLUGINDIR}/feature-point6d${CMAKE_SHARED_LIBRARY_SUFFIX})
+	ENDIF(WIN32)
+endforeach(lib)
 
 # Add subdirectories.
 ADD_SUBDIRECTORY(src)
