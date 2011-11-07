@@ -53,7 +53,6 @@ namespace dynamicgraph
       /* --- CLASS ----------------------------------------------------------- */
       /* --------------------------------------------------------------------- */
 
-
       FeatureProjectedLine::
       FeatureProjectedLine( const std::string& pointName )
 	: FeatureAbstract( pointName )
@@ -74,11 +73,8 @@ namespace dynamicgraph
 	errorSOUT.addDependency( xbSIN );
 	errorSOUT.addDependency( xcSIN );
 
-	activationSOUT.removeDependency( desiredValueSIN );
-
 	signalRegistration( xaSIN << xbSIN << xcSIN << JaSIN << JbSIN );
       }
-
 
       /* --------------------------------------------------------------------- */
       /* --------------------------------------------------------------------- */
@@ -117,17 +113,6 @@ namespace dynamicgraph
 	      & dya=JA(1,i),& dyb=JB(1,i);
 	    J(0,i) = dxa*(yb-yc) - dxb*(ya-yc) - dya*(xb-xc) + dyb*(xa-xc);
 	  }
-	// J.resize(3,nq);
-	// for( int i=0;i<nq;++i )
-	//   {
-	//     const double
-	//       & dxa=JA(0,i),& dxb=JB(0,i),
-	//       & dya=JA(1,i),& dyb=JB(1,i),
-	//       & dza=JA(2,i),& dzb=JB(2,i);
-	//     J(0,i) = dxa;
-	//     J(1,i) = dya;
-	//     J(2,i) = dza;
-	//   }
 
 	sotDEBUGOUT(15);
 	return J;
@@ -149,12 +134,6 @@ namespace dynamicgraph
 
 	error.resize(1);
 	error(0) = (xb-xa)*(yc-ya)-(yb-ya)*(xc-xa);
-
-	// error.resize(3);
-	// error(0) = xa-xc;
-	// error(1) = ya-yc;
-	// error(2) = A(2,3) - C(2);
-	//std::cout << time << " " << ya << " " << yc << std::endl;
 
 	sotDEBUGOUT(15);
 	return error ;

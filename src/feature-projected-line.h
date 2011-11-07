@@ -72,15 +72,15 @@ namespace dynamicgraph {
 	DECLARE_SIGNAL_IN(Jb,ml::Matrix);
 	DECLARE_SIGNAL_IN(xc,ml::Vector);
 
+	DECLARE_NO_REFERENCE;
+
       public:
 	FeatureProjectedLine( const std::string& name );
 	virtual ~FeatureProjectedLine( void ) {}
 
 	virtual unsigned int& getDimension( unsigned int & dim, int time );
-
 	virtual ml::Vector& computeError( ml::Vector& res,int time );
 	virtual ml::Matrix& computeJacobian( ml::Matrix& res,int time );
-	virtual ml::Vector& computeActivation( ml::Vector& res,int) {return res;}
 
 	virtual void display( std::ostream& os ) const;
 

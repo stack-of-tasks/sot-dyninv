@@ -11,7 +11,7 @@ class MetaTaskDyn6d(MetaTask6d):
         self.gain = GainAdaptive('gain'+self.name)
         self.gain.set(1050,45,125e3)
     def plugEverything(self):
-        self.feature.sdes.value = self.featureDes.name
+        self.feature.setReference(self.featureDes.name)
         plug(self.dyn.signal(self.opPoint),self.feature.signal('position'))
         plug(self.dyn.signal('J'+self.opPoint),self.feature.signal('Jq'))
         self.task.add(self.feature.name)

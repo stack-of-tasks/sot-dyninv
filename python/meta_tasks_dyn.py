@@ -73,8 +73,7 @@ class MetaTaskDynPosture(object):
         plug(dyn.position,self.feature.errorIN)
         robotDim = len(dyn.position.value)
         self.feature.jacobianIN.value = matrixToTuple( identity(robotDim) )
-#        self.feature.setReference(self.featureDes.name)
-        self.feature.sdes.value = self.featureDes.name
+        self.feature.setReference(self.featureDes.name)
 
         self.task.add(self.feature.name)
         plug(dyn.velocity,self.task.qdot)
@@ -120,8 +119,7 @@ class MetaTaskDynCom(object):
 
         plug(dyn.com,self.feature.errorIN)
         plug(dyn.Jcom,self.feature.jacobianIN)
-#        self.feature.setReference(self.featureDes.name)
-        self.feature.sdes.value = self.featureDes.name
+        self.feature.setReference(self.featureDes.name)
 
         self.task.add(self.feature.name)
         plug(dyn.velocity,self.task.qdot)
