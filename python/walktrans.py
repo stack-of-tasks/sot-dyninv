@@ -1,3 +1,8 @@
+'''
+Walking transition: give an initial posture and final posture, the robot will
+make one step to go from one to the other.
+'''
+
 from dynamic_graph import plug
 from dynamic_graph.sot.core import *
 from dynamic_graph.sot.core.math_small_entities import Derivator_of_Matrix
@@ -214,16 +219,7 @@ plug(dyn.position,pg.position)
 plug(dyn.com,pg.com)
 pg.motorcontrol.value = robotDim*(0,)
 pg.zmppreviouscontroller.value = (0,0,0)
-
-# DEBUG
-plug(dyn.lf,pg.leftfootcurrentpos)
-plug(dyn.rf,pg.rightfootcurrentpos)
-
-print "Pose before init state: " ,dyn.position.value
-pg.initState()
-pg.initrightfootref.recompute(0)
-pg.initleftfootref.recompute(0)
-pg.initcomref.recompute(0)
+#pg.initState()
 
 # --- PG INIT FRAMES ---
 geom = Dynamic("geom")
@@ -262,7 +258,6 @@ plug(pg.zmpref,wa_zmp.sin2)
 pg.parseCmd(':SetZMPFrame world')
 plug(wa_zmp.sout,robot.zmp)
 
-
 # ---- TASKS -------------------------------------------------------------------
 
 # ---- WAIST TASK ---
@@ -277,9 +272,6 @@ waistReferenceVector.selec2(0,3)
 waistReference=PoseRollPitchYawToMatrixHomo('waistReference')
 plug(waistReferenceVector.sout,waistReference.sin)
 plug(waistReference.sout,taskWaist.featureDes.position)
-
-taskWaist.feature.selec.value = '011100'
-taskWaist.task.controlGain.value = 5
 
 # --- TASK COM ---
 featureCom = FeatureGeneric('featureCom')
@@ -311,10 +303,9 @@ plug(gainPosture.gain,taskPosture.controlGain)
 
 # --- TASK RIGHT FOOT
 # Task right hand
-
-plug(pg.rightfootref,taskRF.featureDes.position)
+#plug(pg.rightfootref,taskRF.featureDes.position)
 taskRF.task.controlGain.value = 5
-plug(pg.leftfootref,taskLF.featureDes.position)
+#plug(pg.leftfootref,taskLF.featureDes.position)
 taskLF.task.controlGain.value = 5
 
 # ---- SOT ---------------------------------------------------------------------
@@ -322,11 +313,6 @@ taskLF.task.controlGain.value = 5
 from dynamic_graph.sot.dyninv import SolverKine
 sot = SolverKine('sot')
 sot.setSize(robotDim)
-#sot.push(taskWaist.task.name)
-sot.push(taskRF.task.name)
-sot.push(taskLF.task.name)
-sot.push(taskCom.name)
-
 plug(sot.control,robot.control)
 
 # --- TRACER -----------------------------------------------------------------
@@ -345,33 +331,48 @@ tr.add('dyn.lf','l')
 
 tr.add('featureComDes.errorIN','comref')
 tr.add('dyn.com','com')
+tr.add(taskWaist.gain.name+'.gain','gainwaist')
 
 history = History(dyn,1)
 
 # --- RUN -----------------------------------------------------------------
 
-pg.parseCmd(":stepseq " + seqpart)
 featurePosture.selec.value = toFlags( range(6,36) )
 
-attime(300,lambda: sot.push(taskPosture.name),'Add Posture')
-attime(500,lambda: sot.rm(taskCom.name),'rm com')
-attime(1000,lambda: dump(),'dump!')
-attime(1000,lambda: sys.exit(),'Bye bye')
+sot.clear()
+for task in [taskWaist, taskRF, taskLF]:
+    task.feature.position.recompute(0)
+    task.feature.keep()
+    task.feature.selec.value = '111111'
+    sot.push(task.task.name)
 
-#go()
-next()
+taskWaist.ref = matrixToTuple(eye(4))
+taskWaist.feature.selec.value = '111011'
+taskWaist.gain.setByPoint(18,0.1,0.005,0.8)
+
+attime(200
+       ,(lambda : sot.rm(taskWaist.task.name),'Rm waist')
+       ,(lambda : pg.initState(),'Init PG')
+       ,(lambda : pg.parseCmd(":stepseq " + seqpart),'Push step list')
+       ,(lambda : sot.push(taskCom.name),'Push COM')
+       ,(lambda : plug(pg.rightfootref,taskRF.featureDes.position),'Plug RF')
+       ,(lambda : plug(pg.leftfootref,taskLF.featureDes.position),'plug LF' )
+)
+
+
+#attime(700,lambda: sot.push(taskPosture.name),'Add Posture')
+#attime(900,lambda: sot.rm(taskCom.name),'rm com')
+#attime(1200,lambda: dump(),'dump!')
+#attime(1200,lambda: sys.exit(),'Bye bye')
+attime(1200,dump,stop)
+
+go()
+
+
 '''
 
 sot.clear()
 
-for task in [taskWaist, taskRF, taskLF]:
-    M = eye(4)
-    task.feature.position.recompute(0)
-    M[0:2,3]  = array(task.feature.position.value)[0:2,3]
-    M[2,3]  = 0.105
-    task.ref = matrixToTuple(M)
-    task.feature.selec.value = '111111'
-    sot.push(task.task.name)
 
 if 0:
     Mwref = eye(4)
