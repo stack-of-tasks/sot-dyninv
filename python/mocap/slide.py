@@ -186,7 +186,7 @@ taskCom = MetaTaskDynCom(dyn,dt)
 featurePosture    = FeatureGeneric('featurePosture')
 featurePostureDes = FeatureGeneric('featurePostureDes')
 plug(dyn.position,featurePosture.errorIN)
-featurePosture.sdes.value = featurePostureDes.name
+featurePosture.setReference(featurePostureDes.name)
 featurePosture.jacobianIN.value = matrixToTuple( identity(robotDim) )
 
 taskPosture = TaskDynPD('taskPosture')
@@ -349,7 +349,7 @@ taskHead.featureDes.position.value = matrixToTuple(eye(4))
 sot.push(taskLim.name)
 sot.push(taskHead.task.name)
 plug(robot.state,sot.position)
-
+ 
 # --- Events ---------------------------------------------
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 refset = ( lambda mt,v : mt.__class__.ref.__set__(mt,v) )
