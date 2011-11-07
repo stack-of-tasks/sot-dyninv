@@ -345,6 +345,7 @@ history = History(dyn,1,zmp.zmp)
 #-----------------------------------------------------------------------------
 
 DEG = 180.0/pi
+XCOM=0.03
 
 mp.setPositionMethod("KMK")
 mp.refresh()
@@ -381,7 +382,7 @@ contact(contactLF)
 contact(contactRF)
 
 taskCom.feature.selec.value = "11"
-taskCom.ref = ( 0.02, 0.09,  0.8077 )
+taskCom.ref = ( XCOM, 0.09,  0.8077 )
 taskCom.gain.setByPoint(200,10,0.005,0.8)
 
 taskrh.feature.selec.value = '111'
@@ -464,17 +465,17 @@ attime(960*mp.timeScale,
        lambda: gotoNd(taskrf,rf0,'111',(100,20,0.05,0.9)) , "RF to final position")
 '''
 
-attime(960*mp.timeScale, 
+attime(990*mp.timeScale, 
        (lambda: taskCom.gain.setConstant(0.12), "Lower Com gains"),
 #       (lambda: taskCom.gain.setByPoint(20,1,0.09,0.2), "Lower Com gains"),
        (lambda: taskCom.gain.setByPoint(200,0.15,0.001,0.95), "Lower Com gains"),
-       (lambda: refset(taskCom,(0.01,-0.1,0.8077)), "Com back to the center")  )
+       (lambda: refset(taskCom,(XCOM,-0.1,0.8077)), "Com back to the center")  )
 
 
 attime(1080*mp.timeScale,
 #       (lambda: taskCom.gain.setByPoint(30,5,0.005,0.8), "Increase Com gains"),
        (lambda: contact(contactRF,taskrf),"Add the RF contact")
-       ,(lambda: refset(taskCom,(0.01,0,0.8077)), "Com back to the center")  )
+       ,(lambda: refset(taskCom,(XCOM,0,0.8077)), "Com back to the center")  )
 
 attime(1500*mp.timeScale,stop)
 
