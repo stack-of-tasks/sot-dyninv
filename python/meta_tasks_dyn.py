@@ -60,6 +60,7 @@ class MetaTaskDynPosture(object):
         "larm": range(29,35), \
         "lhand": [35], \
             }
+    nbDof = None
     def __init__(self,dyn,dt,name="posture"):
         self.dyn=dyn
         self.name=name
@@ -72,6 +73,7 @@ class MetaTaskDynPosture(object):
         plug(dyn.position,self.feature.errorIN)
         robotDim = len(dyn.position.value)
         self.feature.jacobianIN.value = matrixToTuple( identity(robotDim) )
+#        self.feature.setReference(self.featureDes.name)
         self.feature.sdes.value = self.featureDes.name
 
         self.task.add(self.feature.name)
@@ -92,7 +94,9 @@ class MetaTaskDynPosture(object):
 
     def gotoq(self,gain=None,**kwargs):
         act=list()
-        qdes = zeros((36,1))
+        if MetaTaskDynPosture.nbDof==None:
+            MetaTaskDynPosture.nbDof = len(self.feature.errorIN.value)
+        qdes = zeros((MetaTaskDynPosture.nbDof,1))
         for n,v in kwargs.items():
             r = self.postureRange[n]
             act += r
@@ -116,6 +120,7 @@ class MetaTaskDynCom(object):
 
         plug(dyn.com,self.feature.errorIN)
         plug(dyn.Jcom,self.feature.jacobianIN)
+#        self.feature.setReference(self.featureDes.name)
         self.feature.sdes.value = self.featureDes.name
 
         self.task.add(self.feature.name)
