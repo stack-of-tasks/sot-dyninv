@@ -30,9 +30,11 @@ class History:
     def dumpToOpenHRP(self,baseName = "dyninv",sample = 1):
         filePos = open(baseName+'.pos','w')
         fileRPY = open(baseName+'.hip','w')
+        fileWaist = open(baseName+'.waist','w')
         sampleT = 0.005
         for nT,q in enumerate(self.q):
             fileRPY.write(str(sampleT*nT)+' '+str(q[3])+' '+str(q[4])+' '+str(q[5])+'\n')
+            fileWaist.write(str(sampleT*nT)+' '+str(q[0])+' '+str(q[1])+' '+str(q[2])+' '+str(q[3])+' '+str(q[4])+' '+str(q[5])+'\n')
             filePos.write(str(sampleT*nT)+' ')
             for j in range(6,36):
                 filePos.write(str(q[j])+' ')
@@ -42,9 +44,9 @@ class History:
             for nT,z in enumerate(self.zmp):
                 fileZMP.write(str(sampleT*nT)+' '+str(z[0])+' '+str(z[1])+' '+str(z[2])+'\n')
 
-        filePos0 = open(baseName+'.pos0','w')
-        filePos0.write(  "seq.sendMsg(\":joint-angles " )
+        filePos0 = open(baseName+'_pos0.py','w')
+        filePos0.write( "dyninv_posinit = '" )
         q0 = self.q[0]
         for x in q0[6:36]:
             filePos0.write( str(x*180.0/pi)+' ' )
-        filePos0.write( "   0 0 0 0 0 0 0 0 0 0  5\")")
+        filePos0.write( "   0 0 0 0 0 0 0 0 0 0  '")
