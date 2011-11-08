@@ -25,6 +25,7 @@ parser.add_option("-s", dest="server", help="Name of server (CORBA or XML-RPC). 
 parser.add_option("-r", dest="size", help="Robot size if file verification is needed.", default="-1", type=int)
 parser.add_option("-n", dest="iter", help="Number of iteration to play.", default="-1", type=int)
 parser.add_option("-z", dest="decimate", help="percentage of frame to use, should be <1", default="1", type=float)
+parser.add_option("-R", dest="robotName", help="Robot on which the simulation is replayed. Default is %default", default="hrp2")
 (options, args) = parser.parse_args()
 parser.print_help()
 print '\n -------------------------------------------------------------------------'
@@ -82,8 +83,8 @@ def inc():
     robotTime += 1
     if robotTime%1000==0: print "\nTime: " + str(robotTime)
 
-    # Add 10 values for the hand DOFs
-    pos_angles += 10*[0.0]
+    # Add 10 values for the hand DOFs for HRP2
+    if options.robotName=="hrp2": pos_angles += 10*[0.0]
 
     # Plot only if the values are not 'NaN'
     nbImage+=decimate
