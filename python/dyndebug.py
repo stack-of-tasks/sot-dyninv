@@ -140,7 +140,7 @@ featureCom    = FeatureGeneric('featureCom')
 featureComDes = FeatureGeneric('featureComDes')
 plug(dyn.com,featureCom.errorIN)
 plug(dyn.Jcom,featureCom.jacobianIN)
-featureCom.sdes.value = 'featureComDes'
+featureCom.setReference('featureComDes')
 featureComDes.errorIN.value = (0.0478408688115,-0.0620357207995,0.684865189311)
 
 taskCom = TaskDynPD('taskCom')
