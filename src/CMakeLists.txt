@@ -63,12 +63,14 @@ FOREACH(lib ${libs})
     )
 ENDFOREACH(lib)
 
-EXEC_PROGRAM(${PYTHON_EXECUTABLE} ARGS "-c \"from distutils import sysconfig; print sysconfig.get_python_lib(0,0,prefix='')\""
-  OUTPUT_VARIABLE PYTHON_SITELIB
-  )
+#EXEC_PROGRAM(${PYTHON_EXECUTABLE} ARGS "-c \"from distutils import sysconfig; print sysconfig.get_python_lib(0,0,prefix='')\""
+#  OUTPUT_VARIABLE PYTHON_SITELIB
+#  )
 
 # Install empty __init__.py files in intermediate directories.
 INSTALL(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/__init__.py
   DESTINATION ${PYTHON_SITELIB}/dynamic_graph/sot/dyninv
   )
+
+MESSAGE(STATUS DESTINATION ${PYTHON_SITELIB} )
