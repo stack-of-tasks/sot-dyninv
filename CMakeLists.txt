@@ -63,6 +63,8 @@ SET(libs
 	task-joint-limits
 	task-inequality
 	feature-projected-line
+
+	contact-selecter
   )
 
 LIST(APPEND LOGGING_WATCHED_TARGETS ${libs})
@@ -95,6 +97,9 @@ SET(headers
 	feature-projected-line.h
 
 	col-piv-qr-solve-in-place.h
+
+	contact-selecter.h
+
 )
 
 # Add subdirectories.
