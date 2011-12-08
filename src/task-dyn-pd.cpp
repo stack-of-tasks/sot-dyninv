@@ -112,14 +112,15 @@ namespace dynamicgraph
 	sotDEBUGIN(15);
 
 	const ml::Vector & e = errorSOUT(time);
-	const ml::Vector & edot = errorDotSOUT(time);
+	const ml::Vector & edot_measured = errorDotSOUT(time);
+	const ml::Vector & edot_ref = errorTimeDerivativeSOUT(time);
 	const double& Kp = controlGainSIN(time);
 	const double& Kv = KvSIN(time);
 
-	assert( e.size() == edot.size() );
+	assert( e.size() == edot_measured.size()  && e.size() == edot_ref.size() );
 	task .resize( e.size() );
 	for( unsigned int i=0;i<task.size(); ++i )
-	  task[i] = - Kp*e(i) - Kv*edot(i);
+	  task[i] = - Kp*e(i) - Kv*(edot_measured(i)-edot_ref(i));
 
 	sotDEBUGOUT(15);
 	return task;
