@@ -41,3 +41,7 @@ TaskInequality('')
 
 from feature_projected_line import FeatureProjectedLine
 FeatureProjectedLine('')
+
+from contact_selecter import ContactSelecter
+ContactSelecter('')
+
