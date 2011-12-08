@@ -40,9 +40,9 @@ namespace Eigen
     template< typename D >
     void solveInPlace( MatrixBase<D>& Gp )
     {
-      const int r = rank(), m=cols(), n=rows();
-      assert( r==m );
-      assert( Gp.rows() == m ); // TODO: if not proper size, resize.
+      const int r = rank(), n=rows();
+      assert( r==cols() );
+      assert( Gp.rows() == cols() ); // TODO: if not proper size, resize.
 
       VectorXd workspace( Gp.rows() ); // Size of Gtp number of rows.
       /* P2*P1*P0 ... */
@@ -80,8 +80,8 @@ namespace Eigen
       /* r is the rank, nxm the size of the original matrix (ie whose transpose
        * has been decomposed. n is the number of cols of the original matrix,
        * thus number of rows of the transpose we want to inverse. */
-      const int r = rank(), n=cols(), m=rows();
-      assert( r==n );
+      const int r = rank(), m=rows();
+      assert( r==cols() );
       assert( Gtp.rows() == m ); // TODO: if not proper size, resize.
 
       /* G E = Q R  ::  E' G' = L Q', with L=R'
