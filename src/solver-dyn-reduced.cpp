@@ -14,7 +14,7 @@
  * with sot-dyninv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VP_DEBUG
+//#define VP_DEBUG
 #define VP_DEBUG_MODE 50
 #include <sot/core/debug.hh>
 #ifdef VP_DEBUG
@@ -370,6 +370,12 @@ namespace dynamicgraph
 	    os << "| " << iter->first <<std::endl;
 	  }
       }
+
+      SolverDynReduced::matrixSINPtr SolverDynReduced::getSupportSIN( const std::string & contacName )
+      {
+	return contactMap[contacName].supportSIN;
+      }
+
 
 
       /* --- INIT SOLVER ------------------------------------------------------ */

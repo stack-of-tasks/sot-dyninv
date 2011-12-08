@@ -153,6 +153,8 @@ namespace dynamicgraph {
 	  void removeContact( const std::string & name );
 	  void dispContacts( std::ostream& os ) const;
 
+	  matrixSINPtr getSupportSIN( const std::string & contacName );
+
 
 	public: /* --- COMMANDS --- */
 	  void debugOnce( void );
