@@ -102,11 +102,11 @@ SET(headers
 
 )
 
-
 list(APPEND task-dyn-limits_plugins_dependencies task-dyn-pd)
 list(APPEND task-dyn-inequality_plugins_dependencies task-dyn-pd)
 list(APPEND task-dyn-joint-limits_plugins_dependencies task-dyn-pd)
 list(APPEND pseudo-robot-dynamic_plugins_dependencies dynamic-integrator)
+list(APPEND contact-selecter_plugins_dependencies solver-dyn-reduced)
 
 foreach(lib task-inequality task-dyn-pd task-joint-limits)
 	IF(WIN32)
