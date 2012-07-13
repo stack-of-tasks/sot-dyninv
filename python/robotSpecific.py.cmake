@@ -13,10 +13,10 @@ specificitiesName=dict()
 jointRankName=dict()
 postureRange=dict()
 
-pkgDataRootDir['hrp10small'] = "/home/nmansard/compil/poulou/hpp2/share/hrp2-10-small"
-pkgDataRootDir['hrp14small'] = "/home/nmansard/compil/poulou/hpp2/share/hrp2-14"
-pkgDataRootDir['hrp14aug'] = "/home/nmansard/compil/poulou/hpp2/share/hrp2-14-augmented"
-pkgDataRootDir['hrp10aug'] = "/home/nmansard/compil/poulou/hpp2/share/hrp2-10-augmented"
+pkgDataRootDir['hrp10small'] = "@CMAKE_INSTALL_PREFIX@/share/hrp2-10-small"
+pkgDataRootDir['hrp14small'] = "@CMAKE_INSTALL_PREFIX@/share/hrp2-14"
+pkgDataRootDir['hrp14aug'] = "@CMAKE_INSTALL_PREFIX@/hrp2-14-augmented"
+pkgDataRootDir['hrp10aug'] = "@CMAKE_INSTALL_PREFIX@/share/hrp2-10-augmented"
 
 modelName['hrp10small'] = 'HRP2JRLmainsmall.wrl'
 modelName['hrp14small'] = 'HRP2JRLmainsmall.wrl'
@@ -84,7 +84,7 @@ gearRatio['hrp10aug'] = (0,0,0,0,0,0,384.0,240.0,180.0,200.0,180.0,100.0,384.0,2
 
 
 # --- ROMEO -----------------------------------
-pkgDataRootDir['romeo'] = "/home/nmansard/compil/poulou/hpp2/share/romeo_hands"
+pkgDataRootDir['romeo'] = "@CMAKE_INSTALL_PREFIX@/share/romeo_hands"
 
 # Romeo data
 modelName['romeo'] = 'RomeoNoToes.wrl'
