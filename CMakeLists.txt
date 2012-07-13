@@ -134,5 +134,11 @@ endforeach(lib)
 ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(unitTesting)
 
+# Configure some of the python files
+CONFIGURE_FILE(
+   "${CMAKE_CURRENT_SOURCE_DIR}/python/robotSpecific.py.cmake"
+   "${CMAKE_CURRENT_SOURCE_DIR}/python/robotSpecific.py"
+)
+
 SETUP_PROJECT_FINALIZE()
 SETUP_PROJECT_CPACK()
