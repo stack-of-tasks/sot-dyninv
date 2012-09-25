@@ -134,12 +134,16 @@ namespace dynamicgraph
       if(! find ){ return; }
 
       StackIterator_t pos=it; pos++;
+
+      // If the task is already at the end of the stack, do nothing
+      if( stack.end()==pos ){ return; }
+
       TaskGeneric* task=*it;
       stack.erase( it );
+      // the task was the second to last one
       if( stack.end()==pos ){ stack.push_back(task); }
       else
 	{
-	  pos++;
 	  stack.insert( pos,task );
 	}
       resetReady();
