@@ -35,5 +35,6 @@ FOREACH(test ${tests})
     ADD_DEPENDENCIES(${EXECUTABLE_NAME} "${${test}_plugins_dependencies}")
     TARGET_LINK_LIBRARIES(${EXECUTABLE_NAME} "${${test}_plugins_dependencies}")
   ENDIF(${test}_plugins_dependencies)
+  TARGET_LINK_LIBRARIES(${EXECUTABLE_NAME} "-lsoth")
 
 ENDFOREACH(test)
