@@ -26,7 +26,7 @@ from numpy import *
 
 from dynamic_graph.sot.core.utils.history import History
 
-from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
+from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 
 # --- ROBOT SIMU ---------------------------------------------------------------
 # --- ROBOT SIMU ---------------------------------------------------------------
@@ -38,7 +38,7 @@ robot = RobotSimu("robot")
 robot.resize(robotDim)
 dt=5e-3
 
-from robotSpecific import halfSittingConfig
+from dynamic_graph.sot.dyninv.robot_specific import halfSittingConfig
 x0=-0.00949035111398315034
 y0=0
 z0=0.64870185118253043
