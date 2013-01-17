@@ -202,7 +202,6 @@ namespace dynamicgraph
       resizeSolver( void )
       {
 	hsolver = hcod_ptr_t(new soth::HCOD( nbDofs,stack.size() ));
-	debugOnce();
 
 	Ctasks.resize(stack.size());
 	btasks.resize(stack.size());
