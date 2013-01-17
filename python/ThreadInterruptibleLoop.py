@@ -68,3 +68,18 @@ def loopInThread( funLoop ):
         def loop(self):
             funLoop()
     return ThreadViewer
+
+from dynamic_graph.script_shortcuts import optionalparentheses
+# Define the 4 classical shortcuts to control the loop.
+def loopShortcuts(runner):
+    @optionalparentheses
+    def go(): runner.play()
+    @optionalparentheses
+    def stop(): runner.pause()
+    @optionalparentheses
+    def next(): runner.loop()
+    class NextInc:
+        def __add__(self,x):
+            for i in range(x):  next()
+    n=NextInc()
+    return [go,stop,next,n]
