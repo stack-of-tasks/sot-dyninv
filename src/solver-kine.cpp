@@ -20,7 +20,7 @@
 #ifdef VP_DEBUG
 class solver_op_space__INIT
 {
-public:solver_op_space__INIT( void ) { dynamicgraph::sot::DebugTrace::openFile(); }
+  //public:solver_op_space__INIT( void ) { dynamicgraph::sot::DebugTrace::openFile(); }
 };
 solver_op_space__INIT solver_op_space_initiator;
 #endif //#ifdef VP_DEBUG
@@ -39,7 +39,45 @@ solver_op_space__INIT solver_op_space_initiator;
 #include <soth/Algebra.hpp>
 #include <Eigen/QR>
 #include <sot-dyninv/mal-to-eigen.h>
+#include <sys/time.h>
 
+namespace soth
+{
+  Bound& operator -= (Bound& xb, const double & x )
+  {
+    return xb;
+  }
+
+  const Bound operator - (const Bound& a, const Bound & b )
+  {
+    assert( b.getType()==Bound::BOUND_TWIN || a.getType()==b.getType() );
+
+    if( b.getType() ==Bound::BOUND_TWIN )
+      {
+	switch( a.getType() )
+	  {
+	  case Bound::BOUND_TWIN:
+	  case Bound::BOUND_INF:
+	  case Bound::BOUND_SUP:
+	    return Bound(a.getBound(a.getType())-b.getBound(Bound::BOUND_TWIN),
+			 a.getType());
+	    break;
+	  case Bound::BOUND_DOUBLE:
+	    return Bound(a.getBound(Bound::BOUND_INF)-b.getBound(Bound::BOUND_TWIN),
+			 a.getBound(Bound::BOUND_SUP)-b.getBound(Bound::BOUND_TWIN));
+	    break;
+	  }
+      }
+    else
+      {
+	// TODO
+	throw "TODO";
+      }
+
+
+    return a;
+  }
+}
 
 namespace dynamicgraph
 {
@@ -52,7 +90,17 @@ namespace dynamicgraph
       using namespace dg;
       using dg::SignalBase;
 
-      /* --- DG FACTORY ------------------------------------------------------- */
+      static bool isLH(boost::shared_ptr<soth::Stage> s)
+      {
+	return s->name == "tasklh";
+      }
+      static bool isRH(boost::shared_ptr<soth::Stage> s)
+      {
+	return s->name == "taskrhorient";
+      }
+
+
+     /* --- DG FACTORY ------------------------------------------------------- */
       DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(SolverKine,"SolverKine");
 
       /* --- CONSTRUCTION ----------------------------------------------------- */
@@ -74,6 +122,8 @@ namespace dynamicgraph
 
 	,Ctasks(),btasks()
 	,solution()
+	,activeSet(),relevantActiveSet(false)
+	  
       {
 	signalRegistration(  controlSOUT << velocitySOUT
 			    << dampingSIN );
@@ -82,6 +132,14 @@ namespace dynamicgraph
 	addCommand("debugOnce",
 		   makeCommandVoid0(*this,&SolverKine::debugOnce,
 				    docCommandVoid0("open trace-file for next iteration of the solver.")));
+
+	addCommand("resetAset",
+		   makeCommandVoid0(*this,&SolverKine::resetAset,
+				    docCommandVoid0("Reset the active set.")));
+
+	addCommand("decompo",
+		   makeCommandVoid1(*this,&SolverKine::getDecomposition,
+				    docCommandVoid1("Return the decomposition of the given level.","Stage level")));
 
 	addCommand("setControlFreeFloating",
 		   makeDirectSetter(*this,&controlFreeFloating,
@@ -120,6 +178,25 @@ namespace dynamicgraph
 	controlSOUT.setReady();
       }
 
+      /* --- NOTIFICATION HCOD ------------------------------------------------ */
+
+      struct HCODUpdateCounter
+      {
+	void operator() (std::string stage,soth::ConstraintRef cst, std::string event)
+	{
+	  if(!onoff) return;
+	  //sotDEBUG(0)
+	  //std::cout<< "At t="<<iter<<" [" << stage << "," << cst << "]: " << event << std::endl;
+	  count ++;
+	}
+	static int iter;
+	static int count;
+	static bool onoff;
+	HCODUpdateCounter()  {count = 0;}
+      };
+      int HCODUpdateCounter::count = 0;
+      int HCODUpdateCounter::iter = 0;
+      bool HCODUpdateCounter::onoff = true;
 
       /* --- INIT SOLVER ------------------------------------------------------ */
       /* --- INIT SOLVER ------------------------------------------------------ */
@@ -144,8 +221,22 @@ namespace dynamicgraph
       resizeSolver( void )
       {
 	hsolver = hcod_ptr_t(new soth::HCOD( nbDofs,stack.size() ));
+	debugOnce();
+
 	Ctasks.resize(stack.size());
 	btasks.resize(stack.size());
+	relevantActiveSet = false;
+
+	// std::cout << controlSOUT.getTime() << std::endl;
+	// if( controlSOUT.getTime() == 10)
+	//   {
+	//     std::cout <<"Exceptionaly keep the aset." << std::endl;
+	//     relevantActiveSet = true;
+	//     activeSet[5] = soth::cstref_vector_t();
+	//     activeSet[6] = soth::cstref_vector_t();
+	//     activeSet.push_back(soth::cstref_vector_t());
+	//     activeSet.push_back(soth::cstref_vector_t());
+	//   }
 
 	int i=0;
 	BOOST_FOREACH( TaskAbstract* task, stack )
@@ -160,6 +251,7 @@ namespace dynamicgraph
 	  }
 
 	solution.resize( nbDofs );
+	hsolver->notifiorRegistration(HCODUpdateCounter());
       }
 
       /* Return true iff the solver sizes fit to the task set. */
@@ -188,15 +280,18 @@ namespace dynamicgraph
 	return !toBeResized;
       }
 
+
       /* --- SIGNALS ---------------------------------------------------------- */
       /* --- SIGNALS ---------------------------------------------------------- */
       /* --- SIGNALS ---------------------------------------------------------- */
+      std::ofstream fup("/tmp/up.dat");
 
       ml::Vector& SolverKine::
       controlSOUT_function( ml::Vector &mlcontrol, int t )
       {
 	sotDEBUG(15) << " # In time = " << t << std::endl;
 
+	HCODUpdateCounter::iter = t;
 	refreshTaskTime( t );
 	if(! checkSolverSize() ) resizeSolver();
 
@@ -229,9 +324,6 @@ namespace dynamicgraph
 	    const dg::sot::VectorMultiBound & ddx = task.taskSOUT(t);
 	    const int nx = ddx.size();
 
-	    sotDEBUG(5) << "ddx"<<i<<" = " << ddx << std::endl;
-	    sotDEBUG(25) << "J"<<i<<" = " << J << std::endl;
-
 	    assert( Ctask.rows() == nx && btask.size() == nx );
 	    assert( J.rows()==nx && J.cols()==nbDofs && (int)ddx.size()==nx );
 
@@ -243,13 +335,24 @@ namespace dynamicgraph
 
 	/* --- */
 	sotDEBUG(1) << "Initial config." << std::endl;
+	double time= 0;
+
 	hsolver->reset();
-	hsolver->setInitialActiveSet();
+	if(relevantActiveSet) 
+	  hsolver->setInitialActiveSet(activeSet);
+	else hsolver->setInitialActiveSet();
+
+	struct timeval t0,t1;
+	gettimeofday(&t0,NULL);
 
 	sotDEBUG(1) << "Run for a solution." << std::endl;
 	hsolver->activeSearch(solution);
 	sotDEBUG(1) << "solution = " << (MATLAB)solution << std::endl;
 
+	gettimeofday(&t1,NULL);
+	time = ((t1.tv_sec-t0.tv_sec)+(t1.tv_usec-t0.tv_usec)/1.0e6);
+
+	activeSet = hsolver->getOptimalActiveSet(); relevantActiveSet = true;
 
 	if( controlFreeFloating )
 	  {
@@ -261,6 +364,12 @@ namespace dynamicgraph
 	    EIGEN_VECTOR_FROM_VECTOR( control,mlcontrol,nbDofs-6 );
 	    control=solution.tail( nbDofs-6 );
 	  }
+
+	fup << t << "\t" << HCODUpdateCounter::count
+	    << " " << time << " " << hsolver->sizeA();	
+	fup << std::endl;
+
+	HCODUpdateCounter::count = 0;
 
 	sotDEBUG(1) << "control = " << mlcontrol << std::endl;
 	return mlcontrol;
@@ -274,8 +383,22 @@ namespace dynamicgraph
       void SolverKine::
       debugOnce( void )
       {
+	std::cout << "Open the trace"<<std::endl;
 	dg::sot::DebugTrace::openFile("/tmp/sot.txt");
-	hsolver->debugOnce();
+	hsolver->debugOnce("/tmp/soth.txt",true);
+      }
+      void SolverKine::
+      resetAset( void )
+      {
+	relevantActiveSet = false;
+      }
+
+      void SolverKine::
+      getDecomposition(const int & i)
+      {
+	using namespace soth;
+	std::cout << "M"<<i<<" = " << (MATLAB) hsolver -> stage(i).getM() << std::endl;
+	std::cout << "L"<<i<<" = " << (MATLAB)(MatrixXd) (hsolver -> stage(i).getLtri()) << std::endl;
       }
 
       /* --- ENTITY ----------------------------------------------------------- */
