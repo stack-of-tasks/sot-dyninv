@@ -165,7 +165,7 @@ namespace dynamicgraph
 	res.resize( outsize ); int idx=0;
 	for( int i=0;i<insize;++i )
 	  { if(selec(i))
-	      res(idx++) = ( error(i)-refInf(i) ) / ( error(i)-refInf(i) ); }
+	      res(idx++) = ( error(i)-refInf(i) ) / ( refSup(i)-refInf(i) ); }
 	return res;
       }
 
