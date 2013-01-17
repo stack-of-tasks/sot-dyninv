@@ -21,20 +21,20 @@ class MetaTaskDyn6d(MetaTask6d):
     
     def __init__(self,*args):
         MetaTask6d.__init__(self,*args)
-        self.opPointModif = OpPointModifier('opmodif'+self.name)
-        plug(self.dyn.signal(self.opPoint),self.opPointModif.signal('positionIN'))
-        plug(self.dyn.signal('J'+self.opPoint),self.opPointModif.signal('jacobianIN'))
-        self.opPointModif.activ = False
+#        self.opPointModif = OpPointModifier('opmodif'+self.name)
+#        plug(self.dyn.signal(self.opPoint),self.opPointModif.signal('positionIN'))
+#        plug(self.dyn.signal('J'+self.opPoint),self.opPointModif.signal('jacobianIN'))
+#        self.opPointModif.activ = False
 
-    @property
-    def opmodif(self):
-        if not self.opPointModif.activ: return False
-        else: return self.opPointModif.getTransformation()
+#    @property
+#    def opmodif(self):
+#        if not self.opPointModif.activ: return False
+#        else: return self.opPointModif.getTransformation()
 
-    @opmodif.setter
-    def opmodif(self,m):
-        if not self.opPointModif.activ:
-            plug(self.opPointModif.signal('position'),self.feature.position )
-            plug(self.opPointModif.signal('jacobian'),self.feature.Jq)
-            self.opPointModif.activ = True
-        self.opPointModif.setTransformation(m)
+#    @opmodif.setter
+#    def opmodif(self,m):
+#        if not self.opPointModif.activ:
+#            plug(self.opPointModif.signal('position'),self.feature.position )
+#            plug(self.opPointModif.signal('jacobian'),self.feature.Jq)
+#            self.opPointModif.activ = True
+#        self.opPointModif.setTransformation(m)
