@@ -91,6 +91,8 @@ namespace dynamicgraph {
 
 	public: /* --- COMMANDS --- */
 	  void debugOnce( void );
+	  void resetAset( void );
+	  void getDecomposition( const int &stage );
 	  bool controlFreeFloating;
 
 	private: /* --- INTERNAL COMPUTATIONS --- */
@@ -106,6 +108,8 @@ namespace dynamicgraph {
 	  std::vector< soth::VectorBound > btasks;
 
 	  Eigen::VectorXd solution;
+	  std::vector<soth::cstref_vector_t> activeSet;
+	  bool relevantActiveSet;
 
 	}; // class SolverKine
 
