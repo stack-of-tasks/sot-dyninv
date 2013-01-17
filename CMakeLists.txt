@@ -62,6 +62,7 @@ SET(libs
 	solver-kine
 	task-joint-limits
 	task-inequality
+	task-weight
 	feature-projected-line
 
 	contact-selecter
@@ -93,6 +94,7 @@ SET(headers
 
 	task-joint-limits.h
 	task-inequality.h
+	task-weight.h
 	solver-kine.h
 	feature-projected-line.h
 
@@ -108,7 +110,7 @@ list(APPEND task-dyn-joint-limits_plugins_dependencies task-dyn-pd)
 list(APPEND pseudo-robot-dynamic_plugins_dependencies dynamic-integrator)
 list(APPEND contact-selecter_plugins_dependencies solver-dyn-reduced)
 
-foreach(lib task-inequality task-dyn-pd task-joint-limits)
+foreach(lib task-weight task-inequality task-dyn-pd task-joint-limits)
 	IF(WIN32)
 		list(APPEND ${lib}_ext_plugins_dependencies
 			${DYNAMIC_GRAPH_PLUGINDIR}/task${CMAKE_LINK_LIBRARY_SUFFIX})
