@@ -178,25 +178,6 @@ namespace dynamicgraph
 	controlSOUT.setReady();
       }
 
-      /* --- NOTIFICATION HCOD ------------------------------------------------ */
-
-      struct HCODUpdateCounter
-      {
-	void operator() (std::string stage,soth::ConstraintRef cst, std::string event)
-	{
-	  if(!onoff) return;
-	  //sotDEBUG(0)
-	  //std::cout<< "At t="<<iter<<" [" << stage << "," << cst << "]: " << event << std::endl;
-	  count ++;
-	}
-	static int iter;
-	static int count;
-	static bool onoff;
-	HCODUpdateCounter()  {count = 0;}
-      };
-      int HCODUpdateCounter::count = 0;
-      int HCODUpdateCounter::iter = 0;
-      bool HCODUpdateCounter::onoff = true;
 
       /* --- INIT SOLVER ------------------------------------------------------ */
       /* --- INIT SOLVER ------------------------------------------------------ */
@@ -227,17 +208,6 @@ namespace dynamicgraph
 	btasks.resize(stack.size());
 	relevantActiveSet = false;
 
-	// std::cout << controlSOUT.getTime() << std::endl;
-	// if( controlSOUT.getTime() == 10)
-	//   {
-	//     std::cout <<"Exceptionaly keep the aset." << std::endl;
-	//     relevantActiveSet = true;
-	//     activeSet[5] = soth::cstref_vector_t();
-	//     activeSet[6] = soth::cstref_vector_t();
-	//     activeSet.push_back(soth::cstref_vector_t());
-	//     activeSet.push_back(soth::cstref_vector_t());
-	//   }
-
 	int i=0;
 	BOOST_FOREACH( TaskAbstract* task, stack )
 	  {
@@ -251,7 +221,6 @@ namespace dynamicgraph
 	  }
 
 	solution.resize( nbDofs );
-	hsolver->notifiorRegistration(HCODUpdateCounter());
       }
 
       /* Return true iff the solver sizes fit to the task set. */
@@ -284,14 +253,11 @@ namespace dynamicgraph
       /* --- SIGNALS ---------------------------------------------------------- */
       /* --- SIGNALS ---------------------------------------------------------- */
       /* --- SIGNALS ---------------------------------------------------------- */
-      std::ofstream fup("/tmp/up.dat");
-
       ml::Vector& SolverKine::
       controlSOUT_function( ml::Vector &mlcontrol, int t )
       {
 	sotDEBUG(15) << " # In time = " << t << std::endl;
 
-	HCODUpdateCounter::iter = t;
 	refreshTaskTime( t );
 	if(! checkSolverSize() ) resizeSolver();
 
@@ -342,15 +308,9 @@ namespace dynamicgraph
 	  hsolver->setInitialActiveSet(activeSet);
 	else hsolver->setInitialActiveSet();
 
-	struct timeval t0,t1;
-	gettimeofday(&t0,NULL);
-
 	sotDEBUG(1) << "Run for a solution." << std::endl;
 	hsolver->activeSearch(solution);
 	sotDEBUG(1) << "solution = " << (MATLAB)solution << std::endl;
-
-	gettimeofday(&t1,NULL);
-	time = ((t1.tv_sec-t0.tv_sec)+(t1.tv_usec-t0.tv_usec)/1.0e6);
 
 	activeSet = hsolver->getOptimalActiveSet(); relevantActiveSet = true;
 
@@ -364,12 +324,6 @@ namespace dynamicgraph
 	    EIGEN_VECTOR_FROM_VECTOR( control,mlcontrol,nbDofs-6 );
 	    control=solution.tail( nbDofs-6 );
 	  }
-
-	fup << t << "\t" << HCODUpdateCounter::count
-	    << " " << time << " " << hsolver->sizeA();	
-	fup << std::endl;
-
-	HCODUpdateCounter::count = 0;
 
 	sotDEBUG(1) << "control = " << mlcontrol << std::endl;
 	return mlcontrol;
