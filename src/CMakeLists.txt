@@ -72,6 +72,8 @@ ENDFOREACH(lib)
 # Install empty __init__.py files in intermediate directories.
 INSTALL(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/__init__.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_task_dyn_6d.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_tasks_dyn.py
   DESTINATION ${PYTHON_SITELIB}/dynamic_graph/sot/dyninv
   )
 

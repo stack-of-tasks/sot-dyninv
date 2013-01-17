@@ -13,9 +13,7 @@ from task_joint_limits import TaskJointLimits
 from task_inequality import TaskInequality
 from feature_projected_line import FeatureProjectedLine
 from contact_selecter import ContactSelecter
-
 from task_weight import TaskWeight
-
 
 from solver_kine import SolverKine
 def sot_addContact( sot,metaTask ):
