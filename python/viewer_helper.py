@@ -6,7 +6,12 @@ def stateFullSize(robot,additionalData = () ):
     return [float(val) for val in robot.state.value+additionalData]
 
 def refreshView( robot ):
-    robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
+    if robot.name=='robot':       name='hrp'
+    else:                         name=robot.name
+    robot.viewer.updateElementConfig(name,robot.stateFullSize())
+
+    for f in robot.displayList:
+        f()
 
 def incrementView(robot,dt):
     '''Increment then refresh.'''
@@ -16,6 +21,7 @@ def incrementView(robot,dt):
 def setView( robot,*args ):
     '''Set robot config then refresh.'''
     robot.setNoView(*args)
+    #print('view')
     robot.refresh()
 
 def addRobotViewer(robot,**args):
@@ -27,6 +33,7 @@ def addRobotViewer(robot,**args):
     '''
     verbose = args.get('verbose',True) 
     small = args.get('small',False)
+    small_extra = args.get('small_extra',10)
     server = args.get('server','XML-RPC') 
 
     try:
@@ -35,13 +42,10 @@ def addRobotViewer(robot,**args):
 
         if small:
             if verbose: print 'using a small robot'
-            RobotClass.stateFullSize = lambda x: stateFullSize(x,10*(0.0,))
+            RobotClass.stateFullSize = lambda x: stateFullSize(x,small_extra*(0.0,))
         else: RobotClass.stateFullSize = stateFullSize
 
         robot.viewer = robotviewer.client(server)
-
-        # Check the connection
-        robot.viewer.updateElementConfig('hrp',robot.stateFullSize())
 
         RobotClass.refresh = refreshView
         RobotClass.incrementNoView = RobotClass.increment
@@ -49,7 +53,11 @@ def addRobotViewer(robot,**args):
         RobotClass.setNoView = RobotClass.set
         RobotClass.set = setView
 
-        robot.refresh()
+        robot.displayList= []
+
+        # Check the connection
+        if args.get('dorefresh',True): 
+            robot.refresh()
 
     except:
         if verbose: print "No robot viewer, sorry."
@@ -57,7 +65,9 @@ def addRobotViewer(robot,**args):
 
 
 
-
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Add a visual output when an event is called.
 class VisualPinger:
     def __init__(self,viewer):
@@ -69,3 +79,9 @@ class VisualPinger:
     def __call__(self):
         self.pos += 1
         self.refresh()
+
+def updateComDisplay(robot,comsig,objname='com'):
+    if comsig.time > 0:
+        robot.viewer.updateElementConfig(objname,[comsig.value[0],comsig.value[1],0,0,0,0])
+
+
