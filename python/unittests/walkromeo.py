@@ -1,57 +1,43 @@
 # ______________________________________________________________________________
 # ******************************************************************************
-# Basic script illustrating the walking pattern generator: the robot walk
-# following the COM pattern of an online PG (Herdt algorithm). The task list is
-# minimal: feet, COM and waist rotation and altitude.
+# The simplest robot task: just go and reach a point with the right hand.
 # ______________________________________________________________________________
 # ******************************************************************************
 
-from numpy import *
 from dynamic_graph import plug
-from dynamic_graph.script_shortcuts import optionalparentheses
-from dynamic_graph.matlab import matlab
 from dynamic_graph.sot.core import *
-from dynamic_graph.sot.core.math_small_entities import Derivator_of_Matrix
-from dynamic_graph.sot.core.matrix_util import matrixToTuple
-from dynamic_graph.sot.core.meta_task_6d import MetaTask6d,toFlags
-from dynamic_graph.sot.core.meta_tasks_kine import *
-from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger,updateComDisplay
-from dynamic_graph.sot.core.utils.attime import attime
-from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
-from dynamic_graph.sot.core.utils.history import History
-
 from dynamic_graph.sot.dynamics import *
+import dynamic_graph.script_shortcuts
+from dynamic_graph.script_shortcuts import optionalparentheses
+from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
+from dynamic_graph.sot.core.meta_tasks_kine import *
+from dynamic_graph.sot.core.meta_task_posture import MetaTaskKinePosture
+from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger,updateComDisplay
+from numpy import *
 
-from dynamic_graph.sot.dyninv import *
-from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
-from dynamic_graph.sot.dyninv.robot_specific import halfSittingConfig
+from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor,specificitiesName,jointRankName
 
 # --- ROBOT SIMU ---------------------------------------------------------------
-# --- ROBOT SIMU ---------------------------------------------------------------
-# --- ROBOT SIMU ---------------------------------------------------------------
-
-robotName = 'hrp14small'
+robotName = 'romeo'
 robotDim=robotDimension[robotName]
-robot = RobotSimu("robot")
+robot = RobotSimu("romeo")
 robot.resize(robotDim)
 dt=5e-3
 
-x0=-0.00949035111398315034
-y0=0
-z0=0.64870185118253043
-halfSittingConfig[robotName] = (x0,y0,z0,0,0,0)+halfSittingConfig[robotName][6:]
-initialConfig[robotName]=halfSittingConfig[robotName]
+#q0=list(initialConfig[robotName])
+#q0[0]=-0.027827
+#initialConfig[robotName]=tuple(q0)
 
 robot.set( initialConfig[robotName] )
-addRobotViewer(robot,small=True,verbose=False)
+addRobotViewer(robot,small=True,small_extra=24,verbose=False)
 
 #-------------------------------------------------------------------------------
 #----- MAIN LOOP ---------------------------------------------------------------
 #-------------------------------------------------------------------------------
+from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
 @loopInThread
 def inc():
     robot.increment(dt)
-    attime.run(robot.control.time)
     updateComDisplay(robot,dyn.com)
 
 runner=inc()
@@ -62,8 +48,8 @@ runner=inc()
 #-----------------------------------------------------------------------------
 modelDir  = pkgDataRootDir[robotName]
 xmlDir    = pkgDataRootDir[robotName]
-specificitiesPath = xmlDir + '/HRP2SpecificitiesSmall.xml'
-jointRankPath     = xmlDir + '/HRP2LinkJointRankSmall.xml'
+specificitiesPath = xmlDir + '/' + specificitiesName[robotName]
+jointRankPath     = xmlDir + '/' + jointRankName[robotName]
 
 dyn = Dynamic("dyn")
 dyn.setFiles(modelDir, modelName[robotName],specificitiesPath,jointRankPath)
@@ -76,15 +62,6 @@ plug(robot.state,dyn.position)
 dyn.velocity.value = robotDim*(0.,)
 dyn.acceleration.value = robotDim*(0.,)
 
-dyn.ffposition.unplug()
-dyn.ffvelocity.unplug()
-dyn.ffacceleration.unplug()
-
-dyn.setProperty('ComputeBackwardDynamics','true')
-dyn.setProperty('ComputeAccelerationCoM','true')
-
-robot.control.unplug()
-
 # --- PG ---------------------------------------------------------
 # --- PG ---------------------------------------------------------
 # --- PG ---------------------------------------------------------
@@ -95,10 +72,9 @@ pg.plugZmp(robot)
 # ---- SOT ---------------------------------------------------------------------
 # ---- SOT ---------------------------------------------------------------------
 # ---- SOT ---------------------------------------------------------------------
-# The solver SOTH of dyninv is used, but normally, the SOT solver should be sufficient
-from dynamic_graph.sot.dyninv import SolverKine
-sot = SolverKine('sot')
-sot.setSize(robotDim)
+
+sot = SOT('sot')
+sot.setNumberDofs(robotDim)
 plug(sot.control,robot.control)
 
 # ---- TASKS -------------------------------------------------------------------
@@ -131,18 +107,6 @@ taskLF=MetaTask6d('lf',dyn,'lf','left-ankle')
 plug(pg.pg.leftfootref,taskLF.featureDes.position)
 taskLF.task.controlGain.value = 5
 
-# --- TRACER -----------------------------------------------------------------
-from dynamic_graph.tracer import *
-tr = Tracer('tr')
-tr.open('/tmp/','','.dat')
-tr.start()
-robot.after.addSignal('tr.triger')
-
-tr.add(taskRF.featureDes.name+'.position','refr')
-tr.add(taskLF.featureDes.name+'.position','refl')
-
-# --- RUN ----------------------------------------------------------------------
-# --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
 
 sot.push(taskWaist.task.name)
@@ -154,8 +118,7 @@ sot.push(taskCom.task.name)
 # Set the algorithm generating the ZMP reference trajectory to Herdt's one.
 pg.startHerdt()
 # You can now modifiy the speed of the robot using set pg.pg.velocitydes [3]( x, y, yaw)
-pg.pg.velocitydes.value =(0.1,0.0,0.15)
+pg.pg.velocitydes.value =(0.1,0.0,0.0)
 
 #go()
 next()
-
