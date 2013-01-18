@@ -3,7 +3,6 @@
 # ______________________________________________________________________________
 # ******************************************************************************
 
-sys.path.append('..')
 from dynamic_graph import plug
 from dynamic_graph.sot.core import *
 from dynamic_graph.sot.core.math_small_entities import Derivator_of_Matrix
@@ -21,7 +20,7 @@ from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPing
 from dynamic_graph.sot.core.utils.attime import attime,ALWAYS,refset,sigset
 from numpy import *
 
-from history import History
+from dynamic_graph.sot.core.utils.history import History
 
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 

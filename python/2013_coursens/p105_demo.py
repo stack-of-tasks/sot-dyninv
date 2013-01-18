@@ -2,10 +2,7 @@
 # ******************************************************************************
 # ______________________________________________________________________________
 # ******************************************************************************
-import sys
-execfile('/home/nmansard/.pythonrc')
 
-sys.path.append('..')
 from dynamic_graph import plug
 from dynamic_graph.sot.core import *
 from dynamic_graph.sot.core.math_small_entities import Derivator_of_Matrix
