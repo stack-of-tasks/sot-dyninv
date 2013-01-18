@@ -138,9 +138,16 @@ ADD_SUBDIRECTORY(unitTesting)
 
 # Configure some of the python files
 CONFIGURE_FILE(
-   "${CMAKE_CURRENT_SOURCE_DIR}/python/robotSpecific.py.cmake"
-   "${CMAKE_CURRENT_SOURCE_DIR}/python/robotSpecific.py"
+   "${CMAKE_CURRENT_SOURCE_DIR}/python/robot_specific.py.cmake"
+   "${CMAKE_CURRENT_BINARY_DIR}/python/robot_specific.py"
 )
+
+#INCLUDE(cmake/python.cmake)
+#INSTALL(FILES
+#  "${CMAKE_CURRENT_BINARY_DIR}/python/robotSpecific.py"
+#  DESTINATION ${PYTHON_SITELIB}/dynamic_graph/sot/dyninv
+#)
+
 
 SETUP_PROJECT_FINALIZE()
 SETUP_PROJECT_CPACK()
