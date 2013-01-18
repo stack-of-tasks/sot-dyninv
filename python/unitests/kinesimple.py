@@ -126,7 +126,7 @@ class MetaTaskKine6d( MetaTask6d ):
         self.gain = GainAdaptive('gain'+self.name)
         self.gain.set(0.1,0.1,125e3)
     def plugEverything(self):
-        self.feature.sdes.value = self.featureDes.name
+        self.feature.setReference(self.featureDes.name)
         plug(self.dyn.signal(self.opPoint),self.feature.signal('position'))
         plug(self.dyn.signal('J'+self.opPoint),self.feature.signal('Jq'))
         self.task.add(self.feature.name)
@@ -153,7 +153,7 @@ featureCom    = FeatureGeneric('featureCom')
 featureComDes = FeatureGeneric('featureComDes')
 plug(dyn.com,featureCom.errorIN)
 plug(dyn.Jcom,featureCom.jacobianIN)
-featureCom.sdes.value = 'featureComDes'
+featureCom.setReference('featureComDes')
 featureComDes.errorIN.value = (0.0478408688115,-0.0620357207995,0.684865189311)
 
 taskCom = Task('taskCom')
@@ -180,7 +180,7 @@ taskSupport.dt.value=dt
 featurePosture    = FeatureGeneric('featurePosture')
 featurePostureDes = FeatureGeneric('featurePostureDes')
 plug(dyn.position,featurePosture.errorIN)
-featurePosture.sdes.value = 'featurePostureDes'
+featurePosture.setReference('featurePostureDes')
 featurePosture.jacobianIN.value = totuple( identity(robotDim) )
 featurePostureDes.errorIN.value = dyn.position.value
 
