@@ -84,7 +84,7 @@ gearRatio['hrp10aug'] = (0,0,0,0,0,0,384.0,240.0,180.0,200.0,180.0,100.0,384.0,2
 
 
 # --- ROMEO -----------------------------------
-pkgDataRootDir['romeo'] = "@CMAKE_INSTALL_PREFIX@/share/romeo_hands"
+pkgDataRootDir['romeo'] = "@CMAKE_INSTALL_PREFIX@/share/romeo"
 
 # Romeo data
 modelName['romeo'] = 'RomeoNoToes.wrl'
