@@ -1,7 +1,7 @@
 #_____________________________________________________________________________________________
 #********************************************************************************************
 #
-#  Robot motion (HRP2 14 small) using:
+#  Robot motion (romeo) using:
 #  - ONLY OPERATIONAL TASKS
 #  - Joint limits (position and velocity)
 #_____________________________________________________________________________________________
@@ -17,17 +17,16 @@ from dynamic_graph.sot.dyninv import *
 import dynamic_graph.script_shortcuts
 from dynamic_graph.script_shortcuts import optionalparentheses
 from dynamic_graph.matlab import matlab
-sys.path.append('..')
 from dynamic_graph.sot.core.meta_task_6d import toFlags
-from meta_task_dyn_6d import MetaTaskDyn6d
-from meta_tasks_dyn import *
-from attime import attime
+from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
+from dynamic_graph.sot.dyninv.meta_tasks_dyn import *
+from dynamic_graph.sot.core.utils.attime import attime
 from numpy import *
-from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor, specificitiesName, jointRankName, postureRange
-from matrix_util import matrixToTuple, vectorToTuple,rotate
-from history import History
-from zmp_estimator import ZmpEstimator
-from viewer_helper import addRobotViewer,VisualPinger
+from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor, specificitiesName, jointRankName, postureRange
+from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
+# from dynamic_graph.sot.core.utils.history import History
+# from dynamic_graph.sot.dyninv.zmp_estimator import ZmpEstimator
+from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger
 
 #-----------------------------------------------------------------------------
 # --- ROBOT SIMU -------------------------------------------------------------
@@ -39,10 +38,7 @@ robotDim  = robotDimension[robotName]
 RobotClass = RobotDynSimu
 robot      = RobotClass("robot")
 robot.resize(robotDim)
-addRobotViewer(robot,small=False,verbose=False)
-dt = 5e-3
-
-initialConfig['hrp14small'] = (-0.033328803958899381, -0.0019839923040723341, 0.62176527349722499, 2.379901541270165e-05, 0.037719492175904465, 0.00043085147714449579, -0.00028574496353126724, 0.0038294370786961648, -0.64798319906979551, 1.0552418879542016, -0.44497846451873851, -0.0038397195926379991, -0.00028578259876671871, 0.0038284398205732629, -0.64712828871069394, 1.0534202525984278, -0.4440117393779604, -0.0038387216246160054, 0.00014352031102944824, 0.013151503268540811, -0.00057411504064861592, -0.050871000025766742, 0.21782780288481224, -0.37965640592672439, -0.14072647716213352, -1.1942332339530364, 0.0055454863752273523, -0.66956710808008013, 0.1747981826611808, 0.21400703176352612, 0.38370527720078107, 0.14620204468509851, -1.1873407322935838, -0.0038746980026940735, -0.66430172366423146, 0.17500428384087438)
+addRobotViewer(robot,small=True,small_extra=24,verbose=False)
 
 # Similar initial position with hand forward
 robot.set(initialConfig[robotName])
@@ -51,17 +47,18 @@ robot.set(initialConfig[robotName])
 #----- MAIN LOOP ---------------------------------------------------------------
 #-------------------------------------------------------------------------------
 
+dt = 5e-3
 def inc():
     robot.increment(dt)
     # Execute a function at time t, if specified with t.add(...)
-    if 'refresh' in ZmpEstimator.__dict__: zmp.refresh()
+#    if 'refresh' in ZmpEstimator.__dict__: zmp.refresh()
     attime.run(robot.control.time)
-    robot.viewer.updateElementConfig('zmp',[zmp.zmp.value[0],zmp.zmp.value[1],0,0,0,0])
+#    robot.viewer.updateElementConfig('zmp',[zmp.zmp.value[0],zmp.zmp.value[1],0,0,0,0])
     if dyn.com.time >0:
         robot.viewer.updateElementConfig('com',[dyn.com.value[0],dyn.com.value[1],0,0,0,0])
-    history.record()
+#    history.record()
 
-from ThreadInterruptibleLoop import *
+from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
 @loopInThread
 def loop():
 #    try:
@@ -76,26 +73,6 @@ def go(): runner.play()
 def stop(): runner.pause()
 @optionalparentheses
 def next(): inc()
-
-# --- shortcuts -------------------------------------------------
-@optionalparentheses
-def q():
-    print robot.state.__repr__()
-@optionalparentheses
-def qdot(): print robot.control.__repr__()
-@optionalparentheses
-def iter():         print 'iter = ',robot.state.time
-@optionalparentheses
-def status():       print runner.isPlay
-
-@optionalparentheses
-def pl():         print  matlab(  matrixToTuple(zmp.leftSupport()) ).resstr
-@optionalparentheses
-def pr():         print  matlab(  matrixToTuple(zmp.righttSupport()) ).resstr
-
-@optionalparentheses
-def dump():
-    history.dumpToOpenHRP('openhrp/planche')
 
 attime.addPing( VisualPinger(robot.viewer) )
 
@@ -216,8 +193,8 @@ contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-
 contactLF.support =  ((0.03,-0.03,-0.03,0.03),(-0.015,-0.015,0.015,0.015),(-0.105,-0.105,-0.105,-0.105))
 
 #--- ZMP ---------------------------------------------------------------------
-zmp = ZmpEstimator('zmp')
-zmp.declare(sot,dyn)
+# zmp = ZmpEstimator('zmp')
+# zmp.declare(sot,dyn)
 
 #-----------------------------------------------------------------------------
 # --- TRACE ------------------------------------------------------------------
@@ -231,7 +208,7 @@ tr.add('dyn.com','com')
 tr.add(taskCom.feature.name+'.error','ecom')
 tr.add('dyn.waist','waist')
 tr.add('dyn.rh','rh')
-tr.add('zmp.zmp','')
+# tr.add('zmp.zmp','')
 tr.add('dyn.position','')
 tr.add('dyn.velocity','')
 tr.add('robot.acceleration','robot_acceleration')
@@ -254,7 +231,7 @@ robot.after.addSignal('dyn.waist')
 robot.after.addSignal('taskLim.normalizedPosition')
 tr.add('taskLim.normalizedPosition','qn')
 
-history = History(dyn,1,zmp.zmp)
+# history = History(dyn,1,zmp.zmp)
 
 #-----------------------------------------------------------------------------
 # --- RUN --------------------------------------------------------------------
@@ -342,7 +319,7 @@ if WITH_FULL_EXTENTION:
            ,lambda: taskPosture.gotoq(chest=(0,),rleg=(0,0,0,MAX_EXT,0,0),head=(0,0,0,0),rarm=(0,-pi/2,0,0,0,0,0),larm=(0,pi/2,0,0,0,0,0)), "extend arm")
 
     attime(2080
-           ,lambda: taskPosture.gotoq(30,chest=(0,),rleg=(0,0,0,MAX_EXT,0.73,0),head=(0,-pi/4,0,0),rarm=(0,-pi/2,0,0,0,0,0),larm=(0,pi/2,0,0,0,0,0)), "extend foot")
+           ,lambda: taskPosture.gotoq(chest=(0,),rleg=(0,0,0,MAX_EXT,0.73,0),head=(0,-pi/4,0,0),rarm=(0,-pi/2,0,0,0,0,0),larm=(0,pi/2,0,0,0,0,0)), "extend foot")
     tex=1000
 else: tex=0
 
