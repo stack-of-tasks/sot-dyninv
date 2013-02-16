@@ -87,10 +87,10 @@ gearRatio['hrp10aug'] = (0,0,0,0,0,0,384.0,240.0,180.0,200.0,180.0,100.0,384.0,2
 pkgDataRootDir['romeo'] = "@CMAKE_INSTALL_PREFIX@/share/romeo"
 
 # Romeo data
-modelName['romeo'] = 'RomeoNoToes.wrl'
-specificitiesName['romeo'] = 'RomeoNoToesSpecificities.xml'
-jointRankName['romeo'] =  'RomeoNoToesLinkJointRank.xml'
-robotDimension['romeo']=37
+modelName['romeo'] = 'Romeo.wrl'
+specificitiesName['romeo'] = 'RomeoSpecificities.xml'
+jointRankName['romeo'] = 'RomeoLinkJointRank.xml'
+robotDimension['romeo'] = 39
 initialConfig['romeo'] = (
 0, 0, .840252, 0, 0, 0,                                    # FF
 0,                                                      # TRUNK
@@ -98,16 +98,16 @@ initialConfig['romeo'] = (
 1.5,  0.6,  -0.5, -1.05, -0.4, -0.3, -0.2,              # LARM
 1.5, -0.6,   0.5,  1.05, -0.4, -0.3, -0.2,              # RARM
 0,  0,  -0.3490658,  0.6981317,  -0.3490658,   0,       # LLEG    
-#0,                                                      # LTOW
+0,                                                      # LTOW
 0,  0,  -0.3490658,  0.6981317,  -0.3490658,   0,       # RLEG
-#0,                                                      # RTOW
+0,                                                      # RTOW
 )
 
 inertiaRotor['romeo'] = (0,)*6+(5e-4,)*31
 gearRatio['romeo'] =  (0,)*6+(200,)*31
 
 postureRange['romeo'] = { \
-        "rleg": range(31,37), \
+        "rleg": range(32,38), \
         "lleg": range(25,31), \
         "chest": range(6,7), \
         "head": range(7,11), \
