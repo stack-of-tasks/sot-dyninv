@@ -14,6 +14,10 @@
 # received a copy of the GNU Lesser General Public License along with
 # dynamic-graph. If not, see <http://www.gnu.org/licenses/>.
 
+from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
+from dynamic_graph.sot.core.meta_tasks_kine import *
+from numpy import *
+
 from dynamic_graph.sot.romeo.romeo import *
 robot = Robot('robot')
 plug(robot.device.state, robot.dynamic.position)
@@ -23,48 +27,21 @@ ros = Ros(robot)
 
 
 # Create a solver.
-# from dynamic_graph.sot.dynamics.solver import Solver
-# solver = Solver(robot)
-
-from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
-from dynamic_graph.sot.core.meta_tasks_kine import *
-from numpy import *
-
-
-# --- ROBOT SIMU ---------------------------------------------------------------
-# robotName = 'romeo'
-# robotDim=robotDimension[robotName]
-# robot = RobotSimu("romeo")
-# robot.resize(robotDim)
-dt=5e-3
-
-# robot.set( initialConfig[robotName] )
-# addRobotViewer(robot,small=True,small_extra=24,verbose=False)
-
-# --- ROMEO HANDS ---------------------------------------------------------------
-# robot.gripper=0.0
-# RobotClass = RobotSimu
-# RobotClass.stateFullSizeOld = RobotClass.stateFullSize
-# RobotClass.stateFullSize = lambda x: [float(v) for v in x.state.value+24*(x.gripper,)]
+from dynamic_graph.sot.dynamics.solver import Solver
+solver = Solver(robot)
 
 #-------------------------------------------------------------------------------
 #----- MAIN LOOP ---------------------------------------------------------------
 #-------------------------------------------------------------------------------
+# define the macro allowing to run the simulation.
 from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
+dt=5e-3
 @loopInThread
 def inc():
     robot.device.increment(dt)
 
 runner=inc()
 [go,stop,next,n]=loopShortcuts(runner)
-
-# ---- SOT ---------------------------------------------------------------------
-# ---- SOT ---------------------------------------------------------------------
-# ---- SOT ---------------------------------------------------------------------
-
-sot = SOT('sot')
-sot.setNumberDofs(robot.dimension)
-plug(sot.control,robot.device.control)
 
 # ---- TASKS -------------------------------------------------------------------
 # ---- TASKS -------------------------------------------------------------------
@@ -79,11 +56,6 @@ taskRH.feature.frame('desired')
 # robot.tasks['right-wrist'].add(taskRH.feature.name)
 
 # --- STATIC COM (if not walking)
-# taskCom = MetaTaskKineCom(robot.dynamic)
-# robot.dynamic.com.recompute(0)
-# taskCom.featureDes.errorIN.value = robot.dynamic.com.value
-# taskCom.task.controlGain.value = 10
-
 robot.createCenterOfMassFeatureAndTask(
     'featureCom', 'featureComDef', 'comTask',
     selec = '011',
@@ -104,13 +76,11 @@ for name,joint in [ ['LF','left-ankle'], ['RF','right-ankle' ] ]:
 target=(0.5,-0.2,0.8)
 gotoNd(taskRH,target,'111',(4.9,0.9,0.01,0.9))
 
-# sot.push(taskCom.task.name)
-# sot.push(robot.tasks['right-wrist'].name)
+solver.push(contactRF.task)
+solver.push(contactLF.task)
+solver.push(robot.comTask)
+solver.push(taskRH.task)
 
-sot.push(contactRF.task.name)
-sot.push(contactLF.task.name)
-sot.push((robot.comTask.name))
-sot.push(taskRH.task.name)
-
+# type inc to run one iteration, or go to run indefinitely.
 # go()
 

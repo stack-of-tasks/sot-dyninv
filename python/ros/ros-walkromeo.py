@@ -12,32 +12,30 @@ from dynamic_graph.sot.core.meta_tasks_kine import *
 from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
 from dynamic_graph.sot.dyninv import SolverKine
 
+# Create the robot.
 from dynamic_graph.sot.romeo.romeo import *
 robot = Robot('robot')
 plug(robot.device.state, robot.dynamic.position)
 
-
-
+# Binds with ros, export joint_state.
 from dynamic_graph.ros import *
 ros = Ros(robot)
 
-
 # Create a solver.
-# from dynamic_graph.sot.dynamics.solver import Solver
-# solver = Solver(robot)
+from dynamic_graph.sot.dynamics.solver import Solver
+solver = Solver(robot)
 
 from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
 from dynamic_graph.sot.core.meta_tasks_kine import *
 from numpy import *
 
 
-# --- ROBOT SIMU ---------------------------------------------------------------
-dt=5e-3
-
-
 #-------------------------------------------------------------------------------
 #----- MAIN LOOP ---------------------------------------------------------------
 #-------------------------------------------------------------------------------
+
+dt=5e-3
+
 from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
 @loopInThread
 def inc():
@@ -50,12 +48,6 @@ runner=inc()
 from dynamic_graph.sot.pattern_generator.meta_pg import MetaPG
 pg = MetaPG(robot.dynamic)
 pg.plugZmp(robot.device)
-
-# ---- SOT ---------------------------------------------------------------------
-# The basic SOT solver would work too.
-sot = SolverKine('sot')
-sot.setSize(robot.dimension)
-plug(sot.control,robot.device.control)
 
 # ---- TASKS -------------------------------------------------------------------
 # ---- WAIST TASK ---
@@ -78,13 +70,22 @@ taskLF=MetaTask6d('lf',robot.dynamic,'lf','left-ankle')
 plug(pg.pg.leftfootref,taskLF.featureDes.position)
 taskLF.task.controlGain.value = 40
 
+
+# ---- WAIST TASK ORIENTATION ---
+#  set the orientation of the waist to be the same as the one of the foot.
+taskWaistOr=MetaTask6d('waistOr',robot.dynamic,'waist','waist')
+plug(pg.pg.rightfootref,taskWaistOr.featureDes.position)
+taskWaistOr.task.controlGain.value = 40
+taskWaistOr.feature.selec.value = '100000'
+
 # --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
-sot.push(taskWaist.task.name)
-sot.push(taskRF.task.name)
-sot.push(taskLF.task.name)
-sot.push(taskCom.task.name)
+solver.push(taskWaist.task)
+solver.push(taskRF.task)
+solver.push(taskLF.task)
+solver.push(taskCom.task)
+solver.push(taskWaistOr.task)
 
 # --- HERDT PG AND START -------------------------------------------------------
 # Set the algorithm generating the ZMP reference trajectory to Herdt's one.
@@ -92,6 +93,6 @@ pg.startHerdt(False)
 # You can now modifiy the speed of the robot using set pg.pg.velocitydes [3]( x, y, yaw)
 pg.pg.velocitydes.value =(0.1,0.0,0.0)
 
-go()
+# go()
 
 
