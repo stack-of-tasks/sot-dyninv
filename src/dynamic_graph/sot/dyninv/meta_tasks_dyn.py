@@ -2,7 +2,7 @@ from dynamic_graph.sot.core.meta_task_6d import toFlags
 from dynamic_graph import plug
 from dynamic_graph.sot.core import *
 from dynamic_graph.sot.dyninv import *
-from matrix_util import matrixToTuple, vectorToTuple,rotate
+from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
 from numpy import matrix, identity, zeros, eye
 
 
