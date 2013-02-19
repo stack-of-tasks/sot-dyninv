@@ -20,17 +20,23 @@ from dynamic_graph.sot.core.meta_task_posture import MetaTaskKinePosture
 from dynamic_graph.sot.core.meta_task_visual_point import MetaTaskVisualPoint
 from dynamic_graph.sot.core.utils.attime import attime,ALWAYS,refset,sigset
 from dynamic_graph.tracer import Tracer
+from dynamic_graph.sot.core.utils.history import History
 from numpy import *
 
-from dynamic_graph.sot.core.utils.history import History
 
+# create the robot and plug main signal.
 from dynamic_graph.sot.romeo.romeo import *
-robot = Robot('robot')
+robot = Robot('romeo', device=RobotSimu('romeo'))
 plug(robot.device.state, robot.dynamic.position)
 
+# Binds with ROS. assert that roscore is running.
+# if you prefer a ROS free installation, please comment those lines.
 from dynamic_graph.ros import *
 ros = Ros(robot)
 
+# Alternate visualization tool
+from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer
+addRobotViewer(robot.device,small=True,small_extra=24,verbose=False)
 
 # --- ROBOT SIMU ---------------------------------------------------------------
 # --- ROBOT SIMU ---------------------------------------------------------------
@@ -56,17 +62,17 @@ runner=inc()
 #---- DYN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
+# initialize 
 robot.dynamic.velocity.value = robot.dimension*(0.,)
 robot.dynamic.acceleration.value = robot.dimension*(0.,)
 
+# Unplug the signals og the free floatting: it is not fixed in the scene anymore.
 robot.dynamic.ffposition.unplug()
 robot.dynamic.ffvelocity.unplug()
 robot.dynamic.ffacceleration.unplug()
 
 robot.dynamic.setProperty('ComputeBackwardDynamics','true')
 robot.dynamic.setProperty('ComputeAccelerationCoM','true')
-
-robot.device.control.unplug()
 
 # ---- SOT ---------------------------------------------------------------------
 # ---- SOT ---------------------------------------------------------------------
@@ -78,6 +84,10 @@ def toList(sot):
 SolverKine.toList = toList
 sot = SolverKine('sot')
 sot.setSize(robot.dimension)
+
+# The control signal, previously plugged to the velocity (kinematic mode) is
+#  redirected.
+robot.device.control.unplug()
 plug(sot.control,robot.device.control)
 
 # ---- TASKS -------------------------------------------------------------------
@@ -87,9 +97,11 @@ plug(sot.control,robot.device.control)
 
 # ---- TASK GRIP ---
 taskRH=MetaTaskKine6d('rh',robot.dynamic,'rh','right-wrist')
+# change the position of the operational point wrt the wrist
 handMgrip=eye(4); handMgrip[0:3,3] = (0.07,-0.02,0)
 taskRH.opmodif = matrixToTuple(handMgrip)
 taskRH.feature.frame('desired')
+
 
 taskLH=MetaTaskKine6d('lh',robot.dynamic,'lh','left-wrist')
 taskLH.opmodif = matrixToTuple(handMgrip)
@@ -99,6 +111,7 @@ taskLH.feature.frame('desired')
 taskCom = MetaTaskKineCom(robot.dynamic)
 
 # --- TASK AVOID
+# define a inequality task to reduce the shoulder range.
 taskShoulder=MetaTaskKine6d('shoulder',robot.dynamic,'shoulder','LShoulderPitch')
 taskShoulder.feature.frame('desired')
 gotoNd(taskShoulder,(0,0,0),'010')
@@ -109,6 +122,7 @@ taskShoulder.task.referenceSup.value = (0.20,)    # Xmin, Ymin
 taskShoulder.task.dt.value=dt
 taskShoulder.task.controlGain.value = 0.9
 
+# same thing for the elbow
 taskElbow=MetaTaskKine6d('elbow',robot.dynamic,'elbow','LElbowYaw')
 taskElbow.feature.frame('desired')
 gotoNd(taskElbow,(0,0,0),'010')
@@ -140,8 +154,6 @@ plug(robot.dynamic.Jcom,featureSupportSmall.jacobianIN)
 taskSupportSmall=TaskInequality('taskSupportSmall')
 taskSupportSmall.add(featureSupportSmall.name)
 taskSupportSmall.selec.value = '011'
-#taskSupportSmall.referenceInf.value = (-0.02,-0.02,0)    # Xmin, Ymin
-#askSupportSmall.referenceSup.value = (0.02,0.02,0)  # Xmax, Ymax
 taskSupportSmall.referenceInf.value = (-0.02,-0.05,0)    # Xmin, Ymin
 taskSupportSmall.referenceSup.value = (0.02,0.05,0)  # Xmax, Ymax
 taskSupportSmall.dt.value=dt
@@ -296,21 +308,6 @@ class BallPosition:
         taskFoV.goto3D(self.ball)
 
 b = BallPosition()
-
-
-# tr.add(taskJL.name+".normalizedPosition","qn")
-# tr.add('dyn.com','com')
-# tr.add(taskRH.task.name+'.error','erh')
-# tr.add(taskFoV.feature.name+'.error','fov')
-# tr.add(taskFoV.task.name+'.normalizedPosition','fovn')
-# tr.add(taskSupportSmall.name+".normalizedPosition",'comsmalln')
-# tr.add(taskSupport.name+".normalizedPosition",'comn')
-
-# robot.device.after.addSignal(taskJL.name+".normalizedPosition")
-# robot.device.after.addSignal(taskSupportSmall.name+".normalizedPosition")
-# robot.device.after.addSignal(taskFoV.task.name+".normalizedPosition")
-# robot.device.after.addSignal(taskFoV.feature.name+'.error')
-# robot.device.after.addSignal(taskSupport.name+".normalizedPosition")
 
 # --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
