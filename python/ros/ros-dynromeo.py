@@ -18,18 +18,21 @@ from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
 from numpy import *
 
 
+# Create the robot romeo.
 from dynamic_graph.sot.romeo.romeo import *
-robot = Robot('robot', device=RobotDynSimu('robot'))
+robot = Robot('romeo', device=RobotDynSimu('romeo'))
 plug(robot.device.state, robot.dynamic.position)
 
+# Binds with ROS. assert that roscore is running.
+# if you prefer a ROS free installation, please comment those lines.
 from dynamic_graph.ros import *
 ros = Ros(robot)
 
+# Alternate visualization tool
+from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer
+addRobotViewer(robot.device,small=True,small_extra=24,verbose=False)
+
 # --- ROBOT SIMU ---------------------------------------------------------------
-#robotName = 'romeo'
-#robotDim=robotDimension[robotName]
-#robot = RobotDynSimu("romeo")
-#robot.resize(robotDim)
 dt=5e-3
 
 
@@ -43,26 +46,12 @@ def inc():
 runner=inc()
 [go,stop,next,n]=loopShortcuts(runner)
 
-# --- shortcuts -------------------------------------------------
-@optionalparentheses
-def q():
-    if 'dyn' in globals(): print robot.dynamic.ffposition.__repr__()
-    print robot.state.__repr__()
-@optionalparentheses
-def qdot(): print robot.control.__repr__()
-@optionalparentheses
-def t(): print robot.state.time-1
-@optionalparentheses
-def iter():         print 'iter = ',robot.state.time
-@optionalparentheses
-def status():       print runner.isPlay
-
 # --- DYN ----------------------------------------------------------------------
-
 plug(robot.device.state,   robot.dynamic.position)
 plug(robot.device.velocity,robot.dynamic.velocity)
 robot.dynamic.acceleration.value = robot.dimension*(0.,)
 
+#unplug the waist: it is not fixed in the universe anymore.
 robot.dynamic.ffposition.unplug()
 robot.dynamic.ffvelocity.unplug()
 robot.dynamic.ffacceleration.unplug()
@@ -75,7 +64,7 @@ robot.device.control.unplug()
 # --- Task Dyn -----------------------------------------
 # Task right hand
 task=MetaTaskDyn6d('rh',robot.dynamic,'task')
-task.ref = ((0,0,-1,0.22),(0,1,0,-0.37),(1,0,0,.74),(0,0,0,1))
+task.ref = ((0,0,-1,0.2),(0,1,0,-0.2),(1,0,0,1.00),(0,0,0,1))
 
 # Task LFoot: Move the right foot up.
 taskLF=MetaTaskDyn6d('lf',robot.dynamic,'lf','left-ankle')
@@ -99,10 +88,6 @@ taskCom.dt.value = 1e-3
 gCom = GainAdaptive('gCom')
 plug(taskCom.error,gCom.error)
 plug(gCom.gain,taskCom.controlGain)
-# Work from .04 to .09 gCom.set 1050 45 125e3
-# Good behavior gCom.set 1080 15 125e3
-# Low gains gCom.set 400 1 39e3
-# Current choice
 gCom.set(1050,45,125e3)
 
 # ---- CONTACT -----------------------------------------
@@ -123,6 +108,7 @@ sot.setSize(robot.dimension-6)
 #sot.damping.value = 2e-2
 sot.breakFactor.value = 10
 
+# plug the dynamic entity to the sot
 plug(robot.dynamic.inertiaReal,sot.matrixInertia)
 plug(robot.dynamic.dynamicDrift,sot.dyndrift)
 plug(robot.dynamic.velocity,sot.velocity)
@@ -139,7 +125,13 @@ sot.addContactFromTask(contactLF.task.name,'LF')
 sot._LF_p.value = contactLF.support
 sot.addContactFromTask(contactRF.task.name,'RF')
 sot._RF_p.value = contactRF.support
+
+# add the com task.
 sot.push('taskCom')
 
+# add a task for the left hand.
+sot.push('taskrh')
+
+# Start the simulation
 # go
 
