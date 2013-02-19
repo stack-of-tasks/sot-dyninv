@@ -18,17 +18,23 @@ from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rota
 from dynamic_graph.sot.core.meta_tasks_kine import *
 from numpy import *
 
+# Create the robot romeo.
 from dynamic_graph.sot.romeo.romeo import *
-robot = Robot('robot')
+robot = Robot('romeo', device=RobotSimu('romeo'))
+
 plug(robot.device.state, robot.dynamic.position)
 
+# Binds with ROS. assert that roscore is running.
 from dynamic_graph.ros import *
 ros = Ros(robot)
 
-
-# Create a solver.
+# Create a simple kinematic solver.
 from dynamic_graph.sot.dynamics.solver import Solver
 solver = Solver(robot)
+
+# Alternate visualization tool
+from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer
+addRobotViewer(robot.device,small=True,small_extra=24,verbose=False)
 
 #-------------------------------------------------------------------------------
 #----- MAIN LOOP ---------------------------------------------------------------
@@ -47,9 +53,10 @@ runner=inc()
 # ---- TASKS -------------------------------------------------------------------
 # ---- TASKS -------------------------------------------------------------------
 
-
 # ---- TASK GRIP ---
+# Defines a task for the right hand.
 taskRH=MetaTaskKine6d('rh',robot.dynamic,'right-wrist','right-wrist')
+#  Move the operational point.
 handMgrip=eye(4); handMgrip[0:3,3] = (0.1,0,0)
 taskRH.opmodif = matrixToTuple(handMgrip)
 taskRH.feature.frame('desired')
@@ -73,9 +80,15 @@ for name,joint in [ ['LF','left-ankle'], ['RF','right-ankle' ] ]:
 
 # --- RUN ----------------------------------------------------------------------
 
+# Move the desired position of the right hand
+# 1st param: task concerned 
+# 2st param: objective
+# 3rd param: selected parameters
+# 4th param: gain
 target=(0.5,-0.2,0.8)
 gotoNd(taskRH,target,'111',(4.9,0.9,0.01,0.9))
 
+# Fill the stack with some tasks.
 solver.push(contactRF.task)
 solver.push(contactLF.task)
 solver.push(robot.comTask)
