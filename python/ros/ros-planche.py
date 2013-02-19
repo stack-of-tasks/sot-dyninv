@@ -24,20 +24,26 @@ from dynamic_graph.sot.core.utils.attime import attime
 from numpy import *
 from dynamic_graph.sot.dyninv.robot_specific import postureRange
 from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
-from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger
 from dynamic_graph.tracer import *
 
 #-----------------------------------------------------------------------------
 # --- ROBOT SIMU -------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
+# create the robot. Use a RobotDynSimu for the integration.
 from dynamic_graph.sot.romeo.romeo import *
-robot = Robot('robot', device=RobotDynSimu('robot'))
+robot = Robot('romeo', device=RobotDynSimu('romeo'))
 plug(robot.device.state, robot.dynamic.position)
 
+# Binds with ROS. assert that roscore is running.
+# if you prefer a ROS free installation, please comment those lines.
 # Export joint_state into ros.
 from dynamic_graph.ros import *
 ros = Ros(robot)
+
+# Alternate visualization tool
+from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer
+addRobotViewer(robot.device,small=True,small_extra=24,verbose=False)
 
 #-------------------------------------------------------------------------------
 #----- MAIN LOOP ---------------------------------------------------------------
@@ -70,14 +76,13 @@ plug(robot.device.state, robot.dynamic.position)
 plug(robot.device.velocity,robot.dynamic.velocity)
 robot.dynamic.acceleration.value = robot.dimension*(0.,)
 
+# set the free flyer free.
 robot.dynamic.ffposition.unplug()
 robot.dynamic.ffvelocity.unplug()
 robot.dynamic.ffacceleration.unplug()
 
 robot.dynamic.setProperty('ComputeBackwardDynamics','true')
 robot.dynamic.setProperty('ComputeAccelerationCoM','true')
-
-robot.device.control.unplug()
 
 #-----------------------------------------------------------------------------
 # --- OPERATIONAL TASKS (For HRP2-14)---------------------------------------------
@@ -132,6 +137,8 @@ plug(robot.dynamic.inertiaReal,sot.matrixInertia)
 plug(robot.dynamic.dynamicDrift,sot.dyndrift)
 plug(robot.dynamic.velocity,sot.velocity)
 
+# replug the control signal
+robot.device.control.unplug()
 plug(sot.solution, robot.device.control)
 
 #For the integration of q = int(int(qddot)).
@@ -208,11 +215,10 @@ plug(robot.device.state,sot.position)
 q0 = robot.device.state.value
 rf0 = matrix(taskrf.feature.position.value)[0:3,3]
 
-
-
 MetaTaskDynPosture.postureRange = postureRange['romeo']
 
 # --- Events ---------------------------------------------
+# The sequence of tasks.
 sigset = ( lambda s,v : s.__class__.value.__set__(s,v) )
 refset = ( lambda mt,v : mt.__class__.ref.__set__(mt,v) )
 
@@ -227,7 +233,6 @@ attime(140
        ,(lambda: gotoNd(taskrf, (0,0,0.65),"000110" ), "Up foot RF")
        )
 
-# Was -.8,0,.8 with full extension
 attime(500,lambda: gotoNd(taskrf, (-0.55,0,0.7),"000101" ), "Extend RF")
 
 attime(800,lambda: sot.push(taskChest.task.name), "add chest")
@@ -279,7 +284,8 @@ attime(2650+tex  ,(lambda: contact(contactRF)  , "RF to contact"       )
 
 attime(3200+tex,stop)
 
-go()
+# start the motion 
+# go()
 
 
 
