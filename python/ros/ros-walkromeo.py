@@ -76,19 +76,30 @@ plug(pg.pg.leftfootref,taskLF.featureDes.position)
 taskLF.task.controlGain.value = 40
 
 
+############################################################################
+# Complete the task definition here.
 # ---- WAIST TASK ORIENTATION ---
 #  set the orientation of the waist to be the same as the one of the foot.
+# Define a metaTask for a 6d task controlling the waistOrientation.
 taskWaistOr=MetaTask6d('waistOr',robot.dynamic,'waist','waist')
 taskWaistOr.task.controlGain.value = 40
-plug(pg.pg.rightfootref,taskWaistOr.featureDes.position)
-taskWaistOr.feature.selec.value = '100000'
+# 1\ define the rightfootrefence given by the entity pg
+# as the desired position for the taskWaistOrientation.
+
+
+# 2\ only constrain the Yaw for the waist.
+
 
 # ---- HEAD ORIENTATION ---
 #  set the orientation of the gaze (head) to be the same as the one of the foot.
-taskHead=MetaTask6d('head',robot.dynamic,'gaze','gaze')
-plug(taskRF.featureDes.position, taskHead.featureDes.position)
-taskHead.feature.selec.value = '111000'
-taskHead.task.controlGain.value = 5
+# Define a metaTask for a 6d task controlling the waistOrientation.
+# 1\ Define a MetaTask6d taskHead, constaining the head, attached to the gaze link
+
+# 2\ Link the orientation of the right foot to the desired position of the head.
+
+# 3\ Only constraint the rotation of the head.
+
+# 4\ Choose the gain
 
 # --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
@@ -97,7 +108,9 @@ solver.push(taskWaist.task)
 solver.push(taskRF.task)
 solver.push(taskLF.task)
 solver.push(taskCom.task)
-solver.push(taskWaistOr.task)
+# Activate your new tasks.
+# solver.push(taskWaistOr.task)
+# solver.push(taskHead.task)
 
 # --- HERDT PG AND START -------------------------------------------------------
 # Set the algorithm generating the ZMP reference trajectory to Herdt's one.
