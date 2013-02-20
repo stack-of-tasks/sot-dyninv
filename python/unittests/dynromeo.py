@@ -83,12 +83,11 @@ robot.control.unplug()
 
 # --- Task Dyn -----------------------------------------
 # Task right hand
-task=MetaTaskDyn6d('rh',dyn,'task')
-task.ref = ((0,0,-1,0.22),(0,1,0,-0.37),(1,0,0,.74),(0,0,0,1))
-
-# Task LFoot: Move the right foot up.
-taskLF=MetaTaskDyn6d('lf',dyn,'lf','left-ankle')
-taskLF.ref = ((1,0,0,0.0),(0,1,0,+0.29),(0,0,1,.15),(0,0,0,1))
+task=MetaTaskDyn6d('rh',dyn,'rh')
+# task.ref = ((0,0,-1,0.22),(0,1,0,-0.37),(1,0,0,.74),(0,0,0,1))
+task.ref = ((0,0,-1,0.2),(0,1,0,-0.2),(1,0,0,1.00),(0,0,0,1))
+# constraint only the position: _ _ _ Z Y X
+task.feature.selec.value = '111000'
 
 # --- TASK COM ------------------------------------------------------
 dyn.setProperty('ComputeCoM','true')
@@ -148,7 +147,9 @@ sot.addContactFromTask(contactLF.task.name,'LF')
 sot._LF_p.value = contactLF.support
 sot.addContactFromTask(contactRF.task.name,'RF')
 sot._RF_p.value = contactRF.support
+
 sot.push('taskCom')
+sot.push('taskrh')
 
 # go
 
