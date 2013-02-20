@@ -24,9 +24,10 @@ from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPing
 from dynamic_graph.sot.core.utils.attime import attime,ALWAYS,refset,sigset
 from numpy import *
 
-from history import History
+from dynamic_graph.sot.core.utils.history import History
 
-from robotSpecific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
+from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig
+from dynamic_graph.sot.dyninv.robot_specific import gearRatio,inertiaRotor,halfSittingConfig
 
 # --- ROBOT SIMU ---------------------------------------------------------------
 # --- ROBOT SIMU ---------------------------------------------------------------
@@ -38,7 +39,6 @@ robot = RobotSimu("robot")
 robot.resize(robotDim)
 dt=5e-3
 
-from robotSpecific import halfSittingConfig
 x0=-0.00949035111398315034
 y0=0
 z0=0.64870185118253043  #0.6487018512

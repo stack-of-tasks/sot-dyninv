@@ -36,7 +36,7 @@ from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPing
 robotName = 'romeo'
 robotDim  = robotDimension[robotName]
 RobotClass = RobotDynSimu
-robot      = RobotClass("robot")
+robot      = RobotClass("romeo")
 robot.resize(robotDim)
 addRobotViewer(robot,small=True,small_extra=24,verbose=False)
 
