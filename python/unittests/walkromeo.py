@@ -15,6 +15,15 @@ from dynamic_graph.sot.dyninv import SolverKine
 
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor,specificitiesName,jointRankName
 
+from numpy import *
+def totuple( a ):
+    al=a.tolist()
+    res=[]
+    for i in range(a.shape[0]):
+        res.append( tuple(al[i]) )
+    return tuple(res)
+
+
 # --- ROBOT SIMU ---------------------------------------------------------------
 robotName = 'romeo'
 robotDim=robotDimension[robotName]
@@ -85,6 +94,41 @@ taskLF=MetaTask6d('lf',dyn,'lf','left-ankle')
 plug(pg.pg.leftfootref,taskLF.featureDes.position)
 taskLF.task.controlGain.value = 40
 
+
+# ---- WAIST TASK ORIENTATION ---
+#  set the orientation of the waist to be the same as the one of the foot.
+taskWaistOr=MetaTask6d('waistOr',dyn,'waist','waist')
+plug(pg.pg.rightfootref,taskWaistOr.featureDes.position)
+taskWaistOr.task.controlGain.value = 40
+taskWaistOr.feature.selec.value = '100000'
+
+
+taskHead=MetaTask6d('head',dyn,'gaze','gaze')
+plug(taskRF.featureDes.position, taskHead.featureDes.position)
+taskHead.feature.selec.value = '111000'
+taskHead.task.controlGain.value = 5
+
+# --- TASK POSTURE --------------------------------------------------
+# set a default position for the joints. 
+featurePosition = FeatureGeneric('featurePosition')
+featurePositionDes = FeatureGeneric('featurePositionDes')
+featurePosition.setReference('featurePositionDes')
+plug(dyn.position,featurePosition.errorIN)
+featurePositionDes.errorIN.value = initialConfig['romeo']
+featurePosition.jacobianIN.value = totuple( identity(robotDim) )
+
+taskPosition = Task('taskPosition')
+taskPosition.add('featurePosition')
+# featurePosition.selec.value = toFlags((6,24))
+
+gainPosition = GainAdaptive('gainPosition')
+gainPosition.set(0.1,0.1,125e3)
+gainPosition.gain.value = 5
+plug(taskPosition.error,gainPosition.error)
+plug(gainPosition.gain,taskPosition.controlGain)
+featurePosition.selec.value = '000000000000001111111111111100000000000'
+
+
 # --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
@@ -92,6 +136,13 @@ sot.push(taskWaist.task.name)
 sot.push(taskRF.task.name)
 sot.push(taskLF.task.name)
 sot.push(taskCom.task.name)
+sot.push(taskWaistOr.task.name)
+
+# Stun the upper part of the body.
+sot.push(taskHead.task.name)		# constraint the head orientation: look straight ahead
+sot.push('taskPosition')			# stun the arms.
+
+
 
 # --- HERDT PG AND START -------------------------------------------------------
 # Set the algorithm generating the ZMP reference trajectory to Herdt's one.
