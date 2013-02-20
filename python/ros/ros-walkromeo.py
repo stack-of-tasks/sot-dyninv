@@ -14,6 +14,12 @@ from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPing
 from dynamic_graph.sot.dyninv import SolverKine
 
 from numpy import *
+def totuple( a ):
+    al=a.tolist()
+    res=[]
+    for i in range(a.shape[0]):
+        res.append( tuple(al[i]) )
+    return tuple(res)
 
 # Create the robot.
 from dynamic_graph.sot.romeo.romeo import *
@@ -75,31 +81,38 @@ taskLF=MetaTask6d('lf',robot.dynamic,'lf','left-ankle')
 plug(pg.pg.leftfootref,taskLF.featureDes.position)
 taskLF.task.controlGain.value = 40
 
-
 ############################################################################
 # Complete the task definition here.
-# ---- WAIST TASK ORIENTATION ---
-#  set the orientation of the waist to be the same as the one of the foot.
-# Define a metaTask for a 6d task controlling the waistOrientation.
-taskWaistOr=MetaTask6d('waistOr',robot.dynamic,'waist','waist')
-taskWaistOr.task.controlGain.value = 40
-# 1\ define the rightfootrefence given by the entity pg
-# as the desired position for the taskWaistOrientation.
-
-
-# 2\ only constrain the Yaw for the waist.
-
-
 # ---- HEAD ORIENTATION ---
 #  set the orientation of the gaze (head) to be the same as the one of the foot.
 # Define a metaTask for a 6d task controlling the waistOrientation.
-# 1\ Define a MetaTask6d taskHead, constaining the head, attached to the gaze link
+# 1\ Define a MetaTask6d taskHead, constraining the head, attached to the gaze link
+taskHead=MetaTask6d('head',dyn,'gaze','gaze')
 
 # 2\ Link the orientation of the right foot to the desired position of the head.
 
 # 3\ Only constraint the rotation of the head.
 
-# 4\ Choose the gain
+# 4\ set the gain
+
+
+
+# ---- ARMS ---
+# set a default position for the joints arms
+# 1\ Define two features (entity FeatureGeneric) corresponding to the desired potion.
+#    the desired position corresponds to the initial configuration of the robot
+#    romeo: initialConfig['romeo']
+#    * the reference position is the position given by the entity dyn,
+#    * the jacobian is the identity: ... = totuple( identity(robot.dimension) )
+#    * the joint controlled are those of the two arms [12,25] sur 39.
+
+# 2\ Define the task. Associate to the task the position feature.
+
+# 3\ (Optional) attach an adaptive gain (entity GainAdaptive) to the task created.
+
+
+############################################################################
+
 
 # --- RUN ----------------------------------------------------------------------
 # --- RUN ----------------------------------------------------------------------
@@ -109,8 +122,6 @@ solver.push(taskRF.task)
 solver.push(taskLF.task)
 solver.push(taskCom.task)
 # Activate your new tasks.
-# solver.push(taskWaistOr.task)
-# solver.push(taskHead.task)
 
 # --- HERDT PG AND START -------------------------------------------------------
 # Set the algorithm generating the ZMP reference trajectory to Herdt's one.
