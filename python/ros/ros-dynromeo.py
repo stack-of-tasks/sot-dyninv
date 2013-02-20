@@ -66,9 +66,13 @@ robot.device.control.unplug()
 task=MetaTaskDyn6d('rh',robot.dynamic,'task')
 task.ref = ((0,0,-1,0.2),(0,1,0,-0.2),(1,0,0,1.00),(0,0,0,1))
 
-# Task LFoot: Move the right foot up.
+# Task LFoot: Move the left foot up.
 taskLF=MetaTaskDyn6d('lf',robot.dynamic,'lf','left-ankle')
 taskLF.ref = ((1,0,0,0.0),(0,1,0,+0.29),(0,0,1,.15),(0,0,0,1))
+
+# Task RFoot: Move the right foot up.
+taskRF=MetaTaskDyn6d('rf',robot.dynamic,'rf','right-ankle')
+taskRF.ref = ((1,0,0, 0.0102),(0,1,0,-0.096),(0,0,1,0.1),(0,0,0,1))
 
 # --- TASK COM ------------------------------------------------------
 robot.dynamic.setProperty('ComputeCoM','true')
@@ -127,10 +131,10 @@ sot.addContactFromTask(contactRF.task.name,'RF')
 sot._RF_p.value = contactRF.support
 
 # add the com task.
-sot.push('taskCom')
+# sot.push('taskCom')
 
 # add a task for the left hand.
-sot.push('taskrh')
+# sot.push('taskrh')
 
 # Start the simulation
 # go
