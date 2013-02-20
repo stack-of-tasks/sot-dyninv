@@ -268,9 +268,8 @@ def pop(task):
 RAD=pi/180
 comproj = [0.1,-0.95,1.6]
 #robot.viewer.updateElementConfig('footproj',[0.5,0.15,1.6+0.08,0,-pi/2,0 ])
-# robot.viewer.updateElementConfig('footproj',comproj+[0,-pi/2,0 ])
-#robot.viewer.updateElementConfig('zmp2',[0,0,-10,0,0,0])
-
+robot.device.viewer.updateElementConfig('footproj',comproj+[0,-pi/2,0 ])
+robot.device.viewer.updateElementConfig('zmp2',[0,0,-10,0,0,0])
 
 class BallPosition:
     def __init__(self,xyz=(0,-1.1,0.9)):
@@ -297,7 +296,7 @@ class BallPosition:
     def moveDisplay(self):
         tau = 1.0 if self.duration<=0 else float(self.t) / self.duration
         xyz = tau * array(self.ball) + (1-tau) * array(self.prec)
-#        robot.viewer.updateElementConfig('zmp',vectorToTuple(xyz)+(0,0,0))
+        robot.device.viewer.updateElementConfig('zmp',vectorToTuple(xyz)+(0,0,0))
 
         self.t += 1
         if self.t>self.duration and self.duration>0:
