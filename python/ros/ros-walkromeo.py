@@ -87,7 +87,7 @@ taskLF.task.controlGain.value = 40
 #  set the orientation of the gaze (head) to be the same as the one of the foot.
 # Define a metaTask for a 6d task controlling the waistOrientation.
 # 1\ Define a MetaTask6d taskHead, constraining the head, attached to the gaze link
-taskHead=MetaTask6d('head',dyn,'gaze','gaze')
+taskHead=MetaTask6d('head',robot.dynamic,'gaze','gaze')
 
 # 2\ Link the orientation of the right foot to the desired position of the head.
 
