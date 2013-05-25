@@ -11,7 +11,6 @@ from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rota
 from dynamic_graph.sot.core.meta_tasks_kine import *
 from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
 from dynamic_graph.sot.core.utils.viewer_helper import addRobotViewer,VisualPinger,updateComDisplay
-from dynamic_graph.sot.dyninv import SolverKine
 
 from numpy import *
 def totuple( a ):
@@ -90,11 +89,13 @@ taskLF.task.controlGain.value = 40
 taskHead=MetaTask6d('head',robot.dynamic,'gaze','gaze')
 
 # 2\ Link the orientation of the right foot to the desired position of the head.
+plug(taskRF.featureDes.position, taskHead.featureDes.position)
 
 # 3\ Only constraint the rotation of the head.
+taskHead.feature.selec.value = '111000'
 
 # 4\ set the gain
-
+taskHead.task.controlGain.value = 5
 
 
 # ---- ARMS ---
@@ -105,10 +106,24 @@ taskHead=MetaTask6d('head',robot.dynamic,'gaze','gaze')
 #    * the reference position is the position given by the entity dyn,
 #    * the jacobian is the identity: ... = totuple( identity(robot.dimension) )
 #    * the joint controlled are those of the two arms [12,25] sur 39.
+featurePosition = FeatureGeneric('featurePosition')
+featurePositionDes = FeatureGeneric('featurePositionDes')
+featurePosition.setReference('featurePositionDes')
+plug(robot.dynamic.position,featurePosition.errorIN)
+featurePositionDes.errorIN.value = robot.halfSitting
+featurePosition.jacobianIN.value = totuple( identity(robot.dimension) )
 
 # 2\ Define the task. Associate to the task the position feature.
+taskPosition = Task('taskPosition')
+taskPosition.add('featurePosition')
 
 # 3\ (Optional) attach an adaptive gain (entity GainAdaptive) to the task created.
+gainPosition = GainAdaptive('gainPosition')
+gainPosition.set(0.1,0.1,125e3)
+gainPosition.gain.value = 5
+plug(taskPosition.error,gainPosition.error)
+plug(gainPosition.gain,taskPosition.controlGain)
+featurePosition.selec.value = '000000000000001111111111111100000000000'
 
 
 ############################################################################
@@ -121,7 +136,10 @@ solver.push(taskWaist.task)
 solver.push(taskRF.task)
 solver.push(taskLF.task)
 solver.push(taskCom.task)
-# Activate your new tasks.
+# Stun the upper part of the body.
+sot.push(taskHead.task.name)		# constraint the head orientation: look straight ahead
+sot.push('taskPosition')			# stun the arms.
+
 
 # --- HERDT PG AND START -------------------------------------------------------
 # Set the algorithm generating the ZMP reference trajectory to Herdt's one.
