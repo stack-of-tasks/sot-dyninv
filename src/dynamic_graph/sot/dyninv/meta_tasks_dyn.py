@@ -2,8 +2,8 @@ from dynamic_graph.sot.core.meta_task_6d import toFlags
 from dynamic_graph import plug
 from dynamic_graph.sot.core import *
 from dynamic_graph.sot.dyninv import *
-from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple,rotate, matrixToRPY
-from numpy import matrix, identity, zeros, eye
+from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple, rotate, matrixToRPY, rpy2tr
+from numpy import matrix, identity, zeros, eye, array
 
 
 def setGain(gain,val):
@@ -19,7 +19,10 @@ def goto6d(task,position,gain=None):
     M=eye(4)
     if isinstance(position,matrix): position = vectorToTuple(position)
     if( len(position)==3 ): M[0:3,3] = position
-    else: print "Position 6D with rotation ... todo"
+    else:
+        #print "Position 6D with rotation ... todo" # done?
+        M = array( rpy2tr(*position[3:7]) )
+        M[0:3,3] = position[0:3]
     task.feature.selec.value = "111111"
     setGain(task.gain,gain)
     task.featureDes.position.value = matrixToTuple(M)
@@ -29,7 +32,10 @@ def gotoNd(task,position,selec,gain=None,resetJacobian=True):
     M=eye(4)
     if isinstance(position,matrix): position = vectorToTuple(position)
     if( len(position)==3 ): M[0:3,3] = position
-    else: print "Position 6D with rotation ... todo"
+    else:
+        #print "Position 6D with rotation ... todo" # done?
+        M = array( rpy2tr(*position[3:7]) )
+        M[0:3,3] = position[0:3]
     if isinstance(selec,str):   task.feature.selec.value = selec
     else: task.feature.selec.value = toFlags(selec)
     task.featureDes.position.value = matrixToTuple(M)
