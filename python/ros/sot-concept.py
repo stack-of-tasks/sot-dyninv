@@ -325,8 +325,15 @@ ball.move((0.5,-0.2,1.0),0)
 next()
 next()
 next()
- 
+
+import time
 def config(ref=0):
+    # reset the robot configuration
+    stop()          # stop the control loop
+    time.sleep(0.1) # wait (pb of sync with the viewer)
+    robot.device.set(robot.halfSitting)
+    next()          # manual reset of the robot's posture
+
     if ref==0:
         print '''Only the task RH'''
     elif ref==1:
@@ -410,6 +417,8 @@ def menu(ref=0):
     print '''5: Task RH + foot constraint + COM<'''
     print '''6: Task RH + foot constraint + COM= + SINGULARITE '''
     print '''7: Task RH + foot constraint + COM= + SINGULARITE + DAMPING'''
+    print ''
+    print '''Please re-type menu() to display this choice again'''
     print ''
     uinp = raw_input('   Config? >> ')
     config(int(uinp))
