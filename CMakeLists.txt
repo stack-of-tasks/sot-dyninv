@@ -134,6 +134,7 @@ endforeach(lib)
 
 # Add subdirectories.
 ADD_SUBDIRECTORY(src)
+ADD_SUBDIRECTORY(python)
 ADD_SUBDIRECTORY(unitTesting)
 
 # Configure some of the python files
