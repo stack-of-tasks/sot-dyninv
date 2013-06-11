@@ -102,7 +102,9 @@ namespace dynamicgraph
 	const ml::Vector & refPosSup = referencePosSupSIN(time);
 	const ml::Vector & refVelInf = referenceVelInfSIN(time);
 	const ml::Vector & refVelSup = referenceVelSupSIN(time);
-	const double & dt = dtSIN(time);
+	//const double & dt = dtSIN(time);
+	const double & gain = controlGainSIN(time);
+	const double & dt = dtSIN(time)/gain;
 
 	sotDEBUG(35) << "position = " << position << std::endl;
 	sotDEBUG(35) << "velocity = " << velocity << std::endl;
@@ -113,10 +115,10 @@ namespace dynamicgraph
 	res.resize(position.size());
 	for( unsigned int i=0;i<res.size();++i )
 	  {
-	    maxVel = 1/dt*(refVelSup(i)-velocity(i));
-	    minVel = 1/dt*(refVelInf(i)-velocity(i));
-	    maxPos = kt*(refPosSup(i)-position(i)-dt*velocity(i));
-	    minPos = kt*(refPosInf(i)-position(i)-dt*velocity(i));
+	    maxVel = 1/dt*(refVelSup(i)-velocity(i));	// MAXimum acceleration value due to VELocity limits
+	    minVel = 1/dt*(refVelInf(i)-velocity(i));	// MINimum acceleration value due to VELocity limits
+	    maxPos = kt*(refPosSup(i)-position(i)-dt*velocity(i));	// MAXimum acceleration value due to POSition limits
+	    minPos = kt*(refPosInf(i)-position(i)-dt*velocity(i));	// MINimum acceleration value due to POSition limits
 
 	    maxLim = maxVel<maxPos ? maxVel : maxPos;
 	    minLim = minVel>minPos ? minVel : minPos;
