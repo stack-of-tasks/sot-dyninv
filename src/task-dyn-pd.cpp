@@ -158,7 +158,7 @@ namespace dynamicgraph
 
 
       ml::Vector& TaskDynPD::
-      taskVectorSOUT_function( ml::Vector& taskV,             int time )
+      taskVectorSOUT_function( ml::Vector& taskV, int time )
       {
 	const dg::sot::VectorMultiBound & task = taskSOUT(time);
 	taskV.resize(task.size());
