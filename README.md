@@ -37,4 +37,4 @@ have to be available on your machine.
 
 
 [sot-core]: http://github.com/jrl-umi3128/sot-core
-[soth]: ssh://softs.laas.fr/git/jrl/frameworks/soth
+[soth]: https://github.com/laas/soth.git
