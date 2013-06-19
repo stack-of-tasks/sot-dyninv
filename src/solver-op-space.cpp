@@ -475,7 +475,7 @@ namespace dynamicgraph
 	 * -1- A ddq + b + J'f = S' tau
 	 * -2- J ddq = 0
 	 * -3- Xp f  > eps
-	 * -i- Ji qddot = ddxi - Jidot qdot
+	 * -i- Ji ddq = ddxi - Jidot dq
 	 *
 	 * -1- [ A -S' J' ] [ ddq; tau; f ] = -b
 	 * -2- [ J  0  0  ] [ ddq; tau; f ] =  0
@@ -635,13 +635,13 @@ namespace dynamicgraph
 			assert( bsup );
 			const double xs = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_SUP);
 			btask1[c] = Bound( xs+ddxdrift[c], Bound::BOUND_SUP );
-		      }
-		  }
-	      }
+		      } //else
+		  } //else
+	      } //for c
 
 	    sotDEBUG(15) << "Ctask"<<i<<" = "     << (MATLAB)Ctask1 << std::endl;
 	    sotDEBUG(1) << "btask"<<i<<" = "     << btask1 << std::endl;
-	  }
+	  } //for i
 
 	/* -Last stage- */
 	/* Czero = [ [0(30x6) I(30x30)] 0 0 0 0 0 ] */

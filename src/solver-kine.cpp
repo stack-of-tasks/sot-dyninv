@@ -14,13 +14,13 @@
  * with sot-dyninv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//#define VP_DEBUG
+#define VP_DEBUG
 #define VP_DEBUG_MODE 50
 #include <sot/core/debug.hh>
 #ifdef VP_DEBUG
 class solver_op_space__INIT
 {
-  //public:solver_op_space__INIT( void ) { dynamicgraph::sot::DebugTrace::openFile(); }
+  public:solver_op_space__INIT( void ) { dynamicgraph::sot::DebugTrace::openFile("/tmp/sot-kine-deb.txt"); }
 };
 solver_op_space__INIT solver_op_space_initiator;
 #endif //#ifdef VP_DEBUG
@@ -112,11 +112,12 @@ namespace dynamicgraph
 	,stack_t()
 
 	,CONSTRUCT_SIGNAL_IN(damping,double)
+	,CONSTRUCT_SIGNAL_IN(velocity,ml::Vector)
 	,CONSTRUCT_SIGNAL_OUT(control,ml::Vector,
 			      dampingSIN )
-	,CONSTRUCT_SIGNAL(velocity,OUT,ml::Vector)
 
 	,controlFreeFloating(true)
+	,secondOrderKinematics(false)
 
 	,hsolver()
 
@@ -125,8 +126,8 @@ namespace dynamicgraph
 	,activeSet(),relevantActiveSet(false)
 	  
       {
-	signalRegistration(  controlSOUT << velocitySOUT
-			    << dampingSIN );
+	signalRegistration(  controlSOUT 
+			    << dampingSIN << velocitySIN );
 
 	/* Command registration. */
 	addCommand("debugOnce",
@@ -143,7 +144,15 @@ namespace dynamicgraph
 
 	addCommand("setControlFreeFloating",
 		   makeDirectSetter(*this,&controlFreeFloating,
-				    docDirectSetter("If true, the ouput control includes the ff (ie, size nbDof). Oterwise, size is nbDof-6. FF is supposed to be at the head.","bool")));
+				    docDirectSetter("ouput control includes the ff (ie, size nbDof). Oterwise, size is nbDof-6. FF is supposed to be at the head.","bool")));
+
+	addCommand("setSecondOrderKine",
+		   makeDirectSetter(*this,&secondOrderKinematics,
+				    docDirectSetter("second order kinematic inversion","bool")));
+
+	addCommand("getSecondOrderKine",
+		   makeDirectGetter(*this,&secondOrderKinematics,
+				    docDirectGetter("second order kinematic inversion","bool")));
 
 	ADD_COMMANDS_FOR_THE_STACK;
       }
@@ -252,6 +261,11 @@ namespace dynamicgraph
       /* --- SIGNALS ---------------------------------------------------------- */
       /* --- SIGNALS ---------------------------------------------------------- */
       /* --- SIGNALS ---------------------------------------------------------- */
+
+#define COLS_Q leftCols( nbDofs )
+#define COLS_TAU leftCols( nbDofs+ntau ).rightCols( ntau )
+#define COLS_F rightCols( nfs )
+
       ml::Vector& SolverKine::
       controlSOUT_function( ml::Vector &mlcontrol, int t )
       {
@@ -279,24 +293,94 @@ namespace dynamicgraph
 
 	/* -Tasks 1:n- */
 	/* Ctaski = [ Ji 0 0 0 0 0 ] */
-	for( int i=0;i<(int)stack.size();++i )
+
+	if( !secondOrderKinematics )
 	  {
-	    TaskAbstract & task = * stack[i];
-	    MatrixXd & Ctask = Ctasks[i];
-	    VectorBound & btask = btasks[i];
+	  for( int i=0;i<(int)stack.size();++i )
+	    {
+	      TaskAbstract & task = * stack[i];
+	      MatrixXd & Ctask = Ctasks[i];
+	      VectorBound & btask = btasks[i];
 
-	    EIGEN_CONST_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
-	    const dg::sot::VectorMultiBound & ddx = task.taskSOUT(t);
-	    const int nx = ddx.size();
+	      EIGEN_CONST_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
+	      const dg::sot::VectorMultiBound & dx = task.taskSOUT(t);
+	      const int nx = dx.size();
 
-	    assert( Ctask.rows() == nx && btask.size() == nx );
-	    assert( J.rows()==nx && J.cols()==nbDofs && (int)ddx.size()==nx );
+	      assert( Ctask.rows() == nx && btask.size() == nx );
+	      assert( J.rows()==nx && J.cols()==nbDofs && (int)dx.size()==nx );
 
-	    Ctask = J;  COPY_MB_VECTOR_TO_EIGEN(ddx,btask);
+	      Ctask = J;  COPY_MB_VECTOR_TO_EIGEN(dx,btask);
 
-	    sotDEBUG(15) << "Ctask"<<i<<" = "     << (MATLAB)Ctask << std::endl;
-	    sotDEBUG(1) << "btask"<<i<<" = "     << btask << std::endl;
-	  }
+	      sotDEBUG(15) << "Ctask"<<i<<" = "     << (MATLAB)Ctask << std::endl;
+	      sotDEBUG(1) << "btask"<<i<<" = "     << btask << std::endl;
+
+	    } //for
+	  } //if
+	else
+	  {
+	    /* -Tasks 1:n- */
+		/* Ctaski = [ Ji 0 0 0 0 0 ] */
+
+		for( int i=0;i<(int)stack.size();++i )
+		  {
+			//TaskAbstract & taskAb = new TaskDynPD;
+			TaskAbstract & taskAb = * stack[i];
+			TaskDynPD & task = dynamic_cast<TaskDynPD &>(taskAb);
+
+			MatrixXd & Ctask = Ctasks[i];
+			VectorBound & btask1 = btasks[i];
+
+			EIGEN_CONST_MATRIX_FROM_SIGNAL(Jdot,task.JdotSOUT(t));
+			EIGEN_CONST_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
+			const dg::sot::VectorMultiBound & ddx = task.taskSOUT(t);
+			EIGEN_CONST_VECTOR_FROM_SIGNAL(dq,velocitySIN(t));
+
+			const int nx1 = ddx.size();
+
+			sotDEBUG(5) << "ddx"<<i<<" = " << ddx << std::endl;
+			sotDEBUG(25) << "J"<<i<<" = " << J << std::endl;
+			sotDEBUG(45) << "Jdot"<<i<<" = " << Jdot << std::endl;
+			sotDEBUG(1) << "dq = " << (MATLAB)dq << std::endl;
+
+			assert( Ctask.rows() == nx1 && btask1.size() == nx1 );
+			assert( J.rows()==nx1 && J.cols()==nbDofs && (int)ddx.size()==nx1 );
+			assert( Jdot.rows()==nx1 && Jdot.cols()==nbDofs );
+
+			Ctask = J;
+
+			VectorXd ddxdrift = - (Jdot*dq);
+			for( int c=0;c<nx1;++c )
+			  {
+			if( ddx[c].getMode() == dg::sot::MultiBound::MODE_SINGLE )
+			  btask1[c] = ddx[c].getSingleBound() + ddxdrift[c];
+			else
+			  {
+				const bool binf = ddx[c].getDoubleBoundSetup( dg::sot::MultiBound::BOUND_INF );
+				const bool bsup = ddx[c].getDoubleBoundSetup( dg::sot::MultiBound::BOUND_SUP );
+				if( binf&&bsup )
+				  {
+				const double xi = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_INF);
+				const double xs = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_SUP);
+				btask1[c] = std::make_pair( xi+ddxdrift[c], xs+ddxdrift[c] );
+				  }
+				else if( binf )
+				  {
+				const double xi = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_INF);
+				btask1[c] = Bound( xi+ddxdrift[c], Bound::BOUND_INF );
+				  }
+				else
+				  {
+				assert( bsup );
+				const double xs = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_SUP);
+				btask1[c] = Bound( xs+ddxdrift[c], Bound::BOUND_SUP );
+				  } //else
+			  } //else
+			  } //for c
+
+			sotDEBUG(15) << "Ctask"<<i<<" = "     << (MATLAB)Ctask << std::endl;
+			sotDEBUG(1) << "btask"<<i<<" = "     << btask1 << std::endl;
+		  } //for i
+	  } //else
 
 	/* --- */
 	sotDEBUG(1) << "Initial config." << std::endl;
@@ -366,6 +450,7 @@ namespace dynamicgraph
 	  os <<"control = "<<controlSOUT.accessCopy() <<std::endl << std::endl;
 	}  catch (dynamicgraph::ExceptionSignal e) {}
 	stack_t::display(os);
+
       }
 
       void SolverKine::

@@ -86,14 +86,15 @@ namespace dynamicgraph {
 	public:  /* --- SIGNALS --- */
 
 	  DECLARE_SIGNAL_IN(damping,double);
+	  DECLARE_SIGNAL_IN(velocity,ml::Vector); //only used for second order kinematics
 	  DECLARE_SIGNAL_OUT(control,ml::Vector);
-	  DECLARE_SIGNAL(velocity,OUT,ml::Vector);
 
 	public: /* --- COMMANDS --- */
 	  void debugOnce( void );
 	  void resetAset( void );
 	  void getDecomposition( const int &stage );
 	  bool controlFreeFloating;
+	  bool secondOrderKinematics;
 
 	private: /* --- INTERNAL COMPUTATIONS --- */
 	  void refreshTaskTime( int time );
