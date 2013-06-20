@@ -17,6 +17,7 @@
 #define VP_DEBUG
 #define VP_DEBUG_MODE 50
 #include <sot/core/debug.hh>
+#include <exception>
 #ifdef VP_DEBUG
 class solver_op_space__INIT
 {
@@ -43,7 +44,7 @@ solver_op_space__INIT solver_op_space_initiator;
 
 namespace soth
 {
-  Bound& operator -= (Bound& xb, const double & x )
+  Bound& operator -= (Bound& xb, const double & )
   {
     return xb;
   }
@@ -146,9 +147,16 @@ namespace dynamicgraph
 		   makeDirectSetter(*this,&controlFreeFloating,
 				    docDirectSetter("ouput control includes the ff (ie, size nbDof). Oterwise, size is nbDof-6. FF is supposed to be at the head.","bool")));
 
+	std::string docstring =
+	  "Set second order kinematic inversion\n"
+	  "\n"
+	  "  Input: bool\n"
+	  "\n"
+	  "  If true, check that the solver is empty, since second order\n"
+	  "  kinematics requires tasks to be of type TaskDynPD.";
 	addCommand("setSecondOrderKine",
-		   makeDirectSetter(*this,&secondOrderKinematics,
-				    docDirectSetter("second order kinematic inversion","bool")));
+		   makeCommandVoid1(*this,&SolverKine::setSecondOrderKine,
+				    docstring));
 
 	addCommand("getSecondOrderKine",
 		   makeDirectGetter(*this,&secondOrderKinematics,
@@ -160,6 +168,38 @@ namespace dynamicgraph
       /* --- STACK ----------------------------------------------------------- */
       /* --- STACK ----------------------------------------------------------- */
       /* --- STACK ----------------------------------------------------------- */
+      
+      void SolverKine::push (TaskAbstract& task)
+      {
+	if (secondOrderKinematics) {
+	  checkDynamicTask (task);
+	}
+	sot::Stack< TaskAbstract >::push (task);
+      }
+
+      void SolverKine::checkDynamicTask (const TaskAbstract& task) const
+      {
+	try {
+	  dynamic_cast <const TaskDynPD &> (task);
+	} catch (const std::bad_cast& esc) {
+	  std::string taskName = task.getName ();
+	  std::string className = task.getClassName ();
+	  std::string msg ("Type " + className + " of task \"" + taskName +
+			   "\" does not derive from TaskDynPD");
+	  throw std::runtime_error (msg);
+	}
+      }
+
+      void SolverKine::setSecondOrderKine (const bool& secondOrder)
+      {
+	if (secondOrder) {
+	  if (stack.size() != 0) {
+	    throw std::runtime_error
+	      ("The solver should contain no task before switching to second order mode.");
+	  }
+	}
+	secondOrderKinematics = secondOrder;
+      }
 
       SolverKine::TaskDependancyList_t SolverKine::
       getTaskDependancyList( const TaskAbstract& task )
@@ -321,7 +361,29 @@ namespace dynamicgraph
 	    /* -Tasks 1:n- */
 		/* Ctaski = [ Ji 0 0 0 0 0 ] */
 
-		for( int i=0;i<(int)stack.size();++i )
+	    /*for( int i=0;i<(int)stack.size();++i )
+	    {
+	      TaskAbstract & task = * stack[i];
+	      MatrixXd & Ctask = Ctasks[i];
+	      VectorBound & btask = btasks[i];
+
+	      EIGEN_CONST_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
+	      const dg::sot::VectorMultiBound & dx = task.taskSOUT(t);
+	      const int nx = dx.size();
+
+	      assert( Ctask.rows() == nx && btask.size() == nx );
+	      assert( J.rows()==nx && J.cols()==nbDofs && (int)dx.size()==nx );
+
+	      Ctask = J;  COPY_MB_VECTOR_TO_EIGEN(dx,btask);
+
+	      sotDEBUG(15) << "Ctask"<<i<<" = "     << (MATLAB)Ctask << std::endl;
+	      sotDEBUG(1) << "btask"<<i<<" = "     << btask << std::endl;
+
+	    } //for*/
+
+
+
+	    for( int i=0;i<(int)stack.size();++i )
 		  {
 			//TaskAbstract & taskAb = new TaskDynPD;
 			TaskAbstract & taskAb = * stack[i];
@@ -355,31 +417,31 @@ namespace dynamicgraph
 			  btask1[c] = ddx[c].getSingleBound() + ddxdrift[c];
 			else
 			  {
-				const bool binf = ddx[c].getDoubleBoundSetup( dg::sot::MultiBound::BOUND_INF );
-				const bool bsup = ddx[c].getDoubleBoundSetup( dg::sot::MultiBound::BOUND_SUP );
-				if( binf&&bsup )
-				  {
+			    const bool binf = ddx[c].getDoubleBoundSetup( dg::sot::MultiBound::BOUND_INF );
+			    const bool bsup = ddx[c].getDoubleBoundSetup( dg::sot::MultiBound::BOUND_SUP );
+			    if( binf&&bsup )
+			      {
 				const double xi = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_INF);
 				const double xs = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_SUP);
 				btask1[c] = std::make_pair( xi+ddxdrift[c], xs+ddxdrift[c] );
-				  }
-				else if( binf )
-				  {
+			      }
+			    else if( binf )
+			      {
 				const double xi = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_INF);
 				btask1[c] = Bound( xi+ddxdrift[c], Bound::BOUND_INF );
-				  }
-				else
-				  {
+			      }
+			    else
+			      {
 				assert( bsup );
-				const double xs = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_SUP);
+				const double xs = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_SUP);	
 				btask1[c] = Bound( xs+ddxdrift[c], Bound::BOUND_SUP );
-				  } //else
+			      } //else
 			  } //else
 			  } //for c
 
 			sotDEBUG(15) << "Ctask"<<i<<" = "     << (MATLAB)Ctask << std::endl;
 			sotDEBUG(1) << "btask"<<i<<" = "     << btask1 << std::endl;
-		  } //for i
+			} //for i
 	  } //else
 
 	/* --- */
