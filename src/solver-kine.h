@@ -95,11 +95,17 @@ namespace dynamicgraph {
 	  void getDecomposition( const int &stage );
 	  bool controlFreeFloating;
 	  bool secondOrderKinematics;
+	  /// Push the task in the stack.
+	  /// Call parent implementation anc check that task is
+	  /// of type dynamic if necessary
+	  virtual void push( TaskAbstract& task );
+	  void setSecondOrderKine (const bool& secondOrder);
 
 	private: /* --- INTERNAL COMPUTATIONS --- */
 	  void refreshTaskTime( int time );
 	  bool checkSolverSize( void );
 	  void resizeSolver( void );
+	  void checkDynamicTask (const TaskAbstract& task) const;
 
 	private:
 	  typedef boost::shared_ptr<soth::HCOD> hcod_ptr_t;
