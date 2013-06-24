@@ -14,8 +14,8 @@
  * with sot-dyninv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VP_DEBUG
-#define VP_DEBUG_MODE 50
+//#define VP_DEBUG
+//#define VP_DEBUG_MODE 50
 #include <sot/core/debug.hh>
 #include <exception>
 #ifdef VP_DEBUG
@@ -80,6 +80,9 @@ namespace soth
   }
 }
 
+bool ddxdriftInit=false;
+Eigen::VectorXd ddxdrift ;
+
 namespace dynamicgraph
 {
   namespace sot
@@ -125,6 +128,7 @@ namespace dynamicgraph
 	,Ctasks(),btasks()
 	,solution()
 	,activeSet(),relevantActiveSet(false)
+	 
 	  
       {
 	signalRegistration(  controlSOUT 
@@ -147,8 +151,6 @@ namespace dynamicgraph
 		   makeDirectSetter(*this,&controlFreeFloating,
 				    docDirectSetter("ouput control includes the ff (ie, size nbDof). Oterwise, size is nbDof-6. FF is supposed to be at the head.","bool")));
 
-	addCommand("setSecondOrderKine",
-		   makeDirectSetter(*this,&secondOrderKinemat
 	std::string docstring =
 	  "Set second order kinematic inversion\n"
 	  "\n"
@@ -360,40 +362,14 @@ namespace dynamicgraph
 	  } //if
 	else
 	  {
-	    /* -Tasks 1:n- */
-		/* Ctaski = [ Ji 0 0 0 0 0 ] */
-
-	    /*for( int i=0;i<(int)stack.size();++i )
-	    {
-	      TaskAbstract & task = * stack[i];
-	      MatrixXd & Ctask = Ctasks[i];
-	      VectorBound & btask = btasks[i];
-
-	      EIGEN_CONST_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
-	      const dg::sot::VectorMultiBound & dx = task.taskSOUT(t);
-	      const int nx = dx.size();
-
-	      assert( Ctask.rows() == nx && btask.size() == nx );
-	      assert( J.rows()==nx && J.cols()==nbDofs && (int)dx.size()==nx );
-
-	      Ctask = J;  COPY_MB_VECTOR_TO_EIGEN(dx,btask);
-
-	      sotDEBUG(15) << "Ctask"<<i<<" = "     << (MATLAB)Ctask << std::endl;
-	      sotDEBUG(1) << "btask"<<i<<" = "     << btask << std::endl;
-
-	    } //for*/
-
-
 
 	    for( int i=0;i<(int)stack.size();++i )
-
 	      {
-		//TaskAbstract & taskAb = new TaskDynPD;
 		TaskAbstract & taskAb = * stack[i];
-		TaskDynPD & task = dynamic_cast<TaskDynPD &>(taskAb);
+		TaskDynPD & task = dynamic_cast<TaskDynPD &>(taskAb); //it can be static_cast cause of control
 		
 		MatrixXd & Ctask = Ctasks[i];
-		VectorBound & btask1 = btasks[i];
+		VectorBound & btask = btasks[i];
 		
 		EIGEN_CONST_MATRIX_FROM_SIGNAL(Jdot,task.JdotSOUT(t));
 		EIGEN_CONST_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
@@ -407,17 +383,23 @@ namespace dynamicgraph
 		sotDEBUG(45) << "Jdot"<<i<<" = " << Jdot << std::endl;
 		sotDEBUG(1) << "dq = " << (MATLAB)dq << std::endl;
 
-		assert( Ctask.rows() == nx1 && btask1.size() == nx1 );
+		assert( Ctask.rows() == nx1 && btask.size() == nx1 );
 		assert( J.rows()==nx1 && J.cols()==nbDofs && (int)ddx.size()==nx1 );
 		assert( Jdot.rows()==nx1 && Jdot.cols()==nbDofs );
 		
 		Ctask = J;
 
-		VectorXd ddxdrift = - (Jdot*dq);
+		if (!ddxdriftInit)
+		  {
+		    ddxdrift= VectorXd(nx1);
+		    ddxdriftInit=true;
+		  }
+		ddxdrift = - (Jdot*dq);
+		    
 		for( int c=0;c<nx1;++c )
 		  {
 		    if( ddx[c].getMode() == dg::sot::MultiBound::MODE_SINGLE )
-		      btask1[c] = ddx[c].getSingleBound() + ddxdrift[c];
+		      btask[c] = ddx[c].getSingleBound() + ddxdrift[c];
 		    else
 		      {
 			const bool binf = ddx[c].getDoubleBoundSetup( dg::sot::MultiBound::BOUND_INF );
@@ -426,24 +408,24 @@ namespace dynamicgraph
 			  {
 			    const double xi = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_INF);
 			    const double xs = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_SUP);
-			    btask1[c] = std::make_pair( xi+ddxdrift[c], xs+ddxdrift[c] );
+			    btask[c] = std::make_pair( xi+ddxdrift[c], xs+ddxdrift[c] );
 			  }
 			else if( binf )
 			  {
 			    const double xi = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_INF);
-			    btask1[c] = Bound( xi+ddxdrift[c], Bound::BOUND_INF );
+			    btask[c] = Bound( xi+ddxdrift[c], Bound::BOUND_INF );
 			  }
 			else
 			  {
 			    assert( bsup );
 			    const double xs = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_SUP);	
-			    btask1[c] = Bound( xs+ddxdrift[c], Bound::BOUND_SUP );
+			    btask[c] = Bound( xs+ddxdrift[c], Bound::BOUND_SUP );
 			  } //else
 		      } //else
 		  } //for c
 		
 		sotDEBUG(15) << "Ctask"<<i<<" = "     << (MATLAB)Ctask << std::endl;
-		sotDEBUG(1) << "btask"<<i<<" = "     << btask1 << std::endl;
+		sotDEBUG(1) << "btask"<<i<<" = "     << btask << std::endl;
 	      } //for i
 	  } //else
 

@@ -118,6 +118,7 @@ namespace dynamicgraph {
 	  std::vector<soth::cstref_vector_t> activeSet;
 	  bool relevantActiveSet;
 
+
 	}; // class SolverKine
 
     } // namespace dyninv
