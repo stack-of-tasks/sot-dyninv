@@ -367,7 +367,7 @@ namespace dynamicgraph
 	       makeCommandVoid1(*this,					\
 				(void (EntityClassName::*)(const int&))	\
 				&stack_t::defineNbDof,			\
-				docCommandVoid1("??? TODO",		\
+				docCommandVoid1("Set the size of the solver.",		\
 						"int")));		\
     addCommand("getSize",						\
 	       makeDirectGetter(*this,&nbDofs,				\
