@@ -14,8 +14,8 @@
  * with sot-dyninv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//#define VP_DEBUG
-//#define VP_DEBUG_MODE 50
+#define VP_DEBUG
+#define VP_DEBUG_MODE 50
 #include <sot/core/debug.hh>
 #include <exception>
 #ifdef VP_DEBUG
@@ -80,9 +80,6 @@ namespace soth
   }
 }
 
-bool ddxdriftInit=false;
-Eigen::VectorXd ddxdrift ;
-
 namespace dynamicgraph
 {
   namespace sot
@@ -128,7 +125,7 @@ namespace dynamicgraph
 	,Ctasks(),btasks()
 	,solution()
 	,activeSet(),relevantActiveSet(false)
-	 
+	,ddxdriftInit_(false)
 	  
       {
 	signalRegistration(  controlSOUT 
@@ -326,7 +323,8 @@ namespace dynamicgraph
 	    /* Only damp the final stage of the stack, 'cose of the solver known limitation. */
 	    hsolver->setDamping( 0 );
 	    hsolver->useDamp( true );
-	    hsolver->stages.back()->damping( dampingSIN(t) );
+	    if (hsolver->stages.size()!=0)
+	      hsolver->stages.back()->damping( dampingSIN(t) );
 	  }
 	else
 	  {
@@ -366,7 +364,7 @@ namespace dynamicgraph
 	    for( int i=0;i<(int)stack.size();++i )
 	      {
 		TaskAbstract & taskAb = * stack[i];
-		TaskDynPD & task = dynamic_cast<TaskDynPD &>(taskAb); //it can be static_cast cause of control
+		TaskDynPD & task = dynamic_cast<TaskDynPD &>(taskAb); //it can be static_cast cause of type control
 		
 		MatrixXd & Ctask = Ctasks[i];
 		VectorBound & btask = btasks[i];
@@ -389,17 +387,17 @@ namespace dynamicgraph
 		
 		Ctask = J;
 
-		if (!ddxdriftInit)
+		if (!ddxdriftInit_)
 		  {
-		    ddxdrift= VectorXd(nx1);
-		    ddxdriftInit=true;
+		    ddxdrift_= VectorXd(nx1);
+		    ddxdriftInit_=true;
 		  }
-		ddxdrift = - (Jdot*dq);
+		ddxdrift_ = - (Jdot*dq);
 		    
 		for( int c=0;c<nx1;++c )
 		  {
 		    if( ddx[c].getMode() == dg::sot::MultiBound::MODE_SINGLE )
-		      btask[c] = ddx[c].getSingleBound() + ddxdrift[c];
+		      btask[c] = ddx[c].getSingleBound() + ddxdrift_[c];
 		    else
 		      {
 			const bool binf = ddx[c].getDoubleBoundSetup( dg::sot::MultiBound::BOUND_INF );
@@ -408,18 +406,18 @@ namespace dynamicgraph
 			  {
 			    const double xi = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_INF);
 			    const double xs = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_SUP);
-			    btask[c] = std::make_pair( xi+ddxdrift[c], xs+ddxdrift[c] );
+			    btask[c] = std::make_pair( xi+ddxdrift_[c], xs+ddxdrift_[c] );
 			  }
 			else if( binf )
 			  {
 			    const double xi = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_INF);
-			    btask[c] = Bound( xi+ddxdrift[c], Bound::BOUND_INF );
+			    btask[c] = Bound( xi+ddxdrift_[c], Bound::BOUND_INF );
 			  }
 			else
 			  {
 			    assert( bsup );
 			    const double xs = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_SUP);	
-			    btask[c] = Bound( xs+ddxdrift[c], Bound::BOUND_SUP );
+			    btask[c] = Bound( xs+ddxdrift_[c], Bound::BOUND_SUP );
 			  } //else
 		      } //else
 		  } //for c

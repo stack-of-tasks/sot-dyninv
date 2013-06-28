@@ -117,6 +117,10 @@ namespace dynamicgraph {
 	  Eigen::VectorXd solution;
 	  std::vector<soth::cstref_vector_t> activeSet;
 	  bool relevantActiveSet;
+	  
+	  bool ddxdriftInit_;
+	  Eigen::VectorXd ddxdrift_ ;
+
 
 
 	}; // class SolverKine
