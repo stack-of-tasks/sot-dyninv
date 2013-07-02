@@ -14,8 +14,8 @@
  * with sot-dyninv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define VP_DEBUG
-#define VP_DEBUG_MODE 50
+//#define VP_DEBUG
+//#define VP_DEBUG_MODE 50
 #include <sot/core/debug.hh>
 #include <exception>
 #ifdef VP_DEBUG
@@ -118,7 +118,7 @@ namespace dynamicgraph
 			      dampingSIN )
 
 	,controlFreeFloating(true)
-	,secondOrderKinematics(false)
+	,secondOrderKinematics_(false)
 
 	,hsolver()
 
@@ -160,7 +160,7 @@ namespace dynamicgraph
 				    docstring));
 
 	addCommand("getSecondOrderKine",
-		   makeDirectGetter(*this,&secondOrderKinematics,
+		   makeDirectGetter(*this,&secondOrderKinematics_,
 				    docDirectGetter("second order kinematic inversion","bool")));
 
 	ADD_COMMANDS_FOR_THE_STACK;
@@ -172,7 +172,7 @@ namespace dynamicgraph
       
       void SolverKine::push (TaskAbstract& task)
       {
-	if (secondOrderKinematics) {
+	if (secondOrderKinematics_) {
 	  checkDynamicTask (task);
 	}
 	sot::Stack< TaskAbstract >::push (task);
@@ -199,7 +199,7 @@ namespace dynamicgraph
 	      ("The solver should contain no task before switching to second order mode.");
 	  }
 	}
-	secondOrderKinematics = secondOrder;
+	secondOrderKinematics_ = secondOrder;
       }
 
       SolverKine::TaskDependancyList_t SolverKine::
@@ -336,7 +336,7 @@ namespace dynamicgraph
 	/* -Tasks 1:n- */
 	/* Ctaski = [ Ji 0 0 0 0 0 ] */
 
-	if( !secondOrderKinematics )
+	if( !secondOrderKinematics_ )
 	  {
 	  for( int i=0;i<(int)stack.size();++i )
 	    {

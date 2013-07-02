@@ -94,7 +94,7 @@ namespace dynamicgraph {
 	  void resetAset( void );
 	  void getDecomposition( const int &stage );
 	  bool controlFreeFloating;
-	  bool secondOrderKinematics;
+	  bool secondOrderKinematics_;
 	  /// Push the task in the stack.
 	  /// Call parent implementation anc check that task is
 	  /// of type dynamic if necessary
