@@ -155,11 +155,11 @@ namespace dynamicgraph
 	  "\n"
 	  "  If true, check that the solver is empty, since second order\n"
 	  "  kinematics requires tasks to be of type TaskDynPD.";
-	addCommand("setSecondOrderKine",
-		   makeCommandVoid1(*this,&SolverKine::setSecondOrderKine,
+	addCommand("setSecondOrderKinematics",
+		   makeCommandVoid0(*this,&SolverKine::setSecondOrderKinematics,
 				    docstring));
 
-	addCommand("getSecondOrderKine",
+	addCommand("getSecondOrderKinematics",
 		   makeDirectGetter(*this,&secondOrderKinematics_,
 				    docDirectGetter("second order kinematic inversion","bool")));
 
@@ -191,15 +191,13 @@ namespace dynamicgraph
 	}
       }
 
-      void SolverKine::setSecondOrderKine (const bool& secondOrder)
+      void SolverKine::setSecondOrderKinematics ()
       {
-	if (secondOrder) {
-	  if (stack.size() != 0) {
-	    throw std::runtime_error
-	      ("The solver should contain no task before switching to second order mode.");
-	  }
+	if (stack.size() != 0) {
+	  throw std::runtime_error
+	    ("The solver should contain no task before switching to second order mode.");
 	}
-	secondOrderKinematics_ = secondOrder;
+	secondOrderKinematics_ = true;
       }
 
       SolverKine::TaskDependancyList_t SolverKine::

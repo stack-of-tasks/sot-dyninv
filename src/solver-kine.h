@@ -99,7 +99,7 @@ namespace dynamicgraph {
 	  /// Call parent implementation anc check that task is
 	  /// of type dynamic if necessary
 	  virtual void push( TaskAbstract& task );
-	  void setSecondOrderKine (const bool& secondOrder);
+	  void setSecondOrderKinematics ();
 
 	private: /* --- INTERNAL COMPUTATIONS --- */
 	  void refreshTaskTime( int time );
