@@ -3,7 +3,7 @@ from dynamic_graph import plug
 from dynamic_graph.sot.core import *
 from dynamic_graph.sot.dyninv import *
 from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple, rotate, matrixToRPY, rpy2tr
-from numpy import matrix, identity, zeros, eye, array
+from numpy import matrix, identity, zeros, eye, array, pi
 
 
 def setGain(gain,val):
@@ -144,3 +144,34 @@ class MetaTaskDynCom(object):
     @ref.setter
     def ref(self,v):
         self.featureDes.errorIN.value = v
+
+
+class MetaTaskDynLimits(object):
+    def __init__(self, dyn, dt, name="lim"):
+        self.dyn  = dyn
+        self.name = name
+
+        self.task = TaskDynLimits('task'+name)
+        plug(dyn.position, self.task.position)
+        plug(dyn.velocity, self.task.velocity)
+
+        self.task.dt.value = dt
+        self.task.controlGain.value = 10.0
+
+        dyn.upperJl.recompute(0)
+        dyn.lowerJl.recompute(0)
+        self.task.referencePosInf.value = dyn.lowerJl.value
+        self.task.referencePosSup.value = dyn.upperJl.value
+
+        dqup = (0, 0, 0, 0, 0, 0, 
+                200, 220, 250, 230, 290, 520,
+                200, 220, 250, 230, 290, 520, 
+                250, 140, 390, 390, 
+                240, 140, 240, 130, 270, 180, 330, 
+                240, 140, 240, 130, 270, 180, 330)
+        dqup = (1000,)*len(dyn.upperJl.value)
+        self.task.referenceVelInf.value = tuple([-val*pi/180 for val in dqup])
+        self.task.referenceVelSup.value = tuple([ val*pi/180 for val in dqup])
+
+
+
