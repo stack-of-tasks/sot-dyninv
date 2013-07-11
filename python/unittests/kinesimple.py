@@ -1,6 +1,8 @@
 # ______________________________________________________________________________
 # ******************************************************************************
+#
 # The simplest robot task: just go and reach a point with the right hand.
+#
 # ______________________________________________________________________________
 # ******************************************************************************
 
@@ -17,29 +19,35 @@ from numpy import *
 
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir,modelName,robotDimension,initialConfig,gearRatio,inertiaRotor
 
-# --- ROBOT SIMU ---------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# --- ROBOT SIMULATION ---------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 robotName = 'hrp14small'
-robotDim=robotDimension[robotName]
-robot = RobotSimu("robot")
+robotDim  = robotDimension[robotName]
+robot     = RobotSimu("robot")
 robot.resize(robotDim)
+
 dt=5e-3
 
 from dynamic_graph.sot.dyninv.robot_specific import halfSittingConfig
-x0=-0.00949035111398315034
-y0=0
-z0=0.64870185118253043
+x0 = -0.00949035111398315034
+y0 = 0
+z0 = 0.64870185118253043
 halfSittingConfig[robotName] = (x0,y0,z0,0,0,0)+halfSittingConfig[robotName][6:]
 
-q0=list(halfSittingConfig[robotName])
-initialConfig[robotName]=tuple(q0)
+q0 = list(halfSittingConfig[robotName])
+initialConfig[robotName] = tuple(q0)
 
 robot.set( initialConfig[robotName] )
-addRobotViewer(robot,small=True,verbose=True)
+addRobotViewer(robot, small=True, verbose=True)
+
 
 #-------------------------------------------------------------------------------
 #----- MAIN LOOP ---------------------------------------------------------------
 #-------------------------------------------------------------------------------
+
 from dynamic_graph.sot.core.utils.thread_interruptible_loop import loopInThread,loopShortcuts
 @loopInThread
 def inc():
@@ -48,11 +56,13 @@ def inc():
 runner=inc()
 [go,stop,next,n]=loopShortcuts(runner)
 
+
 #-----------------------------------------------------------------------------
 #---- DYN --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
-modelDir  = pkgDataRootDir[robotName]
-xmlDir    = pkgDataRootDir[robotName]
+
+modelDir          = pkgDataRootDir[robotName]
+xmlDir            = pkgDataRootDir[robotName]
 specificitiesPath = xmlDir + '/HRP2SpecificitiesSmall.xml'
 jointRankPath     = xmlDir + '/HRP2LinkJointRankSmall.xml'
 
@@ -67,21 +77,23 @@ plug(robot.state,dyn.position)
 dyn.velocity.value = robotDim*(0.,)
 dyn.acceleration.value = robotDim*(0.,)
 
-# ---- SOT ---------------------------------------------------------------------
-# ---- SOT ---------------------------------------------------------------------
-# ---- SOT ---------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# ---- Kinematic Stack of Tasks (SoT)  -----------------------------------------
+# ------------------------------------------------------------------------------
 
 sot = SOT('sot')
-sot.setNumberDofs(robotDim)
+sot.setSize(robotDim)
 plug(sot.control,robot.control)
 
-# ---- TASKS -------------------------------------------------------------------
-# ---- TASKS -------------------------------------------------------------------
-# ---- TASKS -------------------------------------------------------------------
 
-# ---- TASK GRIP ---
-taskRH=MetaTaskKine6d('rh',dyn,'rh','right-wrist')
-handMgrip=eye(4); handMgrip[0:3,3] = (0,0,-0.21)
+# ------------------------------------------------------------------------------
+# ---- TASKS -------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+# ---- TASK GRIP
+taskRH    = MetaTaskKine6d('rh',dyn,'rh','right-wrist')
+handMgrip = eye(4); handMgrip[0:3,3] = (0,0,-0.21)
 taskRH.opmodif = matrixToTuple(handMgrip)
 taskRH.feature.frame('desired')
 
@@ -100,9 +112,12 @@ for name,joint in [ ['LF','left-ankle'], ['RF','right-ankle' ] ]:
     contact.keep()
     locals()['contact'+name] = contact
 
-# --- RUN ----------------------------------------------------------------------
 
-target=(0.5,-0.2,1.3)
+# ----------------------------------------------------------------------------
+# --- RUN --------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
+target = (0.5,-0.2,1.3)
 robot.viewer.updateElementConfig('zmp',target+(0,0,0))
 gotoNd(taskRH,target,'111',(4.9,0.9,0.01,0.9))
 

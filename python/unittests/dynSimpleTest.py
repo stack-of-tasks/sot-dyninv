@@ -20,13 +20,13 @@ from dynamic_graph.sot.core.utils.attime import attime
 
 from dynamic_graph.sot.dyninv.robot_specific import pkgDataRootDir, modelName, robotDimension, initialConfig, gearRatio, inertiaRotor
 from dynamic_graph.sot.dyninv.meta_task_dyn_6d import MetaTaskDyn6d
-from dynamic_graph.sot.dyninv.meta_tasks_dyn import MetaTaskDynCom, MetaTaskDynPosture, AddContactHelper, gotoNd
+from dynamic_graph.sot.dyninv.meta_tasks_dyn import MetaTaskDynCom, MetaTaskDynPosture, MetaTaskDynLimits, AddContactHelper, gotoNd
 
 from numpy import *
 
 
 # ------------------------------------------------------------------------------
-# --- ROBOT DYNAMIC SIMULATION -------------------------------------------------
+# ---  ROBOT DYNAMIC SIMULATION  -----------------------------------------------
 # ------------------------------------------------------------------------------
 
 robotName = 'hrp14small'
@@ -40,14 +40,14 @@ addRobotViewer(robot,small=True,verbose=False)
 
 dt=5e-3
 
+
 # ------------------------------------------------------------------------------
-# --- MAIN LOOP ----------------------------------------------------------------
+# ---  MAIN LOOP  --------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
 def inc():
     robot.increment(dt)
     attime.run(robot.control.time)
-    # verif.record()
 
 @loopInThread
 def loop():
@@ -68,9 +68,9 @@ def iter():         print 'iter = ',robot.state.time
 def status():       print runner.isPlay
 
 
-#-----------------------------------------------------------------------------
-#---- DYN --------------------------------------------------------------------
-#-----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# ----  DYN  -----------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 modelDir          = pkgDataRootDir[robotName]
 xmlDir            = pkgDataRootDir[robotName]
@@ -98,10 +98,11 @@ dyn.setProperty('ComputeAccelerationCoM','true')
 robot.control.unplug()
 
 
-#-----------------------------------------------------------------------------
-# --- OPERATIONAL TASKS (For HRP2-14)-----------------------------------------
-#-----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# ---  TASKS (for HRP2-14)  --------------------------------------------------
+# ----------------------------------------------------------------------------
 
+# Operational Point (6D) Tasks
 taskWaist = MetaTaskDyn6d('taskWaist', dyn, 'waist', 'waist')
 taskChest = MetaTaskDyn6d('taskChest', dyn, 'chest', 'chest')
 taskHead  = MetaTaskDyn6d('taskHead', dyn, 'head', 'gaze')
@@ -121,25 +122,12 @@ taskCom = MetaTaskDynCom(dyn,dt)
 taskPosture = MetaTaskDynPosture(dyn,dt)
 
 # Angular position and velocity limits
-taskLim = TaskDynLimits('taskLim')
-plug(dyn.position,taskLim.position)
-plug(dyn.velocity,taskLim.velocity)
-taskLim.dt.value = dt
-
-dyn.upperJl.recompute(0)
-dyn.lowerJl.recompute(0)
-taskLim.referencePosInf.value = dyn.lowerJl.value
-taskLim.referencePosSup.value = dyn.upperJl.value
-
-#dqup = (0, 0, 0, 0, 0, 0, 200, 220, 250, 230, 290, 520, 200, 220, 250, 230, 290, 520, 250, 140, 390, 390, 240, 140, 240, 130, 270, 180, 330, 240, 140, 240, 130, 270, 180, 330)
-dqup = (1000,)*robotDim
-taskLim.referenceVelInf.value = tuple([-val*pi/180 for val in dqup])
-taskLim.referenceVelSup.value = tuple([ val*pi/180 for val in dqup])
+taskLim = MetaTaskDynLimits(dyn,dt)
 
 
-#-----------------------------------------------------------------------------
-# --- Stack of tasks controller  ---------------------------------------------
-#-----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# ---  Dynamic Stack of Tasks (SoT) controller  ------------------------------
+# ----------------------------------------------------------------------------
 
 sot     = SolverDynReduced('sot')
 contact = AddContactHelper(sot)
@@ -155,9 +143,9 @@ plug(sot.solution, robot.control)
 plug(sot.acceleration,robot.acceleration)
 
 
-#-----------------------------------------------------------------------------
-# ---- CONTACT: Contact definition -------------------------------------------
-#-----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# ----  CONTACT: Contact definition  -----------------------------------------
+# ----------------------------------------------------------------------------
 
 # Left foot contact
 contactLF = MetaTaskDyn6d('contact_lleg',dyn,'lf','left-ankle')
@@ -175,14 +163,14 @@ contactRF.support = ((0.11,-0.08,-0.08,0.11),(-0.045,-0.045,0.07,0.07),(-0.105,-
 contactLF.support = ((0.11,-0.08,-0.08,0.11),(-0.07,-0.07,0.045,0.045),(-0.105,-0.105,-0.105,-0.105))
 
 # Imposed erordot = 0
-contactLF.feature.errordot.value=(0,0,0,0,0,0)
-contactRF.feature.errordot.value=(0,0,0,0,0,0)
+contactLF.feature.errordot.value = (0,0,0,0,0,0)
+contactRF.feature.errordot.value = (0,0,0,0,0,0)
 
 
 
-#-----------------------------------------------------------------------------
-# --- TRACE ------------------------------------------------------------------
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# ---  TRACES AND AUTO RECOMPUTING SIGNALS  -----------------------------------
+# -----------------------------------------------------------------------------
 
 from dynamic_graph.tracer import *
 tr = Tracer('tr')
@@ -210,12 +198,12 @@ robot.after.addSignal('dyn.lh')
 robot.after.addSignal('dyn.com')
 robot.after.addSignal('sot.forcesNormal')
 robot.after.addSignal('dyn.waist')
-robot.after.addSignal('taskLim.normalizedPosition')
+robot.after.addSignal(taskLim.task.name+'.normalizedPosition')
 
 
-#-----------------------------------------------------------------------------
-# --- RUN --------------------------------------------------------------------
-#-----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# ---  RUN  ------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 
 dyn.lh.recompute(0)
@@ -228,7 +216,7 @@ sot.clear()
 contact(contactLF)
 contact(contactRF)
 
-sot.push(taskLim.name)
+sot.push(taskLim.task.name)
 plug(robot.state,sot.position)
 
 attime(2
@@ -254,3 +242,4 @@ attime(400
 
 attime(600, stop, "Stopped")
 
+go()
