@@ -56,6 +56,7 @@ SET(libs
 	task-dyn-joint-limits
 	task-dyn-limits
 	task-dyn-inequality
+	task-dyn-passing-point
 	solver-op-space
 	solver-dyn-reduced
 
@@ -89,6 +90,7 @@ SET(headers
 	task-dyn-joint-limits.h
 	task-dyn-limits.h
 	task-dyn-inequality.h
+	task-dyn-passing-point.h
 	solver-op-space.h
 	solver-dyn-reduced.h
 
@@ -107,6 +109,7 @@ SET(headers
 list(APPEND task-dyn-limits_plugins_dependencies task-dyn-pd)
 list(APPEND task-dyn-inequality_plugins_dependencies task-dyn-pd)
 list(APPEND task-dyn-joint-limits_plugins_dependencies task-dyn-pd)
+list(APPEND task-dyn-passing-point_plugins_dependencies task-dyn-pd)
 list(APPEND pseudo-robot-dynamic_plugins_dependencies dynamic-integrator)
 list(APPEND contact-selecter_plugins_dependencies solver-dyn-reduced)
 

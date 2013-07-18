@@ -9,6 +9,7 @@ from zmp_estimator import ZmpEstimator
 from robot_dyn_simu import RobotDynSimu
 from task_dyn_joint_limits import TaskDynJointLimits
 from task_dyn_limits import TaskDynLimits
+from task_dyn_passing_point import TaskDynPassingPoint
 from task_joint_limits import TaskJointLimits
 from task_inequality import TaskInequality
 from feature_projected_line import FeatureProjectedLine

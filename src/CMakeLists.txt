@@ -73,6 +73,7 @@ ENDFOREACH(lib)
 INSTALL(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/__init__.py
   ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_task_dyn_6d.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_task_dyn_passing_point.py
   ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_tasks_dyn.py
   ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_tasks_dyn_relative.py
   ${CMAKE_CURRENT_BINARY_DIR}/../python/robot_specific.py
