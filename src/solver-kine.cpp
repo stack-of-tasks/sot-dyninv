@@ -305,9 +305,14 @@ namespace dynamicgraph
 #define COLS_TAU leftCols( nbDofs+ntau ).rightCols( ntau )
 #define COLS_F rightCols( nfs )
 
+      std::ofstream fout("/tmp/kine2-chrono.dat");
+
       ml::Vector& SolverKine::
       controlSOUT_function( ml::Vector &mlcontrol, int t )
       {
+	struct timeval t0,t1,t2,t3,t4;	
+	gettimeofday(&t0,NULL);
+
 	sotDEBUG(15) << " # In time = " << t << std::endl;
 
 	refreshTaskTime( t );
@@ -330,6 +335,7 @@ namespace dynamicgraph
 	    hsolver->useDamp( false );
 	  }
 
+	gettimeofday(&t1,NULL);
 
 	/* -Tasks 1:n- */
 	/* Ctaski = [ Ji 0 0 0 0 0 ] */
@@ -425,6 +431,8 @@ namespace dynamicgraph
 	      } //for i
 	  } //else
 
+	gettimeofday(&t2,NULL);
+
 	/* --- */
 	sotDEBUG(1) << "Initial config." << std::endl;
 	double time= 0;
@@ -450,6 +458,16 @@ namespace dynamicgraph
 	    EIGEN_VECTOR_FROM_VECTOR( control,mlcontrol,nbDofs-6 );
 	    control=solution.tail( nbDofs-6 );
 	  }
+
+	gettimeofday(&t4,NULL);
+
+	double dt1,dt2,dt3,dt4;
+	dt1 = (t1.tv_sec-t0.tv_sec)*1000.0 + (t1.tv_usec-t0.tv_usec)/1000.0;
+	dt2 = (t2.tv_sec-t1.tv_sec)*1000.0 + (t2.tv_usec-t1.tv_usec)/1000.0;
+	dt3 = (t3.tv_sec-t2.tv_sec)*1000.0 + (t3.tv_usec-t2.tv_usec)/1000.0;
+	dt4 = (t4.tv_sec-t3.tv_sec)*1000.0 + (t4.tv_usec-t3.tv_usec)/1000.0;
+
+	fout << dt1 << " " << dt2 << " " << dt3 << " " << dt4 << std::endl;
 
 	sotDEBUG(1) << "control = " << mlcontrol << std::endl;
 	return mlcontrol;
