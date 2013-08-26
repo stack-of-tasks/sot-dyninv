@@ -10,7 +10,7 @@ def setGain(gain,val):
     if val!=None:
         if isinstance(val,int) or isinstance(val,float):
             gain.setConstant(val)
-        if len(val)==1:
+        elif len(val)==1:
             gain.setConstant(val[0])
         elif len(val)==3: gain.set( val[0],val[1],val[2])
         elif len(val)==4: gain.setByPoint( val[0],val[1],val[2],val[3])
@@ -109,6 +109,7 @@ class MetaTaskDynPosture(object):
             r = self.postureRange[n]
             act += r
             if isinstance(v,matrix): qdes[r,0] = vectorToTuple(v)
+            if isinstance(v,ndarray): qdes[r,0] = vectorToTuple(v)
             else: qdes[r,0] = v
         self.ref = vectorToTuple(qdes)
         self.feature.selec.value = toFlags(act)
