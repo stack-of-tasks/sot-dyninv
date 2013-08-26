@@ -3,7 +3,7 @@ from dynamic_graph import plug
 from dynamic_graph.sot.core import *
 from dynamic_graph.sot.dyninv import *
 from dynamic_graph.sot.core.matrix_util import matrixToTuple, vectorToTuple, rotate, matrixToRPY, rpy2tr
-from numpy import matrix, identity, zeros, eye, array, pi
+from numpy import matrix, identity, zeros, eye, array, pi, ndarray
 
 
 def setGain(gain,val):
