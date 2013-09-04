@@ -1,6 +1,10 @@
 sot-dyninv
 ==========
 
+[![Build Status](https://travis-ci.org/stack-of-tasks/sot-dyninv.png)](https://travis-ci.org/stack-of-tasks/sot-dyninv)
+[![Coverage Status](https://coveralls.io/repos/stack-of-tasks/sot-dyninv/badge.png?branch=master)](https://coveralls.io/r/stack-of-tasks/sot-dyninv?branch=master)
+
+
 This sofware provides the solver and features to resolve the inverse of the
 dynamics of a free-floating robot, in contact with its environment.  The basics
 are provided by the sot core, and the computation of the dynamics of the robot
@@ -36,5 +40,5 @@ have to be available on your machine.
    - usual compilation tools (GCC/G++, make, etc.)
 
 
-[sot-core]: http://github.com/jrl-umi3128/sot-core
-[soth]: https://github.com/laas/soth.git
+[sot-core]: http://github.com/stack-of-tasks/sot-core
+[soth]: https://github.com/stack-of-tasks/soth.git
