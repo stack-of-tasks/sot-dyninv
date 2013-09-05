@@ -55,7 +55,7 @@ namespace dynamicgraph
 	,CONSTRUCT_SIGNAL_OUT(velocityDesired, ml::Vector,
 			      velocityDesSIN<<controlSelectionSIN )
 
-	,previousTask(0u)
+	,previousTask()
       {
 	taskSOUT.setFunction( boost::bind(&TaskDynPassingPoint::computeTaskSOUT,this,_1,_2) );
 	taskSOUT.addDependency( velocityCurrentSOUT );
