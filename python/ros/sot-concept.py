@@ -26,7 +26,7 @@ from numpy import *
 
 
 # create the robot and plug main signal.
-from dynamic_graph.sot.romeo.romeo import *
+from dynamic_graph.sot.romeo.robot import *
 robot = Robot('romeo', device=RobotSimu('romeo'))
 plug(robot.device.state, robot.dynamic.position)
 
