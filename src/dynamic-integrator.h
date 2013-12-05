@@ -52,16 +52,14 @@ namespace dynamicgraph {
 	:public ::dynamicgraph::Entity
 	,public ::dynamicgraph::EntityHelper<DynamicIntegrator>
 	{
-
+	  DYNAMIC_GRAPH_ENTITY_DECL();
 	public: /* --- CONSTRUCTOR ---- */
 
 	  DynamicIntegrator( const std::string & name );
 
 	public: /* --- ENTITY INHERITANCE --- */
 
-	  static const std::string CLASS_NAME;
 	  virtual void display( std::ostream& os ) const;
-	  virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
 
 	  virtual void commandLine( const std::string& cmdLine,
 				    std::istringstream& cmdArgs,

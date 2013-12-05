@@ -53,15 +53,13 @@ namespace dynamicgraph {
 	:public ::dynamicgraph::Entity
 	,public ::dynamicgraph::EntityHelper<ContactSelecter>
 	{
-
+	  DYNAMIC_GRAPH_ENTITY_DECL();
 	public: /* --- CONSTRUCTOR ---- */
 
 	  ContactSelecter( const std::string & name );
 
 	public: /* --- ENTITY INHERITANCE --- */
 
-	  static const std::string CLASS_NAME;
-	  virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
 	  virtual void display( std::ostream& os ) const;
 	  void initCommands( void );
 

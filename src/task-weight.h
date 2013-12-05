@@ -54,15 +54,13 @@ namespace dynamicgraph {
 	:public Task
 	,public EntityHelper<TaskWeight>
 	{
-
+	  DYNAMIC_GRAPH_ENTITY_DECL();
 	public: /* --- CONSTRUCTOR ---- */
 
 	  TaskWeight( const std::string& name );
 
 	public: /* --- ENTITY INHERITANCE --- */
 
-	  static const std::string CLASS_NAME;
-	  virtual const std::string& getClassName( void ) { return CLASS_NAME; }
 	  virtual void display( std::ostream& os ) const;
 
 	public:  /* --- SIGNALS --- */

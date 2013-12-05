@@ -54,15 +54,10 @@ namespace dynamicgraph {
 	:public TaskDynPD
 	,public EntityHelper<TaskDynInequality>
 	{
-
+	  DYNAMIC_GRAPH_ENTITY_DECL();
 	public: /* --- CONSTRUCTOR ---- */
 
 	  TaskDynInequality( const std::string& name );
-
-	public: /* --- ENTITY INHERITANCE --- */
-
-	  static const std::string CLASS_NAME;
-	  virtual const std::string& getClassName( void ) { return CLASS_NAME; }
 
 	public:  /* --- SIGNALS --- */
 

@@ -54,16 +54,14 @@ namespace dynamicgraph {
 	:public ::dynamicgraph::sot::Device
 	,public ::dynamicgraph::EntityHelper<RobotDynSimu>
 	{
-
+	  DYNAMIC_GRAPH_ENTITY_DECL();
 	public: /* --- CONSTRUCTOR ---- */
 
 	  RobotDynSimu( const std::string & name );
 
 	public: /* --- ENTITY INHERITANCE --- */
 
-	  static const std::string CLASS_NAME;
 	  virtual void display( std::ostream& os ) const;
-	  virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
 
 	  typedef ::dynamicgraph::EntityHelper<RobotDynSimu>::EntityClassName
 	    EntityClassName;

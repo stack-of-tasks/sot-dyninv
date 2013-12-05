@@ -61,7 +61,7 @@ namespace dynamicgraph {
 	:public ::dynamicgraph::sot::dyninv::TaskDynPD
 	,public ::dynamicgraph::EntityHelper<TaskDynPassingPoint>
 	{
-
+	  DYNAMIC_GRAPH_ENTITY_DECL();
 	public:
 	  /*! Constructor                                                                                                                                                                               
 	    @param name: Name of the task (string)                                                                                                             
@@ -70,9 +70,7 @@ namespace dynamicgraph {
 
 	  /* --- ENTITY INHERITANCE --- */
 	  typedef TaskDynPassingPoint EntityClassName;
-	  static const std::string CLASS_NAME;
 	  virtual void display( std::ostream& os ) const;
-	  virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
 
 	  /* --- SIGNALS --- */
 	  DECLARE_SIGNAL_IN(velocityDes, ml::Vector);

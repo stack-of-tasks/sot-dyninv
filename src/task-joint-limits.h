@@ -53,13 +53,13 @@ namespace dynamicgraph {
 	:public TaskAbstract
 	,public EntityHelper<TaskJointLimits>
 	{
+	  DYNAMIC_GRAPH_ENTITY_DECL();
 	public: /* --- CONSTRUCTOR ---- */
 
 	  TaskJointLimits( const std::string& name );
 
 	public: /* --- ENTITY INHERITANCE --- */
 
-	  DYNAMIC_GRAPH_ENTITY_DECL();
 	  virtual void display( std::ostream& os ) const;
 
 	public:  /* --- SIGNALS --- */

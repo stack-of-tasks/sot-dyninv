@@ -53,16 +53,14 @@ namespace dynamicgraph {
 	:public ::dynamicgraph::sot::Task
 	,public ::dynamicgraph::EntityHelper<TaskDynPD>
 	{
-
+	  DYNAMIC_GRAPH_ENTITY_DECL();
 	public: /* --- CONSTRUCTOR ---- */
 
 	  TaskDynPD( const std::string & name );
 
 	public: /* --- ENTITY INHERITANCE --- */
 
-	  static const std::string CLASS_NAME;
 	  virtual void display( std::ostream& os ) const;
-	  virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
 
 	public:  /* --- SIGNALS --- */
 

@@ -55,7 +55,7 @@ namespace dynamicgraph {
 	,public ::dynamicgraph::EntityHelper<SolverKine>
 	,public sot::Stack< TaskAbstract >
 	{
-
+	  DYNAMIC_GRAPH_ENTITY_DECL();
 	public: /* --- CONSTRUCTOR ---- */
 
 	  SolverKine( const std::string & name );
@@ -75,9 +75,7 @@ namespace dynamicgraph {
 
 	public: /* --- ENTITY INHERITANCE --- */
 
-	  static const std::string CLASS_NAME;
 	  virtual void display( std::ostream& os ) const;
-	  virtual const std::string& getClassName( void ) const { return CLASS_NAME; }
 
 	  virtual void commandLine( const std::string& cmdLine,
 				    std::istringstream& cmdArgs,

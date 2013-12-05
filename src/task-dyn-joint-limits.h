@@ -58,15 +58,13 @@ namespace dynamicgraph {
 	:public ::dynamicgraph::sot::dyninv::TaskDynPD
 	,public ::dynamicgraph::EntityHelper<TaskDynJointLimits>
 	{
-
+	  DYNAMIC_GRAPH_ENTITY_DECL();
 	public: /* --- CONSTRUCTOR ---- */
 
 	  TaskDynJointLimits( const std::string& name );
 
 	public: /* --- ENTITY INHERITANCE --- */
 	  typedef TaskDynJointLimits EntityClassName;
-	  static const std::string CLASS_NAME;
-	  virtual const std::string& getClassName( void ) { return CLASS_NAME; }
 	  //virtual void display( std::ostream& os ) const;
 
 	public:  /* --- SIGNALS --- */
