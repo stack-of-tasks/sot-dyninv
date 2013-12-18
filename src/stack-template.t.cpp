@@ -346,6 +346,12 @@ namespace dynamicgraph
 				&stack_t::pushByTaskName,		\
 				docCommandVoid1("Push the named task.",	\
 						"string (task name)"))); \
+    addCommand("remove",							\
+	       makeCommandVoid1(*this,					\
+				(void (EntityClassName::*)(const std::string&))	\
+				&stack_t::removeByTaskName,		\
+				docCommandVoid1("Remove the named task.", \
+						"string (task name)"))); \
     addCommand("rm",							\
 	       makeCommandVoid1(*this,					\
 				(void (EntityClassName::*)(const std::string&))	\
