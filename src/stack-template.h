@@ -145,30 +145,6 @@ namespace dynamicgraph {
 
 	/*! @{ */
 
-	/* To use the macro, the typedef sot::Stack<TaskSpec> stack_t has to be set,
-	 * as well as the EntityClassName. */
-	//#define ADD_COMMANDS_FOR_THE_STACK /// Code in the .t.cpp
-
-
-	/*! \brief This method deals with the command line.
-	  The command given in argument is send to the stack of tasks by the shell.
-	  The command understood by sot are:
-	  <ul>
-	  <li> Tasks
-	  <ul>
-	  <li> push <task> : Push a task in the stack (FILO).
-	  <li> pop : Remove the task push in the stack.
-	  <li> down <task> : Make the task have a higher priority, i.e.
-	  swap with the task immediatly superior in priority.
-	  <li> up <task> : Make the task have a lowest priority, i.e.
-	  swap with the task immediatly inferior in priority.
-	  <li> rm <task> : Remove the task from the stack.
-	  </ul>
-	*/
-	virtual bool stackCommandLine( const std::string& cmdLine,
-				       std::istringstream& cmdArgs,
-				       std::ostream& os );
-
 	void pushByTaskName( const std::string& taskName );
 	void removeByTaskName( const std::string& taskName );
 	void upByTaskName( const std::string& taskName );

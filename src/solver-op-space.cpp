@@ -755,67 +755,6 @@ namespace dynamicgraph
 	stack_t::display(os);
 	dispContacts(os);
       }
-
-      void SolverOpSpace::
-      commandLine( const std::string& cmdLine,
-		   std::istringstream& cmdArgs,
-		   std::ostream& os )
-      {
-	if( cmdLine == "help" )
-	  {
-	    os << "SolverOpSpace:\n"
-	       << "\t- debugOnce: open trace-file for next iteration of the solver." << std::endl
-	       << "\t- addContact: create the contact signals, unpluged." << std::endl
-	       << "\t- addContactFromTask <taskName>: Add a contact from the named task." << std::endl
-	       << "\t- rmContact <name>: remove a contact." << std::endl
-	       << "\t- dispContacts: guess what?." << std::endl;
-	    stackCommandLine( cmdLine,cmdArgs,os );
-	    Entity::commandLine( cmdLine,cmdArgs,os );
-	  }
-	else if( cmdLine == "debugOnce" )
-	  {
-	    debugOnce();
-	  }
-	else if( cmdLine == "addContact" )
-	  {
-	    if( cmdArgs.good() )
-	      {
-		std::string name; cmdArgs >> name;
-		addContact( name,NULL,NULL,NULL,NULL );
-	      }
-	    else { os << "!! A name must be specified. " << std::endl; }
-	  }
-	else if( cmdLine == "addContactFromTask" )
-	  {
-	    if( cmdArgs.good() )
-	      {
-		std::string name; cmdArgs >> name;
-		addContactFromTask( name,name );
-	      }
-	    else { os << "!! A name must be specified. " << std::endl; }
-	  }
-	else if( cmdLine == "rmContact" )
-	  {
-	    cmdArgs >> std::ws;
-	    if( cmdArgs.good() )
-	      {
-		std::string name; cmdArgs >> name;
-		removeContact( name );
-	      }
-	    else { os << "!! A name must be specified. " << std::endl; }
-	  }
-	else if( cmdLine == "dispContacts" ) { dispContacts( os ); }
-	// TODO: cf sot-v1: else if( cmdLine == "listen" )
-	// 	{
-	// 	  hsolver->notifiorRegistration( sotOpSpaceH::hsolverListener );
-	// 	}
-	else if( stackCommandLine( cmdLine,cmdArgs,os ) );
-	else
-	  {
-	    Entity::commandLine( cmdLine,cmdArgs,os );
-	  }
-      }
-
     } // namespace dyninv
   } // namespace sot
 } // namespace dynamicgraph

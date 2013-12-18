@@ -77,10 +77,6 @@ namespace dynamicgraph {
 
 	  virtual void display( std::ostream& os ) const;
 
-	  virtual void commandLine( const std::string& cmdLine,
-				    std::istringstream& cmdArgs,
-				    std::ostream& os );
-
 	public:  /* --- SIGNALS --- */
 
 	  DECLARE_SIGNAL_IN(damping,double);

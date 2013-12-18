@@ -493,33 +493,7 @@ namespace dynamicgraph
 	  os <<"control = "<<controlSOUT.accessCopy() <<std::endl << std::endl;
 	}  catch (dynamicgraph::ExceptionSignal e) {}
 	stack_t::display(os);
-
       }
-
-      void SolverKine::
-      commandLine( const std::string& cmdLine,
-		   std::istringstream& cmdArgs,
-		   std::ostream& os )
-      {
-	if( cmdLine == "help" )
-	  {
-	    os << "SolverKine:\n"
-	       << "\t- debugOnce: open trace-file for next iteration of the solver." << std::endl;
-	    stackCommandLine( cmdLine,cmdArgs,os );
-	    Entity::commandLine( cmdLine,cmdArgs,os );
-	  }
-	else if( cmdLine == "debugOnce" )
-	  {
-	    debugOnce();
-	  }
-	/* TODO: add controlFreeFloating g/setter. */
-	else if( stackCommandLine( cmdLine,cmdArgs,os ) );
-	else
-	  {
-	    Entity::commandLine( cmdLine,cmdArgs,os );
-	  }
-      }
-
     } // namespace dyninv
   } // namespace sot
 } // namespace dynamicgraph
