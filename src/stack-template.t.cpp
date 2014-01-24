@@ -256,6 +256,9 @@ namespace dynamicgraph
     addCommand("dispStack",						\
 	       makeCommandVerbose(*this,&stack_t::display,		\
 				  docCommandVerbose("Guess what?")));	\
+    addCommand("display",						\
+	       makeCommandVerbose(*this,&stack_t::display,		\
+				  docCommandVerbose("display the list of tasks pushed inside the stack.")));\
     addCommand("up",							\
 	       makeCommandVoid1(*this,					\
 				(void (EntityClassName::*)(const std::string&))	\
