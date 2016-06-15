@@ -51,12 +51,12 @@ namespace dynamicgraph
       TaskInequality( const std::string & name )
 	: Task(name)
 
-	,CONSTRUCT_SIGNAL_IN(referenceInf,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(referenceSup,ml::Vector)
+	,CONSTRUCT_SIGNAL_IN(referenceInf,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(referenceSup,dg::Vector)
 	,CONSTRUCT_SIGNAL_IN(dt,double)
 	,CONSTRUCT_SIGNAL_IN(selec,Flags)
 
-	,CONSTRUCT_SIGNAL_OUT(normalizedPosition,ml::Vector,
+	,CONSTRUCT_SIGNAL_OUT(normalizedPosition,dg::Vector,
 			      errorSOUT<<referenceInfSIN<<referenceSupSIN)
 	,CONSTRUCT_SIGNAL_OUT(size,int,
 			      errorSOUT<<selecSIN)
@@ -97,13 +97,13 @@ namespace dynamicgraph
       dg::sot::VectorMultiBound& TaskInequality::
       computeTask( dg::sot::VectorMultiBound& res,int time )
       {
-	ml::Vector dummy;
+	dg::Vector dummy;
 	const bool withInf = referenceInfSIN, withSup = referenceSupSIN;
 	MultiBound::SupInfType bound = withInf ? MultiBound::BOUND_INF : MultiBound::BOUND_SUP;
 
-	const ml::Vector & error = errorSOUT(time);
-	const ml::Vector & refInf = withInf ? referenceInfSIN(time) : dummy;
-	const ml::Vector & refSup = withSup ? referenceSupSIN(time) : dummy;
+	const dg::Vector & error = errorSOUT(time);
+	const dg::Vector & refInf = withInf ? referenceInfSIN(time) : dummy;
+	const dg::Vector & refSup = withSup ? referenceSupSIN(time) : dummy;
 	const Flags & selec = selecSIN(time);
 	const int insize = error.size(), outsize=sizeSOUT(time);
 	const double K = controlGainSIN(time)/dtSIN(time);
@@ -130,12 +130,12 @@ namespace dynamicgraph
 	return res;
       }
 
-      ml::Matrix& TaskInequality::
-      computeJacobian( ml::Matrix& res,int time )
+      dg::Matrix& TaskInequality::
+      computeJacobian( dg::Matrix& res,int time )
       {
 	const Flags & selec = selecSIN(time);
-	ml::Matrix Jin;  Task::computeJacobian(Jin,time);
-	const int insize = Jin.nbRows(), outsize=sizeSOUT(time), nbc=Jin.nbCols();
+	dg::Matrix Jin;  Task::computeJacobian(Jin,time);
+	const int insize = Jin.rows(), outsize=sizeSOUT(time), nbc=Jin.cols();
 	//assert( );
 
 	res.resize(outsize,nbc); int idx=0;
@@ -152,12 +152,12 @@ namespace dynamicgraph
 	return res;
       }
 
-      ml::Vector& TaskInequality::
-      normalizedPositionSOUT_function( ml::Vector& res, int time )
+      dg::Vector& TaskInequality::
+      normalizedPositionSOUT_function( dg::Vector& res, int time )
       {
-	const ml::Vector & error = errorSOUT(time);
-	const ml::Vector & refInf = referenceInfSIN(time);
-	const ml::Vector & refSup = referenceSupSIN(time);
+	const dg::Vector & error = errorSOUT(time);
+	const dg::Vector & refInf = referenceInfSIN(time);
+	const dg::Vector & refSup = referenceSupSIN(time);
 	const Flags & selec = selecSIN(time);
 	const int insize = error.size(), outsize=sizeSOUT(time);
 	assert( insize==(int)refInf.size() && insize==(int)refSup.size() );

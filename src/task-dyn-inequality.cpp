@@ -51,8 +51,8 @@ namespace dynamicgraph
       TaskDynInequality( const std::string & name )
 	: TaskDynPD(name)
 
-	,CONSTRUCT_SIGNAL_IN(referenceInf,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(referenceSup,ml::Vector)
+	,CONSTRUCT_SIGNAL_IN(referenceInf,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(referenceSup,dg::Vector)
 	,CONSTRUCT_SIGNAL_IN(selec,Flags)
 
 	  //,CONSTRUCT_SIGNAL_OUT(size,int,
@@ -96,14 +96,14 @@ namespace dynamicgraph
       dg::sot::VectorMultiBound& TaskDynInequality::
       computeTaskDyn( dg::sot::VectorMultiBound& res,int iter )
       {
-	ml::Vector dummy;
+	dg::Vector dummy;
 	const bool withInf = referenceInfSIN, withSup = referenceSupSIN;
 	MultiBound::SupInfType bound = withInf ? MultiBound::BOUND_INF : MultiBound::BOUND_SUP;
 
-	const ml::Vector & error = errorSOUT(iter);
-	const ml::Vector & errorDot = errorDotSOUT(iter);
-	const ml::Vector & refInf = withInf ? referenceInfSIN(iter) : dummy;
-	const ml::Vector & refSup = withSup ? referenceSupSIN(iter) : dummy;
+	const dg::Vector & error = errorSOUT(iter);
+	const dg::Vector & errorDot = errorDotSOUT(iter);
+	const dg::Vector & refInf = withInf ? referenceInfSIN(iter) : dummy;
+	const dg::Vector & refSup = withSup ? referenceSupSIN(iter) : dummy;
 	const Flags & selec = selecSIN(iter);
 	const int insize = error.size(), outsize=sizeSOUT(iter);
 	const double dt = dtSIN(iter)*controlGainSIN(iter), dt2 = 2/(dt*dt);
@@ -159,12 +159,12 @@ namespace dynamicgraph
 	return res;
       }
 
-      ml::Matrix& TaskDynInequality::
-      computeJacobian( ml::Matrix& res,int iter )
+      dg::Matrix& TaskDynInequality::
+      computeJacobian( dg::Matrix& res,int iter )
       {
 	const Flags & selec = selecSIN(iter);
-	ml::Matrix Jin;  TaskDynPD::computeJacobian(Jin,iter);
-	const int insize = Jin.nbRows(), outsize=sizeSOUT(iter), nbc=Jin.nbCols();
+	dg::Matrix Jin;  TaskDynPD::computeJacobian(Jin,iter);
+	const int insize = Jin.rows(), outsize=sizeSOUT(iter), nbc=Jin.cols();
 	assert( insize>=outsize );
 
 	res.resize(outsize,nbc); int idx=0;

@@ -66,9 +66,9 @@ namespace dynamicgraph {
 
 	public:  /* --- SIGNALS --- */
 
-	  DECLARE_SIGNAL_IN(fn,ml::Vector);
-	  DECLARE_SIGNAL_IN(support,ml::Matrix);
-	  DECLARE_SIGNAL_OUT(zmp,ml::Vector);
+	  DECLARE_SIGNAL_IN(fn,dg::Vector);
+	  DECLARE_SIGNAL_IN(support,dg::Matrix);
+	  DECLARE_SIGNAL_OUT(zmp,dg::Vector);
 
 	}; // class ZmpEstimator
 

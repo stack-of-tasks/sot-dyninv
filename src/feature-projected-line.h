@@ -26,7 +26,7 @@
 /* SOT */
 #include <sot/core/feature-abstract.hh>
 #include <sot/core/exception-task.hh>
-#include <sot/core/matrix-homogeneous.hh>
+#include <sot/core/matrix-geometry.hh>
 #include <sot/core/exception-feature.hh>
 
 #include <sot-dyninv/signal-helper.h>
@@ -66,9 +66,9 @@ namespace dynamicgraph {
 
 	DECLARE_SIGNAL_IN(xa,MatrixHomogeneous);
 	DECLARE_SIGNAL_IN(xb,MatrixHomogeneous);
-	DECLARE_SIGNAL_IN(Ja,ml::Matrix);
-	DECLARE_SIGNAL_IN(Jb,ml::Matrix);
-	DECLARE_SIGNAL_IN(xc,ml::Vector);
+	DECLARE_SIGNAL_IN(Ja,dg::Matrix);
+	DECLARE_SIGNAL_IN(Jb,dg::Matrix);
+	DECLARE_SIGNAL_IN(xc,dg::Vector);
 
 	DECLARE_NO_REFERENCE;
 
@@ -77,8 +77,8 @@ namespace dynamicgraph {
 	virtual ~FeatureProjectedLine( void ) {}
 
 	virtual unsigned int& getDimension( unsigned int & dim, int time );
-	virtual ml::Vector& computeError( ml::Vector& res,int time );
-	virtual ml::Matrix& computeJacobian( ml::Matrix& res,int time );
+	virtual dg::Vector& computeError( dg::Vector& res,int time );
+	virtual dg::Matrix& computeJacobian( dg::Matrix& res,int time );
 
 	virtual void display( std::ostream& os ) const;
 

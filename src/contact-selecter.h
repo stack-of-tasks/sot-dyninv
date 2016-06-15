@@ -88,7 +88,7 @@ namespace dynamicgraph {
 	    std::string contactName;
 	    bool status;
 	    DECLARE_SIGNAL_IN(activation,bool);
-	    DECLARE_SIGNAL_IN(support,ml::Matrix);
+	    DECLARE_SIGNAL_IN(support,dg::Matrix);
 	    ContactInfo( const std::string & contactName,
 			 const std::string & contactTaskName,
 			 const std::string & complementaryTaskName,

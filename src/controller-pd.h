@@ -80,14 +80,14 @@ namespace dynamicgraph {
 
 	public:  /* --- SIGNALS --- */
 
-	  DECLARE_SIGNAL_IN(Kp,ml::Vector);
-	  DECLARE_SIGNAL_IN(Kd,ml::Vector);
-	  DECLARE_SIGNAL_IN(position,ml::Vector);
-	  DECLARE_SIGNAL_IN(positionRef,ml::Vector);
-	  DECLARE_SIGNAL_IN(velocity,ml::Vector);
-	  DECLARE_SIGNAL_IN(velocityRef,ml::Vector);
+	  DECLARE_SIGNAL_IN(Kp,dg::Vector);
+	  DECLARE_SIGNAL_IN(Kd,dg::Vector);
+	  DECLARE_SIGNAL_IN(position,dg::Vector);
+	  DECLARE_SIGNAL_IN(positionRef,dg::Vector);
+	  DECLARE_SIGNAL_IN(velocity,dg::Vector);
+	  DECLARE_SIGNAL_IN(velocityRef,dg::Vector);
 
-	  DECLARE_SIGNAL_OUT(control,ml::Vector);
+	  DECLARE_SIGNAL_OUT(control,dg::Vector);
 
 	}; // class ControllerPD
 

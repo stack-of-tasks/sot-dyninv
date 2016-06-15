@@ -68,8 +68,8 @@ namespace dynamicgraph {
 	public:  /* --- COMPUTATION --- */
 	  dg::sot::VectorMultiBound&
 	    computeTask( dg::sot::VectorMultiBound& res,int time );
-	  ml::Matrix&
-	    computeJacobian( ml::Matrix& res,int time );
+	  dg::Matrix&
+	    computeJacobian( dg::Matrix& res,int time );
 
 
 	  struct TaskContener

@@ -17,6 +17,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 INCLUDE(cmake/base.cmake)
 INCLUDE(cmake/boost.cmake)
+INCLUDE(cmake/eigen.cmake)
 INCLUDE(cmake/lapack.cmake)
 INCLUDE(cmake/cpack.cmake)
 
@@ -38,11 +39,10 @@ SET(PKG_CONFIG_ADDITIONAL_VARIABLES
 SETUP_PROJECT()
 
 # Search for dependencies.
-ADD_REQUIRED_DEPENDENCY("jrl-mal >= 1.8.0")
-ADD_REQUIRED_DEPENDENCY("dynamic-graph >= 1.0.0")
-ADD_REQUIRED_DEPENDENCY("sot-core >= 1.0.0")
+ADD_REQUIRED_DEPENDENCY("dynamic-graph >= 3.0.0")
+ADD_REQUIRED_DEPENDENCY("sot-core >= 3.0.0")
 ADD_REQUIRED_DEPENDENCY("soth >= 0.0.1")
-
+SEARCH_FOR_EIGEN()
 
 # List plug-ins that will be compiled.
 SET(libs
@@ -81,7 +81,6 @@ SET(headers
 	pseudo-robot-dynamic.h
 	robot-dyn-simu.h
 
-	mal-to-eigen.h
 	stack-template.h
 	stack-template.t.cpp
 

@@ -41,14 +41,14 @@ namespace dynamicgraph
       ControllerPD( const std::string & name )
 	: Entity(name)
 
-	,CONSTRUCT_SIGNAL_IN(Kp,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(Kd,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(position,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(positionRef,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(velocity,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(velocityRef,ml::Vector)
+	,CONSTRUCT_SIGNAL_IN(Kp,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(Kd,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(position,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(positionRef,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(velocity,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(velocityRef,dg::Vector)
 
-	,CONSTRUCT_SIGNAL_OUT(control,ml::Vector,
+	,CONSTRUCT_SIGNAL_OUT(control,dg::Vector,
 			      KpSIN << KdSIN << positionSIN << positionRefSIN
 			      << velocitySIN << velocityRefSIN )
       {
@@ -81,14 +81,14 @@ namespace dynamicgraph
       /* --- SIGNALS ---------------------------------------------------------- */
       /* --- SIGNALS ---------------------------------------------------------- */
 
-      ml::Vector& ControllerPD::
-      controlSOUT_function( ml::Vector &tau, int iter )
+      dg::Vector& ControllerPD::
+      controlSOUT_function( dg::Vector &tau, int iter )
       {
 	sotDEBUGIN(15);
-	const ml::Vector& Kp = KpSIN(iter);
-	const ml::Vector& Kd = KdSIN(iter);
-	const ml::Vector& position = positionSIN(iter);
-	const ml::Vector& desiredposition = positionRefSIN(iter);
+	const dg::Vector& Kp = KpSIN(iter);
+	const dg::Vector& Kd = KdSIN(iter);
+	const dg::Vector& position = positionSIN(iter);
+	const dg::Vector& desiredposition = positionRefSIN(iter);
 	const unsigned int size = Kp.size();
 
 	assert( _dimension == (int)size );
@@ -96,9 +96,9 @@ namespace dynamicgraph
 	assert( size==position.size() );  assert( size==desiredposition.size() );
 
 	bool useVelocity = velocitySIN;
-	ml::Vector velocity;
+	dg::Vector velocity;
 	bool useVelocityDesired = false;
-	ml::Vector desiredvelocity;
+	dg::Vector desiredvelocity;
 	if( useVelocity ) // TODO: there is a useless copy here. Use a pointer?
 	  {
 	    velocity = velocitySIN(iter);
@@ -154,7 +154,7 @@ namespace dynamicgraph
       void ControllerPD::
       setGainVelocityOnly( void )
       {
-	ml::Vector zero(_dimension); zero.fill(0);
+	dg::Vector zero(_dimension); zero.fill(0);
 	positionSIN = zero;
 	positionRefSIN = zero;
 	KpSIN = zero;
@@ -172,8 +172,8 @@ namespace dynamicgraph
 	if( config =="low" )
 	  {
 	    // Low gains
-	    ml::Vector Kp(_dimension); Kp.fill(100);
-	    ml::Vector Kd(_dimension); Kd.fill(20);
+	    dg::Vector Kp(_dimension); Kp.fill(100);
+	    dg::Vector Kd(_dimension); Kd.fill(20);
 	    KpSIN = Kp;
 	    KdSIN = Kd;
 	  }
@@ -183,7 +183,7 @@ namespace dynamicgraph
 	    if( _dimension != 30 )
 	      { std::cerr << "Only working for dim=30!" << std::endl; return; }
 
-	    ml::Vector Kp(_dimension),Kd(_dimension);
+	    dg::Vector Kp(_dimension),Kd(_dimension);
 	    unsigned int i=0;
 	    Kp(i++)=400;   Kp(i++)=1000; Kp(i++)=2000;  Kp(i++)=1800;  Kp(i++)=2000;
 	    Kp(i++)=1000;  Kp(i++)=400;  Kp(i++)=1000;  Kp(i++)=2000;  Kp(i++)=1800;
@@ -209,7 +209,7 @@ namespace dynamicgraph
 	    if( _dimension != 30 )
 	      { std::cerr << "Only working for dim=30!" << std::endl; return; }
 
-	    ml::Vector Kp(_dimension),Kd(_dimension);
+	    dg::Vector Kp(_dimension),Kd(_dimension);
 	    unsigned int i=0;
 	    Kp(i++)=4000;  Kp(i++)=10000; Kp(i++)=20000; Kp(i++)=18000;  Kp(i++)=20000;
 	    Kp(i++)=10000; Kp(i++)=4000;  Kp(i++)=10000; Kp(i++)=20000;  Kp(i++)=18000;

@@ -57,15 +57,15 @@ namespace dynamicgraph
       TaskDynLimits( const std::string & name )
 	: TaskDynPD(name)
 
-	,CONSTRUCT_SIGNAL_IN(position,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(velocity,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(referencePosInf,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(referencePosSup,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(referenceVelInf,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(referenceVelSup,ml::Vector)
+	,CONSTRUCT_SIGNAL_IN(position,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(velocity,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(referencePosInf,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(referencePosSup,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(referenceVelInf,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(referenceVelSup,dg::Vector)
 
-	,CONSTRUCT_SIGNAL_OUT(normalizedVelocity,ml::Vector,velocitySIN<<referenceVelInfSIN<<referenceVelSupSIN)
-	,CONSTRUCT_SIGNAL_OUT(normalizedPosition,ml::Vector,positionSIN<<referencePosInfSIN<<referencePosSupSIN)
+	,CONSTRUCT_SIGNAL_OUT(normalizedVelocity,dg::Vector,velocitySIN<<referenceVelInfSIN<<referenceVelSupSIN)
+	,CONSTRUCT_SIGNAL_OUT(normalizedPosition,dg::Vector,positionSIN<<referencePosInfSIN<<referencePosSupSIN)
 
 	,previousJ(0u,0u),previousJset(false)
       {
@@ -96,12 +96,12 @@ namespace dynamicgraph
       {
 	sotDEBUGIN(45);
 
-	const ml::Vector & position = positionSIN(time);
-	const ml::Vector & velocity = velocitySIN(time);
-	const ml::Vector & refPosInf = referencePosInfSIN(time);
-	const ml::Vector & refPosSup = referencePosSupSIN(time);
-	const ml::Vector & refVelInf = referenceVelInfSIN(time);
-	const ml::Vector & refVelSup = referenceVelSupSIN(time);
+	const dg::Vector & position = positionSIN(time);
+	const dg::Vector & velocity = velocitySIN(time);
+	const dg::Vector & refPosInf = referencePosInfSIN(time);
+	const dg::Vector & refPosSup = referencePosSupSIN(time);
+	const dg::Vector & refVelInf = referenceVelInfSIN(time);
+	const dg::Vector & refVelSup = referenceVelSupSIN(time);
 	//const double & dt = dtSIN(time);
 	const double & gain = controlGainSIN(time);
 	const double & dt = dtSIN(time)/gain;
@@ -131,19 +131,19 @@ namespace dynamicgraph
 	return res;
       }
 
-      ml::Matrix& TaskDynLimits::
-      computeTjlJacobian( ml::Matrix& J,int time )
+      dg::Matrix& TaskDynLimits::
+      computeTjlJacobian( dg::Matrix& J,int time )
       {
 	sotDEBUG(15) << "# In {" << std::endl;
 
-	const ml::Vector& position = positionSIN(time);
+	const dg::Vector& position = positionSIN(time);
 	/*
 	  if( featureList.empty())
 	  { throw( sotExceptionTask(sotExceptionTask::EMPTY_LIST,"Empty feature list") );}
 
 	  try {
-	  unsigned int dimJ = J .nbRows();
-	  unsigned int nbc = J.nbCols();
+	  unsigned int dimJ = J .rows();
+	  unsigned int nbc = J.cols();
 	  if( 0==dimJ ){ dimJ = 1; J.resize(dimJ,nbc); }
 	*/
 	J.resize(position.size(),position.size());
@@ -155,12 +155,12 @@ namespace dynamicgraph
 	return J;
       }
 
-      ml::Matrix& TaskDynLimits::
-      computeTjlJdot( ml::Matrix& Jdot,int time )
+      dg::Matrix& TaskDynLimits::
+      computeTjlJdot( dg::Matrix& Jdot,int time )
       {
 	sotDEBUGIN(15);
 
-	const ml::Vector& velocity = velocitySIN(time);
+	const dg::Vector& velocity = velocitySIN(time);
 	Jdot.resize(velocity.size(),velocity.size());
 	Jdot.setZero();
 
@@ -168,12 +168,12 @@ namespace dynamicgraph
 	return Jdot;
       }
 
-      ml::Vector& TaskDynLimits::
-      normalizedVelocitySOUT_function( ml::Vector& res, int time )
+      dg::Vector& TaskDynLimits::
+      normalizedVelocitySOUT_function( dg::Vector& res, int time )
       {
-	const ml::Vector & velocity = velocitySIN(time);
-	const ml::Vector & refVelInf = referenceVelInfSIN(time);
-	const ml::Vector & refVelSup = referenceVelSupSIN(time);
+	const dg::Vector & velocity = velocitySIN(time);
+	const dg::Vector & refVelInf = referenceVelInfSIN(time);
+	const dg::Vector & refVelSup = referenceVelSupSIN(time);
 
 	const unsigned int & n = velocity.size();
 	res.resize(n);
@@ -185,12 +185,12 @@ namespace dynamicgraph
 	return res;
       }
 
-      ml::Vector& TaskDynLimits::
-      normalizedPositionSOUT_function( ml::Vector& res, int time )
+      dg::Vector& TaskDynLimits::
+      normalizedPositionSOUT_function( dg::Vector& res, int time )
       {
-	const ml::Vector & position = positionSIN(time);
-	const ml::Vector & refPosInf = referencePosInfSIN(time);
-	const ml::Vector & refPosSup = referencePosSupSIN(time);
+	const dg::Vector & position = positionSIN(time);
+	const dg::Vector & refPosInf = referencePosInfSIN(time);
+	const dg::Vector & refPosSup = referencePosSupSIN(time);
 
 	const unsigned int & n = position.size();
 	res.resize(n);

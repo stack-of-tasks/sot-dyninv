@@ -61,18 +61,18 @@ namespace dynamicgraph {
 
 	public:  /* --- SIGNALS --- */
 
-	  DECLARE_SIGNAL_IN(referenceInf,ml::Vector);
-	  DECLARE_SIGNAL_IN(referenceSup,ml::Vector);
+	  DECLARE_SIGNAL_IN(referenceInf,dg::Vector);
+	  DECLARE_SIGNAL_IN(referenceSup,dg::Vector);
 	  DECLARE_SIGNAL_IN(selec,Flags);
 
-	  DECLARE_SIGNAL_OUT(normalizedPosition,ml::Vector);
+	  DECLARE_SIGNAL_OUT(normalizedPosition,dg::Vector);
 	  DECLARE_SIGNAL_OUT(size,int);
 
 	public:  /* --- COMPUTATION --- */
 	  dg::sot::VectorMultiBound&
 	    computeTaskDyn( dg::sot::VectorMultiBound& res,int time );
-	  ml::Matrix&
-	    computeJacobian( ml::Matrix& res,int time );
+	  dg::Matrix&
+	    computeJacobian( dg::Matrix& res,int time );
 
 	}; // class TaskDynInequality
 

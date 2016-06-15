@@ -18,7 +18,6 @@ SET(${PROJECT_NAME}_HEADERS
 	entity-helper.h
 	signal-helper.h
 
-	mal-to-eigen.h
 	stack-template.h
 	stack-template.t.cpp
 
