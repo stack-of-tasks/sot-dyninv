@@ -21,11 +21,11 @@
 
 /* dg signals */
 #include <dynamic-graph/entity.h>
+#include <dynamic-graph/linear-algebra.h>
 #include <dynamic-graph/signal-ptr.h>
 #include <dynamic-graph/signal-time-dependent.h>
 /* Matrix */
-#include <jrl/mal/boost.hh>
-namespace ml = maal::boost;
+namespace dg = dynamicgraph;
 
 /* --- MACROS ---------------------------------------------------------- */
 

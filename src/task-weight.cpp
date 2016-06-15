@@ -126,11 +126,11 @@ namespace dynamicgraph
 	return res;
       }
 
-      ml::Matrix& TaskWeight::
-      computeJacobian( ml::Matrix& res,int time )
+      dg::Matrix& TaskWeight::
+      computeJacobian( dg::Matrix& res,int time )
       {
 	int cursorError = 0;
-	int dimJ = res .nbRows(), colJ = res.nbCols();
+	int dimJ = res .rows(), colJ = res.cols();
 	if( 0==dimJ ){ dimJ = 1; res.resize(dimJ,colJ); }
 
 	for(   std::list< TaskContener >::iterator iter = taskList.begin();
@@ -141,12 +141,12 @@ namespace dynamicgraph
 	    double wi = tw.weight;
 
 
-	    const ml::Matrix & partialJ = task.jacobianSOUT(time);
-	    const int dim = partialJ.nbRows();
-	    if(colJ==0) colJ=partialJ.nbCols();
+	    const dg::Matrix & partialJ = task.jacobianSOUT(time);
+	    const int dim = partialJ.rows();
+	    if(colJ==0) colJ=partialJ.cols();
 
 	    while( cursorError+dim>dimJ )  // DEBUG It was >=
-	      { dimJ *= 2; res.resize(dimJ,colJ,false); }
+	      { dimJ *= 2; res.conservativeResize(dimJ,colJ); }
 
 	    for( int k=0;k<dim;++k )
 	      {
@@ -157,7 +157,7 @@ namespace dynamicgraph
 	  }
 
 	/* If too much memory has been allocated, resize. */
-	res .resize(cursorError,colJ,false);
+	res .conservativeResize(cursorError,colJ);
 	return res;
       }
 

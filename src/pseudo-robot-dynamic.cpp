@@ -19,9 +19,9 @@
 
 #include <dynamic-graph/factory.h>
 #include <dynamic-graph/pool.h>
+#include <dynamic-graph/eigen-io.h>
 
 #include <sot-dyninv/commands-helper.h>
-#include <sot-dyninv/mal-to-eigen.h>
 
 
 namespace dynamicgraph
@@ -44,11 +44,11 @@ namespace dynamicgraph
       PseudoRobotDynamic( const std::string & name )
 	: DynamicIntegrator(name)
 
-	,CONSTRUCT_SIGNAL_IN(control,ml::Vector)
-	,CONSTRUCT_SIGNAL_OUT(qdot,ml::Vector,controlSIN)
+	,CONSTRUCT_SIGNAL_IN(control,dg::Vector)
+	,CONSTRUCT_SIGNAL_OUT(qdot,dg::Vector,controlSIN)
 
-	,CONSTRUCT_SIGNAL(rotation,OUT,ml::Vector)
-	,CONSTRUCT_SIGNAL(translation,OUT,ml::Vector)
+	,CONSTRUCT_SIGNAL(rotation,OUT,dg::Vector)
+	,CONSTRUCT_SIGNAL(translation,OUT,dg::Vector)
 	,stateSOUT( &positionSOUT,getClassName()+"("+getName()+")::output(vector)::state" )
 
 	,formerOpenHRP( NULL )
@@ -88,114 +88,27 @@ namespace dynamicgraph
        * along with the 6D position of the free floating through signals
        * rotationSOUT and translationSOUT.
        */
-      ml::Vector& PseudoRobotDynamic::
-      qdotSOUT_function( ml::Vector& mlqdot, int time )
+      dg::Vector& PseudoRobotDynamic::
+      qdotSOUT_function( dg::Vector& mlqdot, int time )
       {
 	sotDEBUGIN(5);
 
 	controlSIN(time);
 	integrateFromSignals(time);
 
-	EIGEN_CONST_VECTOR_FROM_SIGNAL(v,velocity );
-	EIGEN_VECTOR_FROM_VECTOR( qdot,mlqdot,v.size()-6 );
-	qdot = v.tail(v.size()-6);
+	const Eigen::VectorXd v = velocity;
+	mlqdot = v.tail(v.size()-6);
 
-	EIGEN_VECTOR_FROM_SIGNAL(p,position );
-	{
-	  ml::Vector mlv3;
-	  EIGEN_VECTOR_FROM_VECTOR( r,mlv3,3 );
-	  r = p.segment(3,3);
-	  rotationSOUT = mlv3;
-	  r = p.head(3);
-	  translationSOUT = mlv3;
-	}
+	rotationSOUT = position.segment<3>(3);
+	translationSOUT = position.head<3>();
 
 	sotDEBUGOUT(5);
 	return mlqdot;
       }
 
-      /* --- TOOLS ------------------------------------------------------------- */
-      /* --- TOOLS ------------------------------------------------------------- */
-      /* --- TOOLS ------------------------------------------------------------- */
-
-      namespace PseudoRobotDynamic_Static
-      {
-	using namespace Eigen;
-
-	template< typename D1 >
-	Vector3d computeEulerFromRotationMatrix ( const MatrixBase<D1> & rotation )
-	{
-	  Vector3d euler;
-
-	  double rotationMatrix00 = rotation(0,0);
-	  double rotationMatrix10 = rotation(1,0);
-	  double rotationMatrix20 = rotation(2,0);
-	  double rotationMatrix01 = rotation(0,1);
-	  double rotationMatrix11 = rotation(1,1);
-	  double rotationMatrix21 = rotation(2,1);
-	  double rotationMatrix02 = rotation(0,2);
-	  double rotationMatrix12 = rotation(1,2);
-	  double rotationMatrix22 = rotation(2,2);
-
-	  double cosTheta = sqrt(0.5 * ( rotationMatrix00*rotationMatrix00
-					 + rotationMatrix10*rotationMatrix10
-					 + rotationMatrix21*rotationMatrix21
-					 + rotationMatrix22*rotationMatrix22 ));
-	  double sinTheta = -rotationMatrix20;
-	  euler[1] = atan2 (sinTheta, cosTheta);
-
-	  double cosTheta_cosPhi = 0.5 * (rotationMatrix22 * rotationMatrix11
-					  - rotationMatrix21 * rotationMatrix12);
-	  double cosTheta_sinPhi = 0.5 * (rotationMatrix21 * rotationMatrix02
-					  - rotationMatrix22 * rotationMatrix01);
-	  double cosTheta_cosPsi = 0.5 * (rotationMatrix00 * rotationMatrix11
-					  - rotationMatrix01 * rotationMatrix10);
-	  double cosTheta_sinPsi = 0.5 * (rotationMatrix10 * rotationMatrix02
-					  - rotationMatrix00 * rotationMatrix12);
-
-	  //if cosTheta == 0
-	  if (fabs(cosTheta) < 1e-9 )
-	    {
-	      if (sinTheta > 0.5) // sinTheta ~= 1
-		{
-		  //phi_psi = phi - psi
-		  double phi_psi = atan2(- rotationMatrix10, rotationMatrix11);
-		  double psi = euler[2];
-
-		  double phi = phi_psi + psi;
-		  euler[0] = phi;
-		}
-	      else  //sinTheta  ~= -1
-		{
-		  //phi_psi = phi + psi
-		  double phi_psi = atan2(- rotationMatrix10,  rotationMatrix11);
-
-		  double psi = euler[2];
-
-		  double phi = phi_psi;
-		  euler[0] = phi - psi;
-		}
-	    }
-	  else
-	    {
-	      double cosPsi = cosTheta_cosPsi / cosTheta;
-	      double sinPsi = cosTheta_sinPsi / cosTheta;
-	      euler[0] = atan2 (sinPsi, cosPsi);
-
-	      double cosPhi = cosTheta_cosPhi / cosTheta;
-	      double sinPhi = cosTheta_sinPhi / cosTheta;
-	      euler[2] = atan2 (sinPhi, cosPhi);
-	    }
-
-	  return euler;
-	}
-
-      } // namespace PseudoRobotDynamic_Static
-
       /* --- COMMANDS ---------------------------------------------------------- */
       /* --- COMMANDS ---------------------------------------------------------- */
       /* --- COMMANDS ---------------------------------------------------------- */
-
 
       void PseudoRobotDynamic::
       replaceSimulatorEntity( const std::string& formerName, const bool & plug )
@@ -219,39 +132,38 @@ namespace dynamicgraph
 	      }
 	    catch (...) {}
 
-	    const ml::Vector& pos
-	      = dynamic_cast< dg::Signal<ml::Vector,int>& >
+	    const dg::Vector& pos
+	      = dynamic_cast< dg::Signal<dg::Vector,int>& >
 	      ( formerOpenHRP->getSignal("state") ).accessCopy();
 	    try
 	      {
-		const ml::Vector& vel
-		  = dynamic_cast< dg::Signal<ml::Vector,int>& >
+		const dg::Vector& vel
+		  = dynamic_cast< dg::Signal<dg::Vector,int>& >
 		  ( formerOpenHRP->getSignal("velocity") ).accessCopy();
 		setState(pos,vel);
 	      }
 	    catch (... )
 	      {
-		ml::Vector velzero( pos.size() ); velzero.setZero();
+		dg::Vector velzero( pos.size() ); velzero.setZero();
 		setState(pos,velzero);
 	      }
 	  }
       }
       void PseudoRobotDynamic::
-      setRoot( const ml::Matrix & mlM )
+      setRoot( const dg::Matrix & mlM )
       {
 	sotDEBUG(15) << "Set root with " << mlM << std::endl;
 	using namespace Eigen;
-	using PseudoRobotDynamic_Static::computeEulerFromRotationMatrix;
 
-	EIGEN_CONST_MATRIX_FROM_SIGNAL(M,mlM);
-	Vector3d r = computeEulerFromRotationMatrix( M.topLeftCorner(3,3) );
-	EIGEN_VECTOR_FROM_SIGNAL( q,position );
+	const Eigen::MatrixXd M = mlM;
+	Eigen::Vector3d r = (M.topLeftCorner<3,3>().eulerAngles(2,1,0)).reverse();
+	Eigen::VectorXd q = position;
 	if( q.size()<6 )
 	  {
 	    throw; // TODO
 	  }
-	q.head(3) = M.col(3).head(3);
-	q.segment(3,3) = r;
+	q.head<3>() = M.col(3).head<3>();
+	q.segment<3>(3) = r;
 
 	if( formerOpenHRP )
 	  try
@@ -338,9 +250,9 @@ namespace dynamicgraph
 	  {
 	    if( cmdArgs >> std::ws, cmdArgs.good() )
 	      {
-		ml::Matrix M; cmdArgs >> M; setRoot(M);
+		dg::Matrix M; cmdArgs >> M ; setRoot(M);
 		std::ostringstream osback;
-		osback << M.accessToMotherLib(); cmdArgs.str(osback.str());
+		osback << M.data(); cmdArgs.str(osback.str());
 		formerOpenHRP ->commandLine( cmdLine,cmdArgs,os );
 	      }
 	    else

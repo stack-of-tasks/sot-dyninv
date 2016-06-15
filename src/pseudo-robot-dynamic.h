@@ -80,20 +80,20 @@ namespace dynamicgraph {
 
 	public:  /* --- SIGNALS --- */
 
-	  DECLARE_SIGNAL_IN( control,ml::Vector );
-	  DECLARE_SIGNAL_OUT( qdot,ml::Vector );
+	  DECLARE_SIGNAL_IN( control,dg::Vector );
+	  DECLARE_SIGNAL_OUT( qdot,dg::Vector );
 
-	  DECLARE_SIGNAL(rotation,OUT,ml::Vector);
-	  DECLARE_SIGNAL(translation,OUT,ml::Vector);
-	  //sotSignal< ml::Vector,int > rotationSOUT;
-	  //sotSignal< ml::Vector,int > translationSOUT;
-	  ::dynamicgraph::SignalPtr< ml::Vector,int > stateSOUT;
+	  DECLARE_SIGNAL(rotation,OUT,dg::Vector);
+	  DECLARE_SIGNAL(translation,OUT,dg::Vector);
+	  //sotSignal< dg::Vector,int > rotationSOUT;
+	  //sotSignal< dg::Vector,int > translationSOUT;
+	  ::dynamicgraph::SignalPtr< dg::Vector,int > stateSOUT;
 
 	public:  /* --- SIGNALS --- */
 
 	  void replaceSimulatorEntity( const std::string& formerName,
 				       const bool& plug = false );
-	  void setRoot( const ml::Matrix & M );
+	  void setRoot( const dg::Matrix & M );
 
 	public:  /* --- COMMAND --- */
 	  template< typename T1 >

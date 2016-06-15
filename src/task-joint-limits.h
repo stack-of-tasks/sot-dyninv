@@ -64,20 +64,20 @@ namespace dynamicgraph {
 
 	public:  /* --- SIGNALS --- */
 
-	  DECLARE_SIGNAL_IN(position,ml::Vector);
-	  DECLARE_SIGNAL_IN(referenceInf,ml::Vector);
-	  DECLARE_SIGNAL_IN(referenceSup,ml::Vector);
+	  DECLARE_SIGNAL_IN(position,dg::Vector);
+	  DECLARE_SIGNAL_IN(referenceInf,dg::Vector);
+	  DECLARE_SIGNAL_IN(referenceSup,dg::Vector);
 	  DECLARE_SIGNAL_IN(dt,double);
 	  DECLARE_SIGNAL_IN(controlGain,double);
 	  DECLARE_SIGNAL_IN(selec,Flags);
 
-	  DECLARE_SIGNAL_OUT(normalizedPosition,ml::Vector);
+	  DECLARE_SIGNAL_OUT(normalizedPosition,dg::Vector);
 	  DECLARE_SIGNAL_OUT(activeSize,int);
 
 	public:  /* --- COMPUTATION --- */
 	  dg::sot::VectorMultiBound&
 	    computeTask( dg::sot::VectorMultiBound& res,int time );
-	  ml::Matrix& computeJacobian( ml::Matrix& J,int time );
+	  dg::Matrix& computeJacobian( dg::Matrix& J,int time );
 
 	}; // class TaskJointLimits
 

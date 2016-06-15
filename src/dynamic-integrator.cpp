@@ -20,7 +20,6 @@
 
 #include <sot-dyninv/commands-helper.h>
 
-#include <sot-dyninv/mal-to-eigen.h>
 #include <soth/Algebra.hpp>
 
 /** This class proposes to integrate the acceleration given in input
@@ -49,11 +48,11 @@ namespace dynamicgraph
       DynamicIntegrator( const std::string & name )
 	: Entity(name)
 
-	,CONSTRUCT_SIGNAL_IN(acceleration,ml::Vector)
+	,CONSTRUCT_SIGNAL_IN(acceleration,dg::Vector)
 	,CONSTRUCT_SIGNAL_IN(dt,double)
 
-	,CONSTRUCT_SIGNAL_OUT(velocity,ml::Vector,sotNOSIGNAL)
-	,CONSTRUCT_SIGNAL_OUT(position,ml::Vector,sotNOSIGNAL)
+	,CONSTRUCT_SIGNAL_OUT(velocity,dg::Vector,sotNOSIGNAL)
+	,CONSTRUCT_SIGNAL_OUT(position,dg::Vector,sotNOSIGNAL)
       {
 	Entity::signalRegistration( accelerationSIN << dtSIN
 				    << velocitySOUT << positionSOUT );
@@ -75,15 +74,15 @@ namespace dynamicgraph
       /* --- SIGNALS ---------------------------------------------------------- */
       /* --- SIGNALS ---------------------------------------------------------- */
 
-      ml::Vector& DynamicIntegrator::
-      velocitySOUT_function( ml::Vector& mlv,int )
+      dg::Vector& DynamicIntegrator::
+      velocitySOUT_function( dg::Vector& mlv,int )
       {
 	mlv = velocity;
 	return mlv;
       }
 
-      ml::Vector& DynamicIntegrator::
-      positionSOUT_function( ml::Vector& mlp,int )
+      dg::Vector& DynamicIntegrator::
+      positionSOUT_function( dg::Vector& mlp,int )
       {
 	mlp = position;
 	return mlp;
@@ -93,7 +92,7 @@ namespace dynamicgraph
       void DynamicIntegrator::
       integrateFromSignals( const int & time )
       {
-	const ml::Vector & acc = accelerationSIN(time);
+	const dg::Vector & acc = accelerationSIN(time);
 	const double & dt = dtSIN(time);
 
 	integrate( acc,dt, velocity,position );
@@ -108,21 +107,21 @@ namespace dynamicgraph
       }
 
       void DynamicIntegrator::
-      setPosition( const ml::Vector& p )
+      setPosition( const dg::Vector& p )
       {
 	position = p;
 	positionSOUT.setReady();
       }
 
       void DynamicIntegrator::
-      setVelocity( const ml::Vector& v )
+      setVelocity( const dg::Vector& v )
       {
 	velocity = v;
 	velocitySOUT.setReady();
       }
 
       void DynamicIntegrator::
-      setState( const ml::Vector& p,const ml::Vector& v )
+      setState( const dg::Vector& p,const dg::Vector& v )
       {
 	sotDEBUG(5) << "State: " << p << v << std::endl;
 	position = p;
@@ -139,112 +138,13 @@ namespace dynamicgraph
 
       namespace DynamicIntegratorStatic
       {
-	template< typename D1 >
-	static Matrix3d
-	computeRotationMatrixFromEuler(const MatrixBase<D1> & euler)
-	{
-	  EIGEN_STATIC_ASSERT_VECTOR_ONLY(Eigen::MatrixBase<D1>);
-
-	  double Rpsi	= euler[0];
-	  double Rtheta = euler[1];
-	  double Rphy	= euler[2];
-
-	  double cosPhy = cos(Rphy);
-	  double sinPhy = sin(Rphy);
-
-	  double cosTheta = cos(Rtheta);
-	  double sinTheta = sin(Rtheta);
-
-	  double cosPsi = cos(Rpsi);
-	  double sinPsi = sin(Rpsi);
-
-	  Matrix3d rotation;
-
-	  rotation(0, 0) =  cosPhy * cosTheta;
-	  rotation(1, 0) =  sinPhy * cosTheta;
-	  rotation(2, 0) = -sinTheta;
-
-	  double   sinTheta__sinPsi = sinTheta * sinPsi;
-	  double   sinTheta__cosPsi = sinTheta * cosPsi;
-
-	  rotation(0, 1) = cosPhy * sinTheta__sinPsi - sinPhy * cosPsi;
-	  rotation(1, 1) = sinPhy * sinTheta__sinPsi + cosPhy * cosPsi;
-	  rotation(2, 1) = cosTheta * sinPsi;
-
-	  rotation(0, 2) = cosPhy * sinTheta__cosPsi + sinPhy * sinPsi;
-	  rotation(1, 2) = sinPhy * sinTheta__cosPsi - cosPhy * sinPsi;
-	  rotation(2, 2) = cosTheta * cosPsi;
-
-	  return rotation;
+	void
+	computeRotationMatrixFromEuler(const Eigen::Vector3d& euler, Eigen::Matrix3d& res) {
+	  res = (Eigen::AngleAxisd(euler(2),Eigen::Vector3d::UnitZ())*
+		 Eigen::AngleAxisd(euler(1),Eigen::Vector3d::UnitY())*
+		 Eigen::AngleAxisd(euler(0),Eigen::Vector3d::UnitX())).toRotationMatrix();
 	}
 
-	template< typename D1 >
-	Vector3d computeEulerFromRotationMatrix ( const MatrixBase<D1> & rotation )
-	{
-	  Vector3d euler;
-
-	  double rotationMatrix00 = rotation(0,0);
-	  double rotationMatrix10 = rotation(1,0);
-	  double rotationMatrix20 = rotation(2,0);
-	  double rotationMatrix01 = rotation(0,1);
-	  double rotationMatrix11 = rotation(1,1);
-	  double rotationMatrix21 = rotation(2,1);
-	  double rotationMatrix02 = rotation(0,2);
-	  double rotationMatrix12 = rotation(1,2);
-	  double rotationMatrix22 = rotation(2,2);
-
-	  double cosTheta = sqrt(0.5 * ( rotationMatrix00*rotationMatrix00
-					 + rotationMatrix10*rotationMatrix10
-					 + rotationMatrix21*rotationMatrix21
-					 + rotationMatrix22*rotationMatrix22 ));
-	  double sinTheta = -rotationMatrix20;
-	  euler[1] = atan2 (sinTheta, cosTheta);
-
-	  double cosTheta_cosPhi = 0.5 * (rotationMatrix22 * rotationMatrix11
-					  - rotationMatrix21 * rotationMatrix12);
-	  double cosTheta_sinPhi = 0.5 * (rotationMatrix21 * rotationMatrix02
-					  - rotationMatrix22 * rotationMatrix01);
-	  double cosTheta_cosPsi = 0.5 * (rotationMatrix00 * rotationMatrix11
-					  - rotationMatrix01 * rotationMatrix10);
-	  double cosTheta_sinPsi = 0.5 * (rotationMatrix10 * rotationMatrix02
-					  - rotationMatrix00 * rotationMatrix12);
-
-	  //if cosTheta == 0
-	  if (fabs(cosTheta) < 1e-9 )
-	    {
-	      if (sinTheta > 0.5) // sinTheta ~= 1
-		{
-		  //phi_psi = phi - psi
-		  double phi_psi = atan2(- rotationMatrix10, rotationMatrix11);
-		  double psi = euler[2];
-
-		  double phi = phi_psi + psi;
-		  euler[0] = phi;
-		}
-	      else  //sinTheta  ~= -1
-		{
-		  //phi_psi = phi + psi
-		  double phi_psi = atan2(- rotationMatrix10,  rotationMatrix11);
-
-		  double psi = euler[2];
-
-		  double phi = phi_psi;
-		  euler[0] = phi - psi;
-		}
-	    }
-	  else
-	    {
-	      double cosPsi = cosTheta_cosPsi / cosTheta;
-	      double sinPsi = cosTheta_sinPsi / cosTheta;
-	      euler[0] = atan2 (sinPsi, cosPsi);
-
-	      double cosPhi = cosTheta_cosPhi / cosTheta;
-	      double sinPhi = cosTheta_sinPhi / cosTheta;
-	      euler[2] = atan2 (sinPhi, cosPhi);
-	    }
-
-	  return euler;
-	}
 
 	template< typename D1 >
 	Matrix3d skew( const MatrixBase<D1> & v )
@@ -304,41 +204,40 @@ namespace dynamicgraph
 
       /* -------------------------------------------------------------------------- */
       void DynamicIntegrator::
-      integrate( const ml::Vector& mlacceleration,
+      integrate( const dg::Vector& mlacceleration,
 		 const double & dt,
-		 ml::Vector & mlvelocity,
-		 ml::Vector & mlposition )
+		 dg::Vector & mlvelocity,
+		 dg::Vector & mlposition )
       {
 	using namespace DynamicIntegratorStatic;
 	using soth::MATLAB;
 	sotDEBUGIN(15);
 
 	/* --- Convert acceleration, velocity and position to amelif style  ------- */
-	EIGEN_CONST_VECTOR_FROM_SIGNAL( acceleration,mlacceleration );
-	EIGEN_VECTOR_FROM_SIGNAL( velocity,mlvelocity );
-	EIGEN_VECTOR_FROM_SIGNAL( position,mlposition );
-
+	const Eigen::VectorXd acceleration(mlacceleration);
+	Eigen::VectorXd velocity(mlvelocity);
+	Eigen::VectorXd position(mlposition);
 
 	sotDEBUG(1) << "acceleration = " << (MATLAB)acceleration << std::endl;
 	sotDEBUG(1) << "velocity = " << (MATLAB)velocity << std::endl;
 	sotDEBUG(1) << "position = " << (MATLAB)position << std::endl;
 
-	VectorBlock<SigVectorXd> fftrans = position.head(3);
-	VectorBlock<SigVectorXd> ffeuler = position.segment(3,3);
-	Matrix3d ffrot = computeRotationMatrixFromEuler(ffeuler);
+	const Eigen::Vector3d fftrans = position.head<3>();
+	const Eigen::Vector3d ffeuler = position.segment<3>(3);
+	Eigen::Matrix3d ffrot; computeRotationMatrixFromEuler(ffeuler, ffrot);
 	sotDEBUG(15) << "Rff_start = " << (MATLAB)ffrot << std::endl;
 	sotDEBUG(15) << "tff_start = " << (MATLAB)fftrans << std::endl;
 
-	VectorBlock<SigVectorXd> ffvtrans = velocity.head(3);
-	VectorBlock<SigVectorXd> ffvrot = velocity.segment(3,3);
-	Vector3d v_lin,v_ang;
+	Eigen::Vector3d ffvtrans = velocity.head<3>();
+	Eigen::Vector3d ffvrot = velocity.segment<3>(3);
+	Eigen::Vector3d v_lin,v_ang;
 	djj2amelif( v_ang,v_lin,ffvrot,ffvtrans,fftrans,ffrot );
 	sotDEBUG(15) << "vff_start = " << (MATLAB)v_lin << std::endl;
 	sotDEBUG(15) << "wff_start = " << (MATLAB)v_ang << std::endl;
 
-	const VectorBlock<const_SigVectorXd> ffatrans = acceleration.head(3);
-	const VectorBlock<const_SigVectorXd> ffarot = acceleration.segment(3,3);
-	Vector3d a_lin,a_ang;
+	const Eigen::Vector3d ffatrans = acceleration.head<3>();
+	const Eigen::Vector3d ffarot = acceleration.segment<3>(3);
+	Eigen::Vector3d a_lin,a_ang;
 	djj2amelif( a_ang,a_lin,ffarot,ffatrans,fftrans,ffrot );
 	sotDEBUG(15) << "alff_start = " << (MATLAB)a_lin << std::endl;
 	sotDEBUG(15) << "aaff_start = " << (MATLAB)a_ang << std::endl;
@@ -361,19 +260,19 @@ namespace dynamicgraph
 	    {
 	      const double th  = norm_v_ang * dt;
 	      double sth  =  sin(th), cth  =  1.0 - cos(th);
-	      Vector3d wn  = v_ang / norm_v_ang;
-	      Vector3d vol = v_lin / norm_v_ang;
+	      Eigen::Vector3d wn  = v_ang / norm_v_ang;
+	      Eigen::Vector3d vol = v_lin / norm_v_ang;
 
 	      /* drot = wnX * sin(th) + wnX * wnX * (1 - cos (th)). */
-	      const Matrix3d w_wedge = skew(wn);
+	      const Eigen::Matrix3d w_wedge = skew(wn);
 
-	      Matrix3d drot = w_wedge * cth;
-	      drot += Matrix3d::Identity()*sth;
+	      Eigen::Matrix3d drot = w_wedge * cth;
+	      drot += Eigen::Matrix3d::Identity()*sth;
 	      drot = w_wedge * drot;
 
 	      //rot = drot + id
-	      Matrix3d rot(drot);
-	      rot += Matrix3d::Identity();
+	      Eigen::Matrix3d rot(drot);
+	      rot += Eigen::Matrix3d::Identity();
 	      sotDEBUG(1) << "Rv = " << (MATLAB)rot << std::endl;
 
 	      /* Update the body rotation for the body. */
@@ -409,10 +308,8 @@ namespace dynamicgraph
 	  sotDEBUG(1) << "Rff_end = " << (MATLAB)finalBodyOrientation << std::endl;
 
 	  /* --- Convert position --------------------------------------------------- */
-	  Vector3d ffeuleur_fin = computeEulerFromRotationMatrix( finalBodyOrientation );
-
-	  position.head(3) = finalBodyPosition;
-	  position.segment(3,3) = ffeuleur_fin;
+	  position.head<3>() = finalBodyPosition;
+	  position.segment<3>(3) = (finalBodyOrientation.eulerAngles(2,1,0)).reverse();
 	  position.tail( position.size()-6 ) += velocity.tail( position.size()-6 ) * dt;
 	}
 

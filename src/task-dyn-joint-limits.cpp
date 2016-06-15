@@ -57,12 +57,12 @@ namespace dynamicgraph
       TaskDynJointLimits( const std::string & name )
 	: TaskDynPD(name)
 
-	,CONSTRUCT_SIGNAL_IN(position,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(velocity,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(referenceInf,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(referenceSup,ml::Vector)
+	,CONSTRUCT_SIGNAL_IN(position,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(velocity,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(referenceInf,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(referenceSup,dg::Vector)
 
-	,CONSTRUCT_SIGNAL_OUT(normalizedPosition,ml::Vector,positionSIN<<referenceInfSIN<<referenceSupSIN)
+	,CONSTRUCT_SIGNAL_OUT(normalizedPosition,dg::Vector,positionSIN<<referenceInfSIN<<referenceSupSIN)
 
 	,previousJ(0u,0u),previousJset(false)
       {
@@ -90,12 +90,12 @@ namespace dynamicgraph
 	sotDEBUGIN(45);
 
 	sotDEBUG(45) << "# In " << getName() << " {" << std::endl;
-	const ml::Vector & position = positionSIN(time);
+	const dg::Vector & position = positionSIN(time);
 	sotDEBUG(35) << "position = " << position << std::endl;
-	const ml::Vector & velocity = velocitySIN(time);
+	const dg::Vector & velocity = velocitySIN(time);
 	sotDEBUG(35) << "velocity = " << velocity << std::endl;
-	const ml::Vector & refInf = referenceInfSIN(time);
-	const ml::Vector & refSup = referenceSupSIN(time);
+	const dg::Vector & refInf = referenceInfSIN(time);
+	const dg::Vector & refSup = referenceSupSIN(time);
 	const double & dt = dtSIN(time);
 	const double kt=2/(dt*dt);
 
@@ -111,20 +111,20 @@ namespace dynamicgraph
 	return res;
       }
 
-      ml::Matrix& TaskDynJointLimits::
-      computeTjlJacobian( ml::Matrix& J,int time )
+      dg::Matrix& TaskDynJointLimits::
+      computeTjlJacobian( dg::Matrix& J,int time )
       {
 	sotDEBUG(15) << "# In {" << std::endl;
 
-	const ml::Vector& position = positionSIN(time);
+	const dg::Vector& position = positionSIN(time);
 	/*
 	  if( featureList.empty())
 	  { throw( sotExceptionTask(sotExceptionTask::EMPTY_LIST,
 	  "Empty feature list") ) ; }
 
 	  try {
-	  unsigned int dimJ = J .nbRows();
-	  unsigned int nbc = J.nbCols();
+	  unsigned int dimJ = J .rows();
+	  unsigned int nbc = J.cols();
 	  if( 0==dimJ ){ dimJ = 1; J.resize(dimJ,nbc); }
 	*/
 	J.resize(position.size(),position.size());
@@ -139,26 +139,26 @@ namespace dynamicgraph
 	return J;
       }
 
-      ml::Matrix& TaskDynJointLimits::
-      computeTjlJdot( ml::Matrix& Jdot,int time )
+      dg::Matrix& TaskDynJointLimits::
+      computeTjlJdot( dg::Matrix& Jdot,int time )
       {
 	sotDEBUGIN(15);
 
-	const ml::Matrix& currentJ = jacobianSOUT(time);
+	const dg::Matrix& currentJ = jacobianSOUT(time);
 	const double& dt = dtSIN(time);
 
-	if( previousJ.nbRows()!=currentJ.nbRows() ) previousJset = false;
+	if( previousJ.rows()!=currentJ.rows() ) previousJset = false;
 
 	if( previousJset )
 	  {
-	    assert( currentJ.nbRows()==previousJ.nbRows()
-		    && currentJ.nbCols()==previousJ.nbCols() );
+	    assert( currentJ.rows()==previousJ.rows()
+		    && currentJ.cols()==previousJ.cols() );
 
-	    Jdot .resize( currentJ.nbRows(),currentJ.nbCols() );
+	    Jdot .resize( currentJ.rows(),currentJ.cols() );
 	    Jdot = currentJ - previousJ;
 	    Jdot *= 1/dt;
 	  }
-	else { Jdot.resize(currentJ.nbRows(),currentJ.nbCols() ); Jdot.fill(0); }
+	else { Jdot.resize(currentJ.rows(),currentJ.cols() ); Jdot.setZero(); }
 
 	previousJ = currentJ;
 	previousJset = true;
@@ -167,14 +167,14 @@ namespace dynamicgraph
 	return Jdot;
       }
 
-      ml::Vector& TaskDynJointLimits::
-      //computeNormalizedPosition( ml::Vector& res, int time )
-      normalizedPositionSOUT_function( ml::Vector& res, int time )
+      dg::Vector& TaskDynJointLimits::
+      //computeNormalizedPosition( dg::Vector& res, int time )
+      normalizedPositionSOUT_function( dg::Vector& res, int time )
       {
-	const ml::Vector & position = positionSIN(time);
-	//  const ml::Vector & velocity = velocitySIN(time);
-	const ml::Vector & refInf = referenceInfSIN(time);
-	const ml::Vector & refSup = referenceSupSIN(time);
+	const dg::Vector & position = positionSIN(time);
+	//  const dg::Vector & velocity = velocitySIN(time);
+	const dg::Vector & refInf = referenceInfSIN(time);
+	const dg::Vector & refSup = referenceSupSIN(time);
 
 	const unsigned int & n = position.size();
 	res.resize( n );

@@ -51,14 +51,14 @@ namespace dynamicgraph
       TaskJointLimits( const std::string & name )
 	: TaskAbstract(name)
 
-	,CONSTRUCT_SIGNAL_IN(position,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(referenceInf,ml::Vector)
-	,CONSTRUCT_SIGNAL_IN(referenceSup,ml::Vector)
+	,CONSTRUCT_SIGNAL_IN(position,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(referenceInf,dg::Vector)
+	,CONSTRUCT_SIGNAL_IN(referenceSup,dg::Vector)
 	,CONSTRUCT_SIGNAL_IN(dt,double)
 	,CONSTRUCT_SIGNAL_IN(controlGain,double)
 	,CONSTRUCT_SIGNAL_IN(selec,Flags)
 
-	,CONSTRUCT_SIGNAL_OUT(normalizedPosition,ml::Vector,
+	,CONSTRUCT_SIGNAL_OUT(normalizedPosition,dg::Vector,
 			      positionSIN<<referenceInfSIN<<referenceSupSIN)
 	,CONSTRUCT_SIGNAL_OUT(activeSize,int,
 			      positionSIN<<selecSIN)
@@ -97,9 +97,9 @@ namespace dynamicgraph
       dg::sot::VectorMultiBound& TaskJointLimits::
       computeTask( dg::sot::VectorMultiBound& res,int time )
       {
-	const ml::Vector & position = positionSIN(time);
-	const ml::Vector & refInf = referenceInfSIN(time);
-	const ml::Vector & refSup = referenceSupSIN(time);
+	const dg::Vector & position = positionSIN(time);
+	const dg::Vector & refInf = referenceInfSIN(time);
+	const dg::Vector & refSup = referenceSupSIN(time);
 	const Flags & selec = selecSIN(time);
 	const double K = 1.0/(dtSIN(time)*controlGainSIN(time));
 	const int size = position.size(), activeSize=activeSizeSOUT(time);
@@ -117,8 +117,8 @@ namespace dynamicgraph
 	return res;
       }
 
-      ml::Matrix& TaskJointLimits::
-      computeJacobian( ml::Matrix& J,int time )
+      dg::Matrix& TaskJointLimits::
+      computeJacobian( dg::Matrix& J,int time )
       {
 	const Flags & selec = selecSIN(time);
 	const int size = positionSIN(time).size(), activeSize=activeSizeSOUT(time);
@@ -133,12 +133,12 @@ namespace dynamicgraph
 	return J;
       }
 
-      ml::Vector& TaskJointLimits::
-      normalizedPositionSOUT_function( ml::Vector& res, int time )
+      dg::Vector& TaskJointLimits::
+      normalizedPositionSOUT_function( dg::Vector& res, int time )
       {
-	const ml::Vector & position = positionSIN(time);
-	const ml::Vector & refInf = referenceInfSIN(time);
-	const ml::Vector & refSup = referenceSupSIN(time);
+	const dg::Vector & position = positionSIN(time);
+	const dg::Vector & refInf = referenceInfSIN(time);
+	const dg::Vector & refSup = referenceSupSIN(time);
 	const Flags & selec = selecSIN(time);
 	const int size = position.size(), activeSize=activeSizeSOUT(time);
 	assert( size==(int)refInf.size() && size==(int)refSup.size() );

@@ -39,7 +39,6 @@ solver_op_space__INIT solver_op_space_initiator;
 #include <sstream>
 #include <soth/Algebra.hpp>
 #include <Eigen/QR>
-#include <sot-dyninv/mal-to-eigen.h>
 #include <sys/time.h>
 
 namespace soth
@@ -113,8 +112,8 @@ namespace dynamicgraph
 	,stack_t()
 
 	,CONSTRUCT_SIGNAL_IN(damping,double)
-	,CONSTRUCT_SIGNAL_IN(velocity,ml::Vector)
-	,CONSTRUCT_SIGNAL_OUT(control,ml::Vector,
+	,CONSTRUCT_SIGNAL_IN(velocity,dg::Vector)
+	,CONSTRUCT_SIGNAL_OUT(control,dg::Vector,
 			      dampingSIN )
 
 	,controlFreeFloating(true)
@@ -279,7 +278,7 @@ namespace dynamicgraph
 	assert( nbDofs>0 );
 
 	if(! hsolver ) return false;
-	if( stack.size() != hsolver->nbStages() ) return false;
+	if( stack.size() != (unsigned int)hsolver->nbStages() ) return false;
 
 	bool toBeResized=false;
 	for( int i=0;i<(int)stack.size();++i )
@@ -296,7 +295,6 @@ namespace dynamicgraph
 	return !toBeResized;
       }
 
-
       /* --- SIGNALS ---------------------------------------------------------- */
       /* --- SIGNALS ---------------------------------------------------------- */
       /* --- SIGNALS ---------------------------------------------------------- */
@@ -304,9 +302,39 @@ namespace dynamicgraph
 #define COLS_Q leftCols( nbDofs )
 #define COLS_TAU leftCols( nbDofs+ntau ).rightCols( ntau )
 #define COLS_F rightCols( nfs )
+      namespace {
+	inline void COPY_MB_VECTOR_TO_EIGEN( const VectorMultiBound& ddx,
+					     soth::VectorBound& btask1 ) {
+	  const int nx1 = ddx.size();
+	  for( int c=0;c<nx1;++c ) {
+	    if( ddx[c].getMode() == MultiBound::MODE_SINGLE )
+	      btask1[c] = ddx[c].getSingleBound();
+	    else {
+	      const bool binf = ddx[c].getDoubleBoundSetup( dg::sot::MultiBound::BOUND_INF );
+	      const bool bsup = ddx[c].getDoubleBoundSetup( dg::sot::MultiBound::BOUND_SUP );
+	      if( binf&&bsup ) {
+		const double xi = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_INF);
+		const double xs = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_SUP);
+		btask1[c] = std::make_pair( xi, xs );
+	      }
+	      else if( binf ) {
+		const double xi = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_INF);
+		btask1[c] = soth::Bound( xi, soth::Bound::BOUND_INF );
+	      }
+	      else {
+		assert( bsup );
+		const double xs = ddx[c].getDoubleBound(dg::sot::MultiBound::BOUND_SUP);
+		btask1[c] = soth::Bound( xs, soth::Bound::BOUND_SUP );
+	      }
+	    }
+	  }
+	}
+      }
 
-      ml::Vector& SolverKine::
-      controlSOUT_function( ml::Vector &mlcontrol, int t )
+
+
+      dg::Vector& SolverKine::
+      controlSOUT_function( dg::Vector &mlcontrol, int t )
       {
 	sotDEBUG(15) << " # In time = " << t << std::endl;
 
@@ -342,7 +370,7 @@ namespace dynamicgraph
 	      MatrixXd & Ctask = Ctasks[i];
 	      VectorBound & btask = btasks[i];
 
-	      EIGEN_CONST_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
+	      Eigen::MatrixXd J = task.jacobianSOUT(t);
 	      const dg::sot::VectorMultiBound & dx = task.taskSOUT(t);
 	      const int nx = dx.size();
 
@@ -367,10 +395,10 @@ namespace dynamicgraph
 		MatrixXd & Ctask = Ctasks[i];
 		VectorBound & btask = btasks[i];
 		
-		EIGEN_CONST_MATRIX_FROM_SIGNAL(Jdot,task.JdotSOUT(t));
-		EIGEN_CONST_MATRIX_FROM_SIGNAL(J,task.jacobianSOUT(t));
+		const Eigen::MatrixXd Jdot = task.JdotSOUT(t);
+		const Eigen::MatrixXd J = task.jacobianSOUT(t);
 		const dg::sot::VectorMultiBound & ddx = task.taskSOUT(t);
-		EIGEN_CONST_VECTOR_FROM_SIGNAL(dq,velocitySIN(t));
+		const Eigen::VectorXd dq = velocitySIN(t);
 
 		const int nx1 = ddx.size();
 
@@ -442,13 +470,13 @@ namespace dynamicgraph
 
 	if( controlFreeFloating )
 	  {
-	    EIGEN_VECTOR_FROM_VECTOR( control,mlcontrol,nbDofs );
-	    control=solution;
+	    //EIGEN_VECTOR_FROM_VECTOR( control,mlcontrol,nbDofs );
+	    mlcontrol=solution;
 	  }
 	else
 	  {
-	    EIGEN_VECTOR_FROM_VECTOR( control,mlcontrol,nbDofs-6 );
-	    control=solution.tail( nbDofs-6 );
+	    //EIGEN_VECTOR_FROM_VECTOR( control,mlcontrol,nbDofs-6 );
+	    mlcontrol=solution.tail(nbDofs-6 );
 	  }
 
 	sotDEBUG(1) << "control = " << mlcontrol << std::endl;

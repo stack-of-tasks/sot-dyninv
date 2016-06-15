@@ -67,24 +67,24 @@ namespace dynamicgraph {
 
 	public:  /* --- SIGNALS --- */
 
-	  DECLARE_SIGNAL_IN( acceleration,ml::Vector );
+	  DECLARE_SIGNAL_IN( acceleration,dg::Vector );
 	  DECLARE_SIGNAL_IN( dt,double );
 
-	  DECLARE_SIGNAL_OUT( velocity,ml::Vector );
-	  DECLARE_SIGNAL_OUT( position,ml::Vector );
+	  DECLARE_SIGNAL_OUT( velocity,dg::Vector );
+	  DECLARE_SIGNAL_OUT( position,dg::Vector );
 
 	public: /* --- MODIFIORS --- */
-	  void integrate( const ml::Vector& acceleration, const double& dt,
-			  ml::Vector & velocity, ml::Vector & position );
+	  void integrate( const dg::Vector& acceleration, const double& dt,
+			  dg::Vector & velocity, dg::Vector & position );
 	  void integrateFromSignals( const int & time );
 	  void integrateFromSignals( void );
 
-	  void setPosition( const ml::Vector& p );
-	  void setVelocity( const ml::Vector& v );
-	  void setState( const ml::Vector& p,const ml::Vector& v );
+	  void setPosition( const dg::Vector& p );
+	  void setVelocity( const dg::Vector& v );
+	  void setState( const dg::Vector& p,const dg::Vector& v );
 
 	protected:
-	  ml::Vector position,velocity;
+	  dg::Vector position,velocity;
 
 	}; // class DynamicIntegrator
 

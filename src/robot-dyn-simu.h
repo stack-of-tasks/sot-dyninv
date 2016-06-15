@@ -68,17 +68,17 @@ namespace dynamicgraph {
 
 	public:  /* --- SIGNALS --- */
 
-	  DECLARE_SIGNAL_IN( acceleration,ml::Vector );
-	  DECLARE_SIGNAL_OUT( velocity,ml::Vector );
+	  DECLARE_SIGNAL_IN( acceleration,dg::Vector );
+	  DECLARE_SIGNAL_OUT( velocity,dg::Vector );
 
 	protected:
 	  virtual void integrate( const double & dt );
 
 	private:
-	  ml::Vector velocity_;
+	  dg::Vector velocity_;
 
 	public:
-	  void setVelocity( const ml::Vector& v );
+	  void setVelocity( const dg::Vector& v );
 
 	}; // class RobotDynSimu
     } // namespace dyninv
