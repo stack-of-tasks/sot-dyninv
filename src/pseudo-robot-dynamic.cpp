@@ -218,55 +218,6 @@ namespace dynamicgraph
       {
 	os << "PseudoRobotDynamic "<<getName() << ". " << std::endl;
       }
-
-      void PseudoRobotDynamic::
-      commandLine( const std::string& cmdLine,
-		   std::istringstream& cmdArgs,
-		   std::ostream& os )
-      {
-	sotDEBUGIN(15);
-
-	if( cmdLine == "help" )
-	  {
-	    os << "PseudoRobotDynamic:" << std::endl
-	       << " - replace <OpenHRP> [plug]" << std::endl;
-	  }
-	else if( cmdLine == "replace" )
-	  {
-	    if( cmdArgs >> std::ws, cmdArgs.good() )
-	      {
-		std::string repName; cmdArgs >> repName >> std::ws;
-		bool plug = cmdArgs.good();
-		replaceSimulatorEntity( repName,plug );
-	      }
-	  }
-	else if( cmdLine=="sbs" || cmdLine=="play" || cmdLine =="withForces"
-		 || cmdLine == "periodicCall" || cmdLine == "periodicCallBefore"
-		 || cmdLine == "periodicCallAfter"  )
-	  {
-	    formerOpenHRP ->commandLine( cmdLine,cmdArgs,os );
-	  }
-	else if( cmdLine=="root" )
-	  {
-	    if( cmdArgs >> std::ws, cmdArgs.good() )
-	      {
-		dg::Matrix M; cmdArgs >> M ; setRoot(M);
-		std::ostringstream osback;
-		osback << M.data(); cmdArgs.str(osback.str());
-		formerOpenHRP ->commandLine( cmdLine,cmdArgs,os );
-	      }
-	    else
-	      {
-		os << "TODO" << std::endl;
-	      }
-	  }
-	else
-	  {
-	    Entity::commandLine( cmdLine,cmdArgs,os );
-	  }
-	sotDEBUGOUT(15);
-      }
-
     } // namespace dyninv
   } // namespace sot
 } // namespace dynamicgraph

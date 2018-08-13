@@ -89,24 +89,6 @@ namespace dynamicgraph
       {
 	os << "ZmpEstimator "<<getName() << "." << std::endl;
       }
-
-      void ZmpEstimator::
-      commandLine( const std::string& cmdLine,
-		   std::istringstream& cmdArgs,
-		   std::ostream& os )
-      {
-	if( cmdLine == "help" )
-	  {
-	    os << "ZmpEstimator:\n"
-	       << "\t- ." << std::endl;
-	    Entity::commandLine( cmdLine,cmdArgs,os );
-	  }
-	else
-	  {
-	    Entity::commandLine( cmdLine,cmdArgs,os );
-	  }
-      }
-
     } // namespace dyninv
   } // namespace sot
 } // namespace dynamicgraph
