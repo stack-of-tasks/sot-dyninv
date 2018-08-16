@@ -3,7 +3,7 @@ sot-dyninv
 
 [![Building Status](https://travis-ci.org/stack-of-tasks/sot-dyninv.svg?branch=master)](https://travis-ci.org/stack-of-tasks/sot-dyninv)
 [![Pipeline status](https://gepgitlab.laas.fr/stack-of-tasks/sot-dyninv/badges/master/pipeline.svg)](https://gepgitlab.laas.fr/stack-of-tasks/sot-dyninv/commits/master)
-[![Coverage report](https://gepgitlab.laas.fr/stack-of-tasks/sot-dyninv/badges/master/coverage.svg?job=doc-coverage)](http://projects.laas.fr/stack-of-tasks/doc/stack-of-tasks/sot-dyninv/master/coverage/)
+[![Coverage report](https://gepgitlab.laas.fr/stack-of-tasks/sot-dyninv/badges/master/coverage.svg?job=doc-coverage)](http://projects.laas.fr/gepetto/doc/stack-of-tasks/sot-dyninv/master/coverage/)
 
 
 This sofware provides the solver and features to resolve the inverse of the

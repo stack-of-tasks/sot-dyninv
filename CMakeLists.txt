@@ -26,6 +26,7 @@ SET(PROJECT_DESCRIPTION "control by inverse dynamics.")
 SET(PROJECT_URL "http://github.com/laas/sot-dyninv")
 
 SET(CUSTOM_HEADER_DIR "${PROJECT_NAME}")
+SET(DOXYGEN_USE_MATHJAX YES)
 
 # Disable -Werror on Unix for now.
 SET(CXX_DISABLE_WERROR True)

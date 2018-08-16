@@ -342,31 +342,6 @@ namespace dynamicgraph
       {
 	os << "DynamicIntegrator "<<getName() << ". " << std::endl;
       }
-
-      void DynamicIntegrator::
-      commandLine( const std::string& cmdLine,
-		   std::istringstream& cmdArgs,
-		   std::ostream& os )
-      {
-	if( cmdLine == "help" )
-	  {
-	    os << "DynamicIntegrator:" << std::endl
-	       << " - inc [dt]" << std::endl;
-	  }
-	else if( cmdLine == "inc" )
-	  {
-	    if( cmdArgs >> std::ws, cmdArgs.good() )
-	      {
-		double dt; cmdArgs >> dt; dtSIN = dt;
-	      }
-	    integrateFromSignals();
-	  }
-	else
-	  {
-	    Entity::commandLine( cmdLine,cmdArgs,os );
-	  }
-      }
-
     } // namespace dyninv
   } // namespace sot
 } // namespace dynamicgraph

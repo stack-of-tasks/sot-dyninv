@@ -244,52 +244,6 @@ namespace dynamicgraph
 	  }
 	catch (ExceptionSignal e) {}
       }
-
-      void ControllerPD::
-      commandLine( const std::string& cmdLine,
-		   std::istringstream& cmdArgs,
-		   std::ostream& os )
-      {
-	if( cmdLine == "help" )
-	  {
-	    os << "sotControlPD:\n"
-	       << " - size <arg>\t\tset the size of the vector.\n"
-	       << " - stdGain \t\tset the input vector gains according to the size for HRP2.\n"
-	       << " - velocityonly <arg>\t\tset Kp = 0.\n"
-	       << std::endl;
-	  }
-	else if( cmdLine == "size" )
-	  {
-	    cmdArgs >> std::ws;
-	    if( cmdArgs.good() )
-	      {
-		unsigned int i; cmdArgs >> i ;
-		size(i);
-	      }
-	    else
-	      {
-		os << "size = " << size() << std::endl;
-	      }
-	  }
-	else if( cmdLine == "velocityonly" )
-	  { setGainVelocityOnly(); }
-	else if( cmdLine == "stdGain" )
-	  {
-	    std::string config = "high";
-	    cmdArgs >> std::ws; if( cmdArgs.good() ) cmdArgs >> config;
-	    setStandardGains( config );
-	  }
-	else
-	  {
-	    Entity::commandLine(cmdLine,cmdArgs,os);
-	  }
-      }
-
-
-
-
-
-
     } // namespace dyninv
   } // namespace sot
 } // namespace dynamicgraph
