@@ -20,10 +20,11 @@ INCLUDE(cmake/boost.cmake)
 INCLUDE(cmake/eigen.cmake)
 INCLUDE(cmake/lapack.cmake)
 INCLUDE(cmake/cpack.cmake)
+INCLUDE(cmake/python.cmake)
 
 SET(PROJECT_NAME sot-dyninv)
 SET(PROJECT_DESCRIPTION "control by inverse dynamics.")
-SET(PROJECT_URL "http://github.com/laas/sot-dyninv")
+SET(PROJECT_URL "http://github.com/stack-of-tasks/sot-dyninv")
 
 SET(CUSTOM_HEADER_DIR "${PROJECT_NAME}")
 SET(DOXYGEN_USE_MATHJAX YES)
@@ -135,22 +136,18 @@ foreach(lib solver-op-space solver-dyn-reduced solver-dyn-red2)
 	ENDIF(WIN32)
 endforeach(lib)
 
+OPTION(BUILD_PYTHON_INTERFACE "Build the python bindings" ON)
+IF(BUILD_PYTHON_INTERFACE)
+  FINDPYTHON()
+  FIND_NUMPY()
+  INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_DIRS})
+  ADD_REQUIRED_DEPENDENCY("dynamic-graph-python")
+ENDIF(BUILD_PYTHON_INTERFACE)
+
 # Add subdirectories.
 ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(python)
 ADD_SUBDIRECTORY(unitTesting)
-
-# Configure some of the python files
-CONFIGURE_FILE(
-   "${CMAKE_CURRENT_SOURCE_DIR}/python/robot_specific.py.cmake"
-   "${CMAKE_CURRENT_BINARY_DIR}/python/robot_specific.py"
-)
-
-#INCLUDE(cmake/python.cmake)
-#INSTALL(FILES
-#  "${CMAKE_CURRENT_BINARY_DIR}/python/robotSpecific.py"
-#  DESTINATION ${PYTHON_SITELIB}/dynamic_graph/sot/dyninv
-#)
 
 SETUP_PROJECT_FINALIZE()
 SETUP_PROJECT_CPACK()
