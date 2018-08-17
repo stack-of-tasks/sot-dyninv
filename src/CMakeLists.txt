@@ -14,9 +14,6 @@
 # received a copy of the GNU Lesser General Public License along with
 # sot-dyninv. If not, see <http://www.gnu.org/licenses/>.
 
-INCLUDE(../cmake/python.cmake)
-FINDPYTHON()
-
 IF(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
   ADD_DEFINITIONS(-DDEBUG=2)
 ENDIF(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
@@ -37,7 +34,6 @@ FOREACH(header ${headers})
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ OWNER_WRITE)
 ENDFOREACH(header)
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/include)
-LINK_DIRECTORIES(${PYTHON_LIBRARY_DIRS})
 
 # --- COMPILATION OF PLUGINS
 FOREACH(lib ${libs})
@@ -62,22 +58,23 @@ FOREACH(lib ${libs})
 
   INSTALL(TARGETS ${lib} DESTINATION ${DYNAMIC_GRAPH_PLUGINDIR})
   # build python submodule
-  STRING(REPLACE - _ PYTHON_LIBRARY_NAME ${lib})
-  DYNAMIC_GRAPH_PYTHON_MODULE("sot/dyninv/${PYTHON_LIBRARY_NAME}"
-    ${lib}
-    sot-dyninv-${PYTHON_LIBRARY_NAME}-wrap
-    )
+  IF(BUILD_PYTHON_INTERFACE)
+    STRING(REPLACE - _ PYTHON_LIBRARY_NAME ${lib})
+    DYNAMIC_GRAPH_PYTHON_MODULE("sot/dyninv/${PYTHON_LIBRARY_NAME}"
+      ${lib}
+      sot-dyninv-${PYTHON_LIBRARY_NAME}-wrap
+      )
+  ENDIF(BUILD_PYTHON_INTERFACE)
 ENDFOREACH(lib)
 
 # Install empty __init__.py files in intermediate directories.
-INSTALL(FILES
-  ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/__init__.py
-  ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_task_dyn_6d.py
-  ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_task_dyn_passing_point.py
-  ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_tasks_dyn.py
-  ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_tasks_dyn_relative.py
-  ${CMAKE_CURRENT_BINARY_DIR}/../python/robot_specific.py
-  DESTINATION ${PYTHON_SITELIB}/dynamic_graph/sot/dyninv
-)
-
-MESSAGE(STATUS DESTINATION ${PYTHON_SITELIB} )
+IF(BUILD_PYTHON_INTERFACE)
+  INSTALL(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/__init__.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_task_dyn_6d.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_task_dyn_passing_point.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_tasks_dyn.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/dynamic_graph/sot/dyninv/meta_tasks_dyn_relative.py
+    DESTINATION ${PYTHON_SITELIB}/dynamic_graph/sot/dyninv
+    )
+ENDIF(BUILD_PYTHON_INTERFACE)
