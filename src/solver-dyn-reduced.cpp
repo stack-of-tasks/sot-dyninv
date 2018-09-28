@@ -38,6 +38,7 @@ solver_op_space__INIT solver_op_space_initiator;
 #include <soth/HCOD.hpp>
 #include <sot-dyninv/task-dyn-pd.h>
 #include <sot/core/feature-point6d.hh>
+#include <iostream>
 #include <sstream>
 #include <soth/Algebra.hpp>
 #include <Eigen/QR>

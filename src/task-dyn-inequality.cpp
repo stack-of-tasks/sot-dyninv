@@ -110,7 +110,7 @@ namespace dynamicgraph
 	assert( !withInf || insize==(int)refInf.size() );
 	assert( !withSup || insize==(int)refSup.size() );
 
-	using std::cout; using std::endl;
+	// using std::cout; using std::endl;
 	// int iterShow = 76;
 	// if(iter==iterShow)
 	//   {

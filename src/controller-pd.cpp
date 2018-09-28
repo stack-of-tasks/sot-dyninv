@@ -18,6 +18,7 @@
 #include <sot/core/debug.hh>
 #include <dynamic-graph/factory.h>
 
+#include <iostream>
 #include <sot-dyninv/commands-helper.h>
 
 namespace dynamicgraph

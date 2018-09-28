@@ -28,6 +28,7 @@ public:contacter_op_space__INIT( void )
 contacter_op_space__INIT contacter_op_space_initiator;
 #endif //#ifdef VP_DEBUG
 
+#include <iostream>
 #include <sot-dyninv/commands-helper.h>
 #include <sot-dyninv/contact-selecter.h>
 #include <dynamic-graph/factory.h>
