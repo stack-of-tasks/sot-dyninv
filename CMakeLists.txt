@@ -22,9 +22,10 @@ INCLUDE(cmake/lapack.cmake)
 INCLUDE(cmake/cpack.cmake)
 INCLUDE(cmake/python.cmake)
 
+SET(PROJECT_NAMESPACE stack-of-tasks)
 SET(PROJECT_NAME sot-dyninv)
 SET(PROJECT_DESCRIPTION "control by inverse dynamics.")
-SET(PROJECT_URL "http://github.com/stack-of-tasks/sot-dyninv")
+SET(PROJECT_URL "http://github.com/${PROJECT_NAMESPACE}/${PROJECT_NAME}")
 
 SET(CUSTOM_HEADER_DIR "${PROJECT_NAME}")
 SET(DOXYGEN_USE_MATHJAX YES)
@@ -37,6 +38,9 @@ SET(PKG_CONFIG_ADDITIONAL_VARIABLES
   plugindirname
   plugindir
   )
+
+OPTION(BUILD_PYTHON_INTERFACE "Build the python bindings" ON)
+OPTION(INSTALL_PYTHON_INTERFACE_ONLY "Install *ONLY* the python bindings" OFF)
 
 SETUP_PROJECT()
 
@@ -136,7 +140,6 @@ foreach(lib solver-op-space solver-dyn-reduced solver-dyn-red2)
 	ENDIF(WIN32)
 endforeach(lib)
 
-OPTION(BUILD_PYTHON_INTERFACE "Build the python bindings" ON)
 IF(BUILD_PYTHON_INTERFACE)
   FINDPYTHON()
   FIND_NUMPY()
@@ -150,4 +153,3 @@ ADD_SUBDIRECTORY(python)
 ADD_SUBDIRECTORY(unitTesting)
 
 SETUP_PROJECT_FINALIZE()
-SETUP_PROJECT_CPACK()
