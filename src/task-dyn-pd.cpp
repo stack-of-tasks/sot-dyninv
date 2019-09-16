@@ -14,6 +14,7 @@
  * with sot-dyninv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <pinocchio/fwd.hpp>
 #include <dynamic-graph/factory.h>
 
 #include <sot/core/debug.hh>
